@@ -1,0 +1,17 @@
+# Environment
+.env
+.env.local
+.env*.local
+
+# Expo
+.expo/
+dist/
+node_modules/
+
+# Native
+ios/
+android/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -54,9 +54,9 @@ USD, EUR, DKK, SEK
 
 ## 5. Debt Model
 
-**Net balance with debt simplification (Splitwise model).**
+**Debt simplification.**
 
-The app tracks a running net balance per person across all expenses in a group, then computes the minimum number of transactions needed to settle everything. Example: if B owes you €20 from dinner but you owe B €15 from the taxi, the app shows "B owes you €5" — one transaction, not two.
+The app tracks a running Balance per person across all expenses in a group, then computes the minimum number of Settlements needed to settle everything. Example: if B owes you €20 from dinner but you owe B €15 from the taxi, the app shows "B owes you €5" — one Settlement, not two.
 
 ### Real-time sync
 When any member adds an expense, all other group members see it instantly via Supabase Realtime. No refresh needed.
@@ -132,13 +132,13 @@ Each group has one persistent invite link. **Any group member can share this lin
 - **Already a member** → navigates directly to the group detail page. No acceptance screen.
 - **App installed, logged in, not yet a member** → deep link opens the app directly → user sees the Invite Acceptance Screen → Accept adds them to the group immediately.
 - **App installed, not logged in** → Invite Acceptance Screen is shown first (no sign-in required to view it) → tapping Accept triggers Google sign-in → after sign-in, added to group → lands on group detail page. If it's their first ever sign-in, display name + currency onboarding screens appear before the group detail page. Tapping Decline also triggers sign-in (needed to use the app), then lands on empty Groups tab.
-- **App not installed** → invitee becomes a **placeholder member** (stored by email); expenses can be assigned to them immediately; when they install and sign up with the same Gmail, their account activates and all history syncs retroactively → they are then shown the Invite Acceptance Screen → after accepting, **if they already have an outstanding balance**, a one-time pop-up appears: "While you were away, you were added to some expenses. You currently owe [amount]." with a "View balances" button. If they have no balance yet, they land directly on the group detail page with no pop-up.
+- **App not installed** → invitee becomes a **Invited Member** (stored by email); expenses can be assigned to them immediately; when they install and sign up with the same Gmail, their account activates and all history syncs retroactively → they are then shown the Invite Acceptance Screen → after accepting, **if they already have an outstanding balance**, a one-time pop-up appears: "While you were away, you were added to some expenses. You currently owe [amount]." with a "View balances" button. If they have no balance yet, they land directly on the group detail page with no pop-up.
 
 ### Adding by email
 Any member can add someone by typing their email directly in the app. Two outcomes:
 
 - **Already registered** → they receive a push notification and see the Invite Acceptance Screen next time they open the app
-- **Not registered yet** → they become a placeholder member immediately (expenses can be assigned to them right away). An automated invite email is sent via **Resend** from `invite@evenSteven.app` containing: who added them, group name and type, date range (Trip only), member count, and a smart download link. The link opens the app directly if installed, or redirects to the App Store / Play Store if not. After installing and signing up with the same Gmail, they land on the Invite Acceptance Screen for that group. The smart link is hosted at `join.evenSteven.app/invite/{token}`.
+- **Not registered yet** → they become a Invited Member immediately (expenses can be assigned to them right away). An automated invite email is sent via **Resend** from `invite@evenSteven.app` containing: who added them, group name and type, date range (Trip only), member count, and a smart download link. The link opens the app directly if installed, or redirects to the App Store / Play Store if not. After installing and signing up with the same Gmail, they land on the Invite Acceptance Screen for that group. The smart link is hosted at `join.evenSteven.app/invite/{token}`.
 
 ### Invite Acceptance Screen
 Shown to anyone who taps an invite link or email invite (new or existing user). Contains:
@@ -234,7 +234,7 @@ If a member with an outstanding balance tries to leave (or is removed by admin),
 - **Description** — optional, appears below the title. Max 500 characters. Live character counter appears at 450/500. Placeholder text: "Add more details about this expense…" — disappears on first keystroke. Helps members remember context when settling up later.
 - **Date** — defaults to today, tappable to change. Past and today allowed; future dates are blocked. Expense list sorts by this date, not entry date.
 - **Amount** — numeric, with currency selector (USD / EUR / DKK / SEK). Defaults to the user's preferred currency from Account settings. Live conversion shown below the field as you type (e.g. "≈ 375 DKK") based on today's cached exchange rates. Minimum: 0.01. Maximum: 999 999.99. Decimal-pad keyboard.
-- **Category** — see full list in §12. Defaults to "Other." Auto-detected from the title field using a client-side keyword map (case-insensitive, partial match). A subtle "auto" badge on the category field shows it was auto-detected. Auto-detection stops if the user manually selects a category.
+- **Category** — see full list in §12. Defaults to "Other." Auto-detected from the title field using a client-side keyword map (case-insensitive, partial match). A subtle "suggested" badge on the category field shows it was auto-detected. Auto-detection stops if the user manually selects a category.
 
   **Auto-detection keyword map:**
   | Keywords | Category |
@@ -260,22 +260,22 @@ If a member with an outstanding balance tries to leave (or is removed by admin),
 - **Split method selector** — choose first: Equal · Unequal · Percentage. Switching modes clears previously entered amounts and recalculates from scratch.
 - **Participant list** — shown below the split method. All group members pre-selected by default with checkboxes. "Select All" button at the top as a quick shortcut. Members shown with avatar and name. No search bar — list is always fully visible. Order: you first, then all others alphabetically by display name.
   - **Equally** — amount divided evenly among checked members
-  - **Unequally** — each participant gets an amount field. The **payer's field is always the remainder** — it starts at the full expense total and decreases automatically as you enter amounts for others. You never type the payer's share; it's always calculated as: total − sum of all other amounts. Save is always enabled as long as no individual share is negative. If the expense total changes after amounts are entered, all other participants' amounts are preserved and the payer's remainder recalculates automatically.
-  - **By percentage** — same remainder model: the payer's percentage starts at 100% and decreases as you assign percentages to others. Save is always enabled as long as no individual percentage is negative.
+  - **Unequally** — each participant gets an amount field. The **payer's field holds the Remainder by default** — it starts at the full expense total and decreases automatically as you enter amounts for others. The payer's field is editable; if they enter a specific amount, the split must still sum to the full expense total. Save is always enabled as long as no individual share is negative. If the expense total changes after amounts are entered, all other participants' amounts are preserved and the payer's remainder recalculates automatically.
+  - **By percentage** — same Remainder model: the payer's percentage starts at 100% and decreases as you assign percentages to others. The payer's percentage field is editable; the split must always sum to 100%. Save is always enabled as long as no individual percentage is negative.
 
 ### Cancelling the expense form
 If the user taps the back/close button and the form has any data entered, show a confirmation dialog: "Discard this expense?" with "Discard" and "Keep editing" buttons. If the form is completely untouched, close silently with no prompt.
 
 ### Expense rules
 - Non-participants (members not included in the split) do not see the expense
-- Expenses can be **deleted only if zero payments** have been recorded against them. Any participant in the expense (or the group admin) can delete it.
+- Expenses can be **deleted only if zero Settlements** have been recorded against them. Any participant in the expense (or the group admin) can delete it.
 - **Anyone in the split** can edit the expense description and category at any time.
-- **Payer or group admin only** can edit the financial structure — amount (if no payments recorded), split method, split distribution, and participant list. When the split structure is edited, all balances recalculate automatically. If someone overpaid due to an edit, the difference shows as a debt owed back to them.
-- Expense **total amount is locked** once any payment is recorded; split structure remains editable by payer/admin even after payments.
+- **Payer or group admin only** can edit the financial structure — amount (if no Settlements recorded), split method, split distribution, and participant list. When the split structure is edited, all balances recalculate automatically. If someone overpaid due to an edit, the difference shows as a debt owed back to them.
+- Expense **total amount is locked** once any Settlement is recorded; split structure remains editable by payer/admin even after Settlements.
 - Edited expenses show a small **"edited" badge** on the expense card so members know the expense changed
 - Settled expenses remain visible to participants but are **visually dimmed** — reduced opacity and muted text/icon. Same card layout, just quieter. Unsettled expenses appear at full opacity above them.
 
-### Resettlement
+### Settlement Correction
 A member can undo and re-record their own payments only. They cannot touch payment records made by other members.
 
 ---
@@ -332,10 +332,10 @@ Electronics: Other Electronics
 - **Settlement window:**
   - Opens settlement window
   - Amount shown in group base currency with currency toggle (display only — any of the 4 currencies)
-  - Enter amount (full or partial); full payment clears balance, partial shows remainder
+  - Enter amount (full or partial); full Settlement clears Balance, partial reduces it
   - Works in both directions (you owe / you are owed)
-  - **Either party can record the payment** — the creditor can record an incoming payment on behalf of the debtor (e.g. Luka hands you cash, you record it yourself). The debtor can also initiate from their own device.
-  - On success: green "Payment recorded" toast at the bottom, auto-dismisses. No separate confirmation screen. Balances tab updates in real time.
+  - **Either party can record the Settlement** — the creditor can record an incoming Settlement on behalf of the debtor (e.g. Luka hands you cash, you record it yourself). The debtor can also initiate from their own device.
+  - On success: green "Settlement recorded" toast at the bottom, auto-dismisses. No separate confirmation screen. Balances tab updates in real time.
 
 ### Tab 3 — Summary
 - Total group spending (in base currency)
@@ -414,8 +414,8 @@ Filter icon in the top-right header opens a bottom sheet with a single filter: *
 
 ## 16. Friends System
 
-- Add friends by email — unidirectional, no approval needed
-- Friends from groups: once two users share a group they appear in each other's friends list
+- Add friends by email — explicit and unidirectional, no approval needed. The person who adds sees the other in their Friends tab; the other does not automatically see them back.
+- Sharing a Group does NOT create a Friendship. Members must explicitly add each other via the "Add Friend" button on the Member Profile Sheet.
 - Friends tab is a shortcut for quickly adding known people to future groups without searching by email
 
 ### Friends Tab — Adding a Friend
@@ -436,14 +436,14 @@ Tapping a friend opens a **Friend Detail Screen** showing:
 - Total balance across all shared groups
 - List of shared groups with balance per group
 - **Add to Group** shortcut — opens a group picker bottom sheet listing active groups. Tap one to send them an invite to that group (same flow as adding by email from within the group).
-- **Settle Up** button (shown only if outstanding balance exists)
+- **Settle Up** button (shown only if a non-zero Balance exists)
 - **Add Expense** button — opens a group picker bottom sheet first (same active groups list). After picking a group, the expense form opens pre-filled with you and this friend as participants. The selected group name is displayed prominently in the form header so it's clear which group the expense belongs to. "Paid by" defaults to "You" — changeable with one tap.
 
 ### Member Profile Sheet (inside a group)
 Tapping any member's avatar opens a bottom sheet showing:
 - Their name and profile photo
 - Their current balance in this group ("Owes you €23" / "You owe them €15" / "Settled")
-- **Settle Up with [name]** button — jumps directly into the settlement flow for this person
+- **Settle Up with [name]** button — only shown if a non-zero Balance exists between you and this Member. Jumps directly into the settlement flow for this person.
 - **Add Friend** button — only shown if they are not already in your friends list
 
 ---
@@ -727,7 +727,7 @@ English only for v1. Localization (Croatian, Danish, Swedish) deferred to a futu
 
 ## Open Questions (not yet decided)
 
-None — all major decisions resolved.
+- **Personal expense tracking (future):** Allow a Member to log an Expense where they are the only Participant — no one owes anyone anything. Useful for tracking personal spending alongside shared group expenses in the Summary tab. Deferred to a future version; not in v1.
 - ~~Offline behavior~~ — **online only**. App requires internet connection to add or edit anything. Clear error message shown when offline.
 - ~~Group list sorting~~ — **most recently active first, user-controlled pinning, filters via bottom sheet**
 - ~~Search~~ — **Groups tab: search by group name. Friends tab: search by name or email. No global search.**
