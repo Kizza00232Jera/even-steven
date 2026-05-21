@@ -16,6 +16,7 @@ import {
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import { configureGoogleSignIn } from '../lib/auth';
@@ -25,6 +26,8 @@ import { VersionGateScreen } from '../components/VersionGateScreen';
 import { useVersionGate } from '../hooks/useVersionGate';
 import { useOTAUpdates } from '../hooks/useOTAUpdates';
 import { ToastProvider } from '../components/ToastProvider';
+import { OfflineBanner } from '../components/OfflineBanner';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -68,6 +71,7 @@ function NavigationGuard() {
 function RootContent() {
   const { colorScheme } = useColorScheme();
   const { setSession, setProfile, setIsLoading } = useAuthStore();
+  const { isOnline } = useNetworkStatus();
 
   const [fontsLoaded, fontError] = useFonts({
     SpaceGrotesk_400Regular,
@@ -129,7 +133,10 @@ function RootContent() {
   return (
     <>
       <NavigationGuard />
-      <Stack screenOptions={{ headerShown: false }} />
+      <View style={{ flex: 1 }}>
+        <OfflineBanner isOnline={isOnline} />
+        <Stack screenOptions={{ headerShown: false }} />
+      </View>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
     </>
   );
