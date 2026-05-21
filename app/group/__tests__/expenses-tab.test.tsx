@@ -186,7 +186,7 @@ function setupGroupQuery(groupData = BASE_GROUP, expensesData = EXPENSES, balanc
     if (queryKey[0] === 'group-balances') {
       return { data: balancesData, isLoading: false, isError: false };
     }
-    return { data: null, isLoading: false, isError: false };
+    return { data: undefined, isLoading: false, isError: false };
   });
 }
 
