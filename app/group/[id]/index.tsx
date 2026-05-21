@@ -8,6 +8,7 @@ import {
   Alert,
   Share,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -24,9 +25,21 @@ import { getOrCreateInviteToken } from '../../../lib/repos/invites';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/auth';
 import { useToast } from '../../../hooks/useToast';
+import { BalancesTab } from './balances';
 import type { GroupDetail } from '../../../lib/repos/groups';
 
 const INVITE_BASE = 'even-steven.vercel.app/invite';
+
+type Tab = 'expenses' | 'balances' | 'summary';
+
+const GROUP_HEADER_COLORS: Record<string, string> = {
+  Trip: Colors.gradients.trip[0],
+  Home: Colors.gradients.home[0],
+  Couple: Colors.gradients.couple[0],
+  Utilities: Colors.gradients.utilities[0],
+  Family: Colors.gradients.family[0],
+  Other: Colors.gradients.other[0],
+};
 
 function useGroupDetail(id: string, userId: string) {
   return useQuery({
@@ -145,6 +158,8 @@ function AddExpenseFab({ group }: { group: GroupDetail }) {
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { colorScheme } = useColorScheme();
+  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
   const { session } = useAuthStore();
   const queryClient = useQueryClient();
   const userId = session?.user.id ?? '';
@@ -152,6 +167,7 @@ export default function GroupDetailScreen() {
   const { data: group, isLoading, isError, refetch } = useGroupDetail(id, userId);
   const [showSettings, setShowSettings] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>('balances');
 
   const leaveMutation = useMutation({
     mutationFn: ({ memberId, isAdmin }: { memberId: string; isAdmin: boolean }) =>
@@ -270,50 +286,91 @@ export default function GroupDetailScreen() {
     return <RemovedMemberState />;
   }
 
+  const headerColor = GROUP_HEADER_COLORS[group.type] ?? Colors.gradients.other[0];
+
   return (
     <SafeAreaView className="flex-1 bg-background">
-      <View className="flex-row items-center px-4 py-3 border-b border-border">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          className="mr-3"
-        >
-          <ChevronLeft size={24} color={Colors.accent} strokeWidth={2} />
-        </TouchableOpacity>
-        <Text className="font-display text-text-primary font-semibold text-lg flex-1" numberOfLines={1}>
+      {/* Colored header with group name and action buttons */}
+      <View className="px-4 pt-3 pb-4" style={{ backgroundColor: headerColor }}>
+        <View className="flex-row items-center justify-between mb-2">
+          <TouchableOpacity
+            onPress={() => router.back()}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            className="flex-row items-center"
+          >
+            <ChevronLeft size={22} color="rgba(255,255,255,0.8)" strokeWidth={2} />
+            <Text className="text-sm ml-1" style={{ color: 'rgba(255,255,255,0.8)' }}>
+              Back
+            </Text>
+          </TouchableOpacity>
+          <View className="flex-row items-center gap-3">
+            <TouchableOpacity
+              testID="share-invite-button"
+              onPress={handleShareInviteLink}
+              disabled={isSharing}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              {isSharing ? (
+                <ActivityIndicator size="small" color="rgba(255,255,255,0.8)" />
+              ) : (
+                <Share2 size={20} color="rgba(255,255,255,0.8)" strokeWidth={1.5} />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="settings-button"
+              onPress={() => setShowSettings(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Settings size={22} color="rgba(255,255,255,0.8)" strokeWidth={1.5} />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <Text className="text-white font-bold text-2xl" style={{ fontFamily: 'SpaceGrotesk_700Bold' }}>
           {group.name}
         </Text>
-        <TouchableOpacity
-          testID="share-invite-button"
-          onPress={handleShareInviteLink}
-          disabled={isSharing}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          className="mr-3"
-        >
-          {isSharing ? (
-            <ActivityIndicator size="small" color={Colors.accent} />
-          ) : (
-            <Share2 size={20} color={Colors.dark.textSecondary} strokeWidth={1.5} />
-          )}
-        </TouchableOpacity>
-        <TouchableOpacity
-          testID="settings-button"
-          onPress={() => setShowSettings(true)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Settings size={22} color={Colors.dark.textSecondary} strokeWidth={1.5} />
-        </TouchableOpacity>
-      </View>
-
-      <View className="flex-1 px-4 pt-4">
         {group.status === 'expired' && (
-          <View className="mb-3 px-3 py-1.5 bg-surface rounded-xl self-start">
-            <Text className="font-body text-xs text-text-secondary">Trip ended</Text>
+          <View className="mt-1.5 px-2 py-0.5 bg-black/20 rounded-full self-start">
+            <Text className="text-white/70 text-xs">Trip ended</Text>
           </View>
         )}
-        <Text className="font-body text-text-secondary text-sm text-center mt-20">
-          Group detail — expenses and balances coming soon.
-        </Text>
+      </View>
+
+      {/* Tab bar */}
+      <View
+        className="flex-row border-b border-border"
+        style={{ backgroundColor: theme.surface }}
+      >
+        {(['expenses', 'balances', 'summary'] as Tab[]).map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            onPress={() => setActiveTab(tab)}
+            className="flex-1 py-3 items-center"
+          >
+            <Text
+              className="text-sm font-medium capitalize"
+              style={{
+                color: activeTab === tab ? Colors.accent : theme.textSecondary,
+              }}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </Text>
+            {activeTab === tab && (
+              <View
+                className="absolute bottom-0 left-4 right-4 h-0.5 rounded-full"
+                style={{ backgroundColor: Colors.accent }}
+              />
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Tab content */}
+      <View className="flex-1">
+        {activeTab === 'expenses' && <ExpensesTabStub />}
+        {activeTab === 'balances' && group.currentMemberId && (
+          <BalancesTab groupId={id} currentMemberId={group.currentMemberId} />
+        )}
+        {activeTab === 'summary' && <SummaryTabStub />}
       </View>
 
       <AddExpenseFab group={group} />
@@ -331,5 +388,21 @@ export default function GroupDetailScreen() {
         />
       )}
     </SafeAreaView>
+  );
+}
+
+function ExpensesTabStub() {
+  return (
+    <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+      <Text className="text-text-secondary text-base">Expenses coming soon</Text>
+    </ScrollView>
+  );
+}
+
+function SummaryTabStub() {
+  return (
+    <View className="flex-1 items-center justify-center px-4">
+      <Text className="text-text-secondary text-base">Summary coming soon</Text>
+    </View>
   );
 }
