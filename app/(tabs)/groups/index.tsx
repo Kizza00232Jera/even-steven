@@ -20,7 +20,6 @@ import {
   MoreHorizontal,
   Filter,
   X,
-  Check,
 } from 'lucide-react-native';
 import { SkeletonGroupCard } from '../../../components/SkeletonGroupCard';
 import { ErrorState } from '../../../components/ErrorState';
@@ -53,15 +52,24 @@ const EMPTY_FILTERS: GroupFilters = {
   tripTiming: null,
 };
 
+const BALANCE_CHIP_LABELS: Record<NonNullable<GroupFilters['balance']>, string> = {
+  owe: 'You owe',
+  owed: 'You are owed',
+  settled: 'Settled',
+};
+
+const ACTIVE_CHIP_STYLE = {
+  backgroundColor: Colors.accentDim,
+  borderColor: Colors.accent,
+  borderWidth: 1,
+} as const;
+
 function formatDateRange(start: string, end: string): string {
   const startDate = new Date(start + 'T00:00:00');
   const endDate = new Date(end + 'T00:00:00');
-  const startStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  const endYear = endDate.getFullYear();
   const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const startYear = startDate.getFullYear();
-  if (startYear === endYear) {
-    return `${startStr} – ${endStr}`;
+  if (startDate.getFullYear() === endDate.getFullYear()) {
+    return `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${endStr}`;
   }
   return `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} – ${endStr}`;
 }
@@ -524,7 +532,7 @@ export default function GroupsScreen() {
               <TouchableOpacity
                 onPress={() => setFilters((f) => ({ ...f, status: null }))}
                 className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
-                style={{ backgroundColor: Colors.accentDim, borderColor: Colors.accent, borderWidth: 1 }}
+                style={ACTIVE_CHIP_STYLE}
               >
                 <Text className="font-body text-xs capitalize" style={{ color: Colors.accent }}>
                   {filters.status}
@@ -539,7 +547,7 @@ export default function GroupsScreen() {
                   setFilters((f) => ({ ...f, types: f.types.filter((x) => x !== t) }))
                 }
                 className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
-                style={{ backgroundColor: Colors.accentDim, borderColor: Colors.accent, borderWidth: 1 }}
+                style={ACTIVE_CHIP_STYLE}
               >
                 <Text className="font-body text-xs" style={{ color: Colors.accent }}>
                   {t}
@@ -551,14 +559,10 @@ export default function GroupsScreen() {
               <TouchableOpacity
                 onPress={() => setFilters((f) => ({ ...f, balance: null }))}
                 className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
-                style={{ backgroundColor: Colors.accentDim, borderColor: Colors.accent, borderWidth: 1 }}
+                style={ACTIVE_CHIP_STYLE}
               >
                 <Text className="font-body text-xs" style={{ color: Colors.accent }}>
-                  {filters.balance === 'owe'
-                    ? 'You owe'
-                    : filters.balance === 'owed'
-                    ? 'You are owed'
-                    : 'Settled'}
+                  {BALANCE_CHIP_LABELS[filters.balance!]}
                 </Text>
                 <X size={12} color={Colors.accent} strokeWidth={2} />
               </TouchableOpacity>
@@ -567,7 +571,7 @@ export default function GroupsScreen() {
               <TouchableOpacity
                 onPress={() => setFilters((f) => ({ ...f, tripTiming: null }))}
                 className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
-                style={{ backgroundColor: Colors.accentDim, borderColor: Colors.accent, borderWidth: 1 }}
+                style={ACTIVE_CHIP_STYLE}
               >
                 <Text className="font-body text-xs capitalize" style={{ color: Colors.accent }}>
                   {filters.tripTiming}

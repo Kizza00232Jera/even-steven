@@ -114,13 +114,9 @@ export default function GroupDetailScreen() {
 
   const leaveMutation = useMutation({
     mutationFn: () => leaveGroup(supabase, id, userId),
-    onSuccess: (result) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups'] });
-      if (result.groupDeleted) {
-        router.back();
-      } else {
-        router.back();
-      }
+      router.back();
     },
     onError: () => {
       Alert.alert('Error', 'Could not leave the group. Please try again.');
