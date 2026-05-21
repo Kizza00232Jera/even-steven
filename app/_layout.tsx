@@ -43,10 +43,13 @@ function NavigationGuard() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuth = segments[0] === '(auth)';
+    const inAuth   = segments[0] === '(auth)';
+    const inInvite = segments[0] === 'invite';
 
     if (!session) {
-      if (!inAuth) router.replace('/(auth)');
+      // Invite screen is accessible without authentication so non-members can
+      // view group details before deciding to sign up and accept.
+      if (!inAuth && !inInvite) router.replace('/(auth)');
       return;
     }
 

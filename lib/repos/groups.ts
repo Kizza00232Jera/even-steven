@@ -79,3 +79,20 @@ export async function fetchGroups(
   if (error) throw error;
   return data ?? [];
 }
+
+// Returns the group_members.id for the current user in the given group.
+export async function getGroupMemberId(
+  client: SupabaseClient<Database>,
+  groupId: string,
+  userId: string,
+): Promise<string | null> {
+  const { data, error } = await client
+    .from('group_members')
+    .select('id')
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .single();
+  if (error) return null;
+  return data?.id ?? null;
+}

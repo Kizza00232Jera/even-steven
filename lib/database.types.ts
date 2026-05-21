@@ -36,6 +36,7 @@ export type Database = {
           google_avatar_url: string | null
           preferred_currency: "USD" | "EUR" | "DKK" | "SEK"
           onboarding_done: boolean
+          show_balance_nudge: boolean
           created_at: string
           updated_at: string
         }
@@ -47,6 +48,7 @@ export type Database = {
           google_avatar_url?: string | null
           preferred_currency?: "USD" | "EUR" | "DKK" | "SEK"
           onboarding_done?: boolean
+          show_balance_nudge?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -58,6 +60,7 @@ export type Database = {
           google_avatar_url?: string | null
           preferred_currency?: "USD" | "EUR" | "DKK" | "SEK"
           onboarding_done?: boolean
+          show_balance_nudge?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -643,6 +646,10 @@ export type Database = {
       current_member_id: {
         Args: { p_group_id: string }
         Returns: string | null
+      }
+      resolve_invite_token: {
+        Args: { p_token: string }
+        Returns: Json
       }
     }
     Enums: {
