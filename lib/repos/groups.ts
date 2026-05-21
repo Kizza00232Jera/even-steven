@@ -458,4 +458,39 @@ export async function deleteGroup(
   if (error) throw error;
 }
 
+export async function fetchGroupById(
+  client: SupabaseClient<Database>,
+  id: string,
+): Promise<Group | null> {
+  const { data, error } = await client
+    .from('groups')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function markGroupExpired(
+  client: SupabaseClient<Database>,
+  groupId: string,
+): Promise<void> {
+  const { error } = await client
+    .from('groups')
+    .update({ status: 'expired' })
+    .eq('id', groupId);
+  if (error) throw error;
+}
+
+export async function markGroupArchived(
+  client: SupabaseClient<Database>,
+  groupId: string,
+): Promise<void> {
+  const { error } = await client
+    .from('groups')
+    .update({ status: 'archived' })
+    .eq('id', groupId);
+  if (error) throw error;
+}
+
 export type { GroupMember };

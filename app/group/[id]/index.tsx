@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useColorScheme } from 'nativewind';
-import { Settings, ChevronLeft, LogOut, Users, BellOff, Bell, X, ChevronRight } from 'lucide-react-native';
+import { Settings, ChevronLeft, LogOut, Users, BellOff, Bell, X, ChevronRight, Plus } from 'lucide-react-native';
 import { SkeletonExpenseCard } from '../../../components/SkeletonExpenseCard';
 import { SkeletonBalanceRow } from '../../../components/SkeletonBalanceRow';
 import { ErrorState } from '../../../components/ErrorState';
@@ -20,6 +20,7 @@ import { Colors } from '../../../constants/colors';
 import { fetchGroupDetail, leaveGroup } from '../../../lib/repos/groups';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/auth';
+import { useToast } from '../../../hooks/useToast';
 import type { GroupDetail } from '../../../lib/repos/groups';
 
 function useGroupDetail(id: string, userId: string) {
@@ -99,6 +100,40 @@ function SettingsSheet({ visible, group, onClose, onLeave, onViewMembers }: Sett
         </Pressable>
       </Pressable>
     </Modal>
+  );
+}
+
+function AddExpenseFab({ group }: { group: GroupDetail }) {
+  const toast = useToast();
+  const isExpiredOrArchived = group.status === 'expired' || group.status === 'archived';
+
+  function handlePress() {
+    if (isExpiredOrArchived) {
+      toast.info('This trip has ended. Extend the trip in settings to add new expenses.');
+      return;
+    }
+  }
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      testID="add-expense-fab"
+      style={{
+        position: 'absolute',
+        bottom: 24,
+        right: 24,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: isExpiredOrArchived ? Colors.dark.textTertiary : Colors.accent,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: isExpiredOrArchived ? 0.6 : 1,
+      }}
+      activeOpacity={0.8}
+    >
+      <Plus size={24} color="#ffffff" strokeWidth={2.5} />
+    </TouchableOpacity>
   );
 }
 
@@ -235,10 +270,17 @@ export default function GroupDetailScreen() {
       </View>
 
       <View className="flex-1 px-4 pt-4">
+        {group.status === 'expired' && (
+          <View className="mb-3 px-3 py-1.5 bg-surface rounded-xl self-start">
+            <Text className="font-body text-xs text-text-secondary">Trip ended</Text>
+          </View>
+        )}
         <Text className="font-body text-text-secondary text-sm text-center mt-20">
           Group detail — expenses and balances coming soon.
         </Text>
       </View>
+
+      <AddExpenseFab group={group} />
 
       {showSettings && (
         <SettingsSheet

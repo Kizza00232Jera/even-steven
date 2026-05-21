@@ -23,6 +23,7 @@ import {
 } from 'lucide-react-native';
 import { SkeletonGroupCard } from '../../../components/SkeletonGroupCard';
 import { ErrorState } from '../../../components/ErrorState';
+import { TripExpiredModal } from '../../../components/TripExpiredModal';
 import { Colors } from '../../../constants/colors';
 import {
   fetchGroupsWithMembership,
@@ -35,6 +36,7 @@ import { filterGroups } from '../../../lib/groupFilters';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/auth';
 import { hapticOnGroupPin, hapticOnToggle } from '../../../lib/haptics';
+import { useTripExpiry } from '../../../hooks/useTripExpiry';
 import { format } from '../../../lib/currency';
 import type { GroupWithMembership, GroupFilters } from '../../../lib/groupFilters';
 import type { Database } from '../../../lib/database.types';
@@ -405,6 +407,7 @@ export default function GroupsScreen() {
   const userId = session?.user.id ?? '';
 
   const { data: groups, isLoading, isError, refetch } = useGroups(userId);
+  const { popupGroup, dismissPopup } = useTripExpiry(groups);
 
   const [filters, setFilters] = useState<GroupFilters>(EMPTY_FILTERS);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
@@ -598,6 +601,12 @@ export default function GroupsScreen() {
         filters={filters}
         onClose={() => setShowFilterSheet(false)}
         onApply={setFilters}
+      />
+
+      <TripExpiredModal
+        groupName={popupGroup?.name ?? ''}
+        visible={popupGroup !== null}
+        onDismiss={dismissPopup}
       />
     </SafeAreaView>
   );
