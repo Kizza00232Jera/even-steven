@@ -16,6 +16,7 @@ import {
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import { configureGoogleSignIn } from '../lib/auth';
 import { getProfile } from '../lib/repos/profiles';
@@ -23,6 +24,7 @@ import { useAuthStore } from '../store/auth';
 import { VersionGateScreen } from '../components/VersionGateScreen';
 import { useVersionGate } from '../hooks/useVersionGate';
 import { useOTAUpdates } from '../hooks/useOTAUpdates';
+import { ToastProvider } from '../components/ToastProvider';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -135,8 +137,12 @@ function RootContent() {
 
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <RootContent />
-    </QueryClientProvider>
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <RootContent />
+        </ToastProvider>
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }
