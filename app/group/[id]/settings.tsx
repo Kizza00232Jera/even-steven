@@ -48,6 +48,11 @@ import {
   toggleMuteGroup,
 } from '../../../lib/repos/groups';
 
+const rowClass = 'flex-row items-center justify-between px-4 py-4 border-b border-border';
+const rowLabelClass = 'font-body text-base text-text-primary ml-3 flex-1';
+const rowIconContainer = 'w-8 h-8 rounded-full bg-surface-2 items-center justify-center';
+const sectionHeaderClass = 'font-body text-xs text-text-tertiary uppercase tracking-widest px-4 pt-6 pb-2';
+
 export default function GroupSettingsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -330,11 +335,6 @@ export default function GroupSettingsScreen() {
     );
   }
 
-  const rowClass = 'flex-row items-center justify-between px-4 py-4 border-b border-border';
-  const rowLabelClass = 'font-body text-base text-text-primary ml-3 flex-1';
-  const rowIconContainer = 'w-8 h-8 rounded-full bg-surface-2 items-center justify-center';
-  const sectionHeaderClass = 'font-body text-xs text-text-tertiary uppercase tracking-widest px-4 pt-6 pb-2';
-
   return (
     <SafeAreaView className="flex-1 bg-background">
       {/* Header */}
@@ -490,7 +490,7 @@ export default function GroupSettingsScreen() {
                   <View className={rowIconContainer}>
                     <Archive size={16} color={Colors.warning} />
                   </View>
-                  <Text className={`${rowLabelClass}`} style={{ color: Colors.warning }}>
+                  <Text className={rowLabelClass} style={{ color: Colors.warning }}>
                     Archive group
                   </Text>
                 </TouchableOpacity>
