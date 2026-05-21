@@ -95,12 +95,14 @@ Always `list_tables` before writing schema changes. Always `generate_typescript_
 | Team | kizza00232jera (personal) |
 | Project | even-steven |
 | Production URL | `even-steven.vercel.app` |
-| GitHub repo | `Kizza00232Jera/even-steven` |
+| GitHub repo | `Kizza00232Jera/even-steven-web` (web layer — separate repo) |
 | Production branch | `master` |
 
 **Vercel MCP is connected.** Use `mcp__vercel__*` tools to check deployments and logs.
 
-Pushing to `master` triggers an automatic Vercel deployment of the web layer.
+Pushing to `master` of `even-steven-web` triggers automatic Vercel deployment of the web layer.
+
+**Note:** The Vercel project must be re-linked from `Kizza00232Jera/even-steven` to `Kizza00232Jera/even-steven-web` in the Vercel dashboard — this is a one-time manual step.
 
 ---
 
