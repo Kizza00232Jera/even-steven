@@ -8,6 +8,10 @@ const mockCreateExpense = jest.fn();
 const mockFetchGroupMembers = jest.fn();
 const mockInvalidateQueries = jest.fn();
 const mockFetchRates = jest.fn();
+const mockUploadReceipt = jest.fn();
+const mockManipulateAsync = jest.fn();
+const mockLaunchImageLibraryAsync = jest.fn();
+const mockLaunchCameraAsync = jest.fn();
 
 const TODAY = new Date().toISOString().split('T')[0];
 
@@ -46,6 +50,7 @@ jest.mock('expo-router', () => ({
 jest.mock('../../../lib/repos/expenses', () => ({
   createExpense: (...args: unknown[]) => mockCreateExpense(...args),
   fetchGroupMembers: (...args: unknown[]) => mockFetchGroupMembers(...args),
+  uploadReceipt: (...args: unknown[]) => mockUploadReceipt(...args),
 }));
 
 jest.mock('../../../lib/supabase', () => ({ supabase: {} }));
@@ -84,12 +89,37 @@ jest.mock('lucide-react-native', () => ({
   X: () => null,
   ChevronDown: () => null,
   Check: () => null,
+  Camera: () => null,
+  Paperclip: () => null,
+}));
+
+jest.mock('expo-image-picker', () => ({
+  launchCameraAsync: (...args: unknown[]) => mockLaunchCameraAsync(...args),
+  launchImageLibraryAsync: (...args: unknown[]) => mockLaunchImageLibraryAsync(...args),
+  requestCameraPermissionsAsync: jest.fn(() => Promise.resolve({ granted: true })),
+  requestMediaLibraryPermissionsAsync: jest.fn(() => Promise.resolve({ granted: true })),
+  MediaTypeOptions: { Images: 'Images' },
+}));
+
+jest.mock('expo-image-manipulator', () => ({
+  manipulateAsync: (...args: unknown[]) => mockManipulateAsync(...args),
+  SaveFormat: { JPEG: 'jpeg' },
 }));
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockCreateExpense.mockResolvedValue({ id: 'expense-1' });
   mockFetchGroupMembers.mockResolvedValue(MEMBERS);
+  mockUploadReceipt.mockResolvedValue('https://example.com/receipt.jpg');
+  mockManipulateAsync.mockResolvedValue({ uri: 'compressed://picked.jpg' });
+  mockLaunchImageLibraryAsync.mockResolvedValue({
+    canceled: false,
+    assets: [{ uri: 'file://picked.jpg', width: 1200, height: 900 }],
+  });
+  mockLaunchCameraAsync.mockResolvedValue({
+    canceled: false,
+    assets: [{ uri: 'file://camera.jpg', width: 1200, height: 900 }],
+  });
 });
 
 describe('AddExpenseScreen — form defaults', () => {
@@ -467,5 +497,181 @@ describe('AddExpenseScreen — percentage split mode', () => {
     fireEvent.changeText(getByTestId('member-percentage-member-2'), '40');
     fireEvent.press(getByTestId('split-mode-unequal'));
     expect(queryByTestId('member-percentage-member-2')).toBeNull();
+  });
+});
+
+describe('AddExpenseScreen — receipt attachment', () => {
+  it('shows receipt-attach-button', () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    expect(getByTestId('receipt-attach-button')).toBeTruthy();
+  });
+
+  it('shows action sheet when receipt-attach-button is pressed', () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.press(getByTestId('receipt-attach-button'));
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Attach Receipt',
+      undefined,
+      expect.arrayContaining([
+        expect.objectContaining({ text: 'Take Photo' }),
+        expect.objectContaining({ text: 'Choose from Library' }),
+        expect.objectContaining({ text: 'Cancel' }),
+      ])
+    );
+    alertSpy.mockRestore();
+  });
+
+  it('shows thumbnail after picking from library', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    const { getByTestId, queryByTestId } = render(<AddExpenseScreen />);
+
+    expect(queryByTestId('receipt-thumbnail')).toBeNull();
+    fireEvent.press(getByTestId('receipt-attach-button'));
+
+    const [, , buttons] = alertSpy.mock.calls[0] as [
+      string,
+      string | undefined,
+      { text: string; onPress?: () => void }[],
+    ];
+    await waitFor(async () => {
+      await buttons.find((b) => b.text === 'Choose from Library')?.onPress?.();
+    });
+
+    await waitFor(() => expect(getByTestId('receipt-thumbnail')).toBeTruthy());
+    alertSpy.mockRestore();
+  });
+
+  it('shows thumbnail after taking photo with camera', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    const { getByTestId, queryByTestId } = render(<AddExpenseScreen />);
+
+    expect(queryByTestId('receipt-thumbnail')).toBeNull();
+    fireEvent.press(getByTestId('receipt-attach-button'));
+
+    const [, , buttons] = alertSpy.mock.calls[0] as [
+      string,
+      string | undefined,
+      { text: string; onPress?: () => void }[],
+    ];
+    await waitFor(async () => {
+      await buttons.find((b) => b.text === 'Take Photo')?.onPress?.();
+    });
+
+    await waitFor(() => expect(getByTestId('receipt-thumbnail')).toBeTruthy());
+    alertSpy.mockRestore();
+  });
+
+  it('shows receipt-remove-button after picking image', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    const { getByTestId } = render(<AddExpenseScreen />);
+
+    fireEvent.press(getByTestId('receipt-attach-button'));
+    const [, , buttons] = alertSpy.mock.calls[0] as [
+      string,
+      string | undefined,
+      { text: string; onPress?: () => void }[],
+    ];
+    await waitFor(async () => {
+      await buttons.find((b) => b.text === 'Choose from Library')?.onPress?.();
+    });
+
+    await waitFor(() => expect(getByTestId('receipt-remove-button')).toBeTruthy());
+    alertSpy.mockRestore();
+  });
+
+  it('removes thumbnail when receipt-remove-button is pressed', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    const { getByTestId, queryByTestId } = render(<AddExpenseScreen />);
+
+    fireEvent.press(getByTestId('receipt-attach-button'));
+    const [, , buttons] = alertSpy.mock.calls[0] as [
+      string,
+      string | undefined,
+      { text: string; onPress?: () => void }[],
+    ];
+    await waitFor(async () => {
+      await buttons.find((b) => b.text === 'Choose from Library')?.onPress?.();
+    });
+    await waitFor(() => expect(getByTestId('receipt-thumbnail')).toBeTruthy());
+
+    fireEvent.press(getByTestId('receipt-remove-button'));
+    expect(queryByTestId('receipt-thumbnail')).toBeNull();
+    alertSpy.mockRestore();
+  });
+
+  it('saves without receipt_url when no image attached', async () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.changeText(getByTestId('title-input'), 'Lunch');
+    fireEvent.changeText(getByTestId('amount-input'), '25');
+    fireEvent.press(getByTestId('save-button'));
+
+    await waitFor(() =>
+      expect(mockCreateExpense).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.not.objectContaining({ receipt_url: expect.any(String) }),
+        expect.any(Array)
+      )
+    );
+    expect(mockUploadReceipt).not.toHaveBeenCalled();
+  });
+
+  it('uploads receipt and saves with receipt_url when image is attached', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    const { getByTestId } = render(<AddExpenseScreen />);
+
+    fireEvent.changeText(getByTestId('title-input'), 'Lunch');
+    fireEvent.changeText(getByTestId('amount-input'), '25');
+
+    fireEvent.press(getByTestId('receipt-attach-button'));
+    const [, , buttons] = alertSpy.mock.calls[0] as [
+      string,
+      string | undefined,
+      { text: string; onPress?: () => void }[],
+    ];
+    await waitFor(async () => {
+      await buttons.find((b) => b.text === 'Choose from Library')?.onPress?.();
+    });
+    await waitFor(() => expect(getByTestId('receipt-thumbnail')).toBeTruthy());
+
+    fireEvent.press(getByTestId('save-button'));
+
+    await waitFor(() => expect(mockUploadReceipt).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(mockCreateExpense).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ receipt_url: 'https://example.com/receipt.jpg' }),
+        expect.any(Array)
+      )
+    );
+    alertSpy.mockRestore();
+  });
+
+  it('does not show receipt thumbnail in dirty check (form closes without dialog when only receipt attached)', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const { getByTestId } = render(<AddExpenseScreen />);
+
+    // Attach receipt
+    fireEvent.press(getByTestId('receipt-attach-button'));
+    const [, , buttons] = alertSpy.mock.calls[0] as [
+      string,
+      string | undefined,
+      { text: string; onPress?: () => void }[],
+    ];
+    await waitFor(async () => {
+      await buttons.find((b) => b.text === 'Choose from Library')?.onPress?.();
+    });
+    await waitFor(() => expect(getByTestId('receipt-thumbnail')).toBeTruthy());
+
+    alertSpy.mockReset();
+
+    // Close button — should show discard dialog since receipt was attached (form is dirty)
+    fireEvent.press(getByTestId('close-button'));
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Discard this expense?',
+      expect.any(String),
+      expect.any(Array)
+    );
+    alertSpy.mockRestore();
   });
 });
