@@ -20,6 +20,9 @@ import { supabase } from '../lib/supabase';
 import { configureGoogleSignIn } from '../lib/auth';
 import { getProfile } from '../lib/repos/profiles';
 import { useAuthStore } from '../store/auth';
+import { VersionGateScreen } from '../components/VersionGateScreen';
+import { useVersionGate } from '../hooks/useVersionGate';
+import { useOTAUpdates } from '../hooks/useOTAUpdates';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -73,11 +76,14 @@ function RootContent() {
     Inter_500Medium,
   });
 
+  const versionGate = useVersionGate();
+  useOTAUpdates();
+
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    if ((fontsLoaded || fontError) && versionGate !== 'loading') {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, fontError]);
+  }, [fontsLoaded, fontError, versionGate]);
 
   useEffect(() => {
     async function fetchAndSetProfile(userId: string) {
@@ -112,7 +118,11 @@ function RootContent() {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (!fontsLoaded && !fontError) return null;
+  if ((!fontsLoaded && !fontError) || versionGate === 'loading') return null;
+
+  if (versionGate === 'blocked') {
+    return <VersionGateScreen />;
+  }
 
   return (
     <>
