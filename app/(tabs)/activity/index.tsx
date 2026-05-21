@@ -46,21 +46,23 @@ const PAGE_SIZE = 10;
 // Event helpers
 // ---------------------------------------------------------------------------
 
-const EVENT_ICONS: Record<EventType, React.ReactElement> = {
-  expense_added: <DollarSign size={18} color={Colors.accent} strokeWidth={1.5} />,
-  expense_edited: <Pencil size={18} color={Colors.accent} strokeWidth={1.5} />,
-  expense_deleted: <Trash2 size={18} color={Colors.destructive} strokeWidth={1.5} />,
-  settlement_recorded: <ArrowLeftRight size={18} color={Colors.accent} strokeWidth={1.5} />,
-  settlement_voided: <RotateCcw size={18} color={Colors.dark.textSecondary} strokeWidth={1.5} />,
-  member_joined: <UserPlus size={18} color={Colors.accent} strokeWidth={1.5} />,
-  member_removed: <UserMinus size={18} color={Colors.destructive} strokeWidth={1.5} />,
-  member_left: <LogOut size={18} color={Colors.dark.textSecondary} strokeWidth={1.5} />,
-  group_created: <Users size={18} color={Colors.accent} strokeWidth={1.5} />,
-  group_archived: <Archive size={18} color={Colors.dark.textSecondary} strokeWidth={1.5} />,
-  group_unarchived: <Archive size={18} color={Colors.accent} strokeWidth={1.5} />,
-  invite_link_reset: <Link size={18} color={Colors.dark.textSecondary} strokeWidth={1.5} />,
-  trip_expired: <Clock size={18} color={Colors.destructive} strokeWidth={1.5} />,
-};
+function getEventIcons(secondary: string): Record<EventType, React.ReactElement> {
+  return {
+    expense_added: <DollarSign size={18} color={Colors.accent} strokeWidth={1.5} />,
+    expense_edited: <Pencil size={18} color={Colors.accent} strokeWidth={1.5} />,
+    expense_deleted: <Trash2 size={18} color={Colors.destructive} strokeWidth={1.5} />,
+    settlement_recorded: <ArrowLeftRight size={18} color={Colors.accent} strokeWidth={1.5} />,
+    settlement_voided: <RotateCcw size={18} color={secondary} strokeWidth={1.5} />,
+    member_joined: <UserPlus size={18} color={Colors.accent} strokeWidth={1.5} />,
+    member_removed: <UserMinus size={18} color={Colors.destructive} strokeWidth={1.5} />,
+    member_left: <LogOut size={18} color={secondary} strokeWidth={1.5} />,
+    group_created: <Users size={18} color={Colors.accent} strokeWidth={1.5} />,
+    group_archived: <Archive size={18} color={secondary} strokeWidth={1.5} />,
+    group_unarchived: <Archive size={18} color={Colors.accent} strokeWidth={1.5} />,
+    invite_link_reset: <Link size={18} color={secondary} strokeWidth={1.5} />,
+    trip_expired: <Clock size={18} color={Colors.destructive} strokeWidth={1.5} />,
+  };
+}
 
 const EVENT_DESCRIPTIONS: Record<EventType, (actor: string) => string> = {
   expense_added: (a) => `${a} added an expense`,
@@ -116,11 +118,11 @@ function ActivityRow({ event }: ActivityRowProps) {
   const { colorScheme } = useColorScheme();
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
 
-  const icon = EVENT_ICONS[event.eventType];
+  const icon = getEventIcons(theme.textSecondary)[event.eventType];
   const description = EVENT_DESCRIPTIONS[event.eventType]?.(event.actorName) ?? event.actorName;
   const amount =
-    typeof event.metadata?.amount === 'number' && event.metadata?.currency
-      ? ` · ${(event.metadata.currency as string)} ${(event.metadata.amount as number).toFixed(2)}`
+    typeof event.metadata.amount === 'number' && event.metadata.currency
+      ? ` · ${event.metadata.currency as string} ${event.metadata.amount.toFixed(2)}`
       : '';
 
   return (
@@ -170,6 +172,7 @@ function FilterSheet({ visible, groups, selectedGroupId, onSelect, onClose }: Fi
         <View
           className="absolute bottom-0 left-0 right-0 rounded-t-2xl p-4 pb-8"
           style={{ backgroundColor: theme.surface }}
+          onStartShouldSetResponder={() => true}
         >
           <View className="flex-row items-center justify-between mb-4">
             <Text className="font-display text-text-primary font-semibold text-base">
