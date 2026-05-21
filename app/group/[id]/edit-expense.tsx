@@ -10,20 +10,23 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/auth';
 import { logActivityEvent } from '../../../lib/repos/activity';
-import { X, ChevronDown, Check, Trash2, AlertCircle } from 'lucide-react-native';
+import { X, ChevronDown, Check, Trash2, AlertCircle, Paperclip } from 'lucide-react-native';
 import { useNetworkStatus } from '../../../hooks/useNetworkStatus';
 import { useOfflineGuard } from '../../../hooks/useOfflineGuard';
 import { useToast } from '../../../hooks/useToast';
+import { useReceiptPicker } from '../../../hooks/useReceiptPicker';
 import {
   fetchGroupExpenses,
   hasGroupSettlements,
   updateExpenseMetadata,
+  uploadReceipt,
   deleteExpense,
   type ExpenseListItem,
 } from '../../../lib/repos/expenses';
@@ -90,6 +93,8 @@ export default function EditExpenseScreen() {
   const [description, setDescription] = useState('');
   const [amountText, setAmountText] = useState('');
   const [category, setCategory] = useState<Category>('Other');
+  const [receiptChanged, setReceiptChanged] = useState(false);
+  const { receiptUri, setReceiptUri, handleAttachReceipt } = useReceiptPicker(() => setReceiptChanged(true));
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -111,6 +116,7 @@ export default function EditExpenseScreen() {
           setDescription(found.description ?? '');
           setAmountText(String(found.amount));
           setCategory(found.category as Category);
+          setReceiptUri(found.receipt_url ?? null);
         }
         setGroupHasSettlements(settled);
       } finally {
@@ -136,6 +142,7 @@ export default function EditExpenseScreen() {
             setDescription(found.description ?? '');
             setAmountText(String(found.amount));
             setCategory(found.category as Category);
+            setReceiptUri(found.receipt_url ?? null);
             queryClient.invalidateQueries({ queryKey: ['expenses', groupId] });
             toastRef.current.info('This expense was just edited.');
           }
@@ -153,6 +160,11 @@ export default function EditExpenseScreen() {
     setCategoryModalVisible(false);
   }
 
+  function handleRemoveReceipt() {
+    setReceiptUri(null);
+    setReceiptChanged(true);
+  }
+
   const canSave =
     title.trim().length > 0 && !writesDisabled && !isSaving && expense !== null;
 
@@ -161,10 +173,23 @@ export default function EditExpenseScreen() {
     isSavingRef.current = true;
     setIsSaving(true);
     try {
+      let updatedReceiptUrl: string | null | undefined;
+      if (receiptChanged) {
+        if (receiptUri) {
+          updatedReceiptUrl = await uploadReceipt(
+            supabase,
+            `${expense.id}.jpg`,
+            receiptUri
+          );
+        } else {
+          updatedReceiptUrl = null;
+        }
+      }
       await updateExpenseMetadata(supabase, expense.id, {
         title: title.trim(),
         description: description.trim() || null,
         category,
+        ...(receiptChanged ? { receipt_url: updatedReceiptUrl } : {}),
       });
       logActivityEvent(supabase, {
         groupId,
@@ -303,6 +328,39 @@ export default function EditExpenseScreen() {
               numberOfLines={3}
               className="bg-surface-2 rounded-xl px-4 py-3 text-text-primary font-body text-base"
             />
+          </View>
+
+          {/* Receipt */}
+          <View>
+            <Text className="font-body text-text-secondary text-xs mb-1 uppercase tracking-wider">
+              Receipt (optional)
+            </Text>
+            {receiptUri ? (
+              <View className="relative">
+                <Image
+                  testID="receipt-thumbnail"
+                  source={{ uri: receiptUri }}
+                  className="w-full h-40 rounded-xl"
+                  resizeMode="cover"
+                />
+                <TouchableOpacity
+                  testID="receipt-remove-button"
+                  onPress={handleRemoveReceipt}
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 items-center justify-center"
+                >
+                  <X size={16} color="#ffffff" strokeWidth={2.5} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                testID="receipt-attach-button"
+                onPress={handleAttachReceipt}
+                className="bg-surface-2 rounded-xl px-4 py-3 flex-row items-center gap-3"
+              >
+                <Paperclip size={18} color={Colors.dark.textSecondary} strokeWidth={1.5} />
+                <Text className="font-body text-text-secondary text-base">Attach receipt</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Category */}

@@ -11,16 +11,18 @@ import {
   KeyboardAvoidingView,
   Platform,
   Switch,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { X, ChevronDown, Check } from 'lucide-react-native';
+import { X, ChevronDown, Check, Paperclip } from 'lucide-react-native';
 import { useAuthStore } from '../../../store/auth';
 import { useRatesStore } from '../../../store/rates';
 import { useNetworkStatus } from '../../../hooks/useNetworkStatus';
 import { useOfflineGuard } from '../../../hooks/useOfflineGuard';
-import { createExpense, fetchGroupMembers } from '../../../lib/repos/expenses';
+import { useReceiptPicker } from '../../../hooks/useReceiptPicker';
+import { createExpense, fetchGroupMembers, uploadReceipt } from '../../../lib/repos/expenses';
 import { logActivityEvent } from '../../../lib/repos/activity';
 import { detectCategory, type Category } from '../../../lib/categories';
 import { calculateEqualSplit, calculateUnequalSplit, calculatePercentageSplit } from '../../../lib/splits';
@@ -155,6 +157,7 @@ export default function AddExpenseScreen() {
   const [splitMode, setSplitMode] = useState<'equal' | 'unequal' | 'percentage'>('equal');
   const [memberAmounts, setMemberAmounts] = useState<Record<string, string>>({});
   const [memberPercentages, setMemberPercentages] = useState<Record<string, string>>({});
+  const { receiptUri, setReceiptUri, handleAttachReceipt } = useReceiptPicker();
 
   // ── Modal state ─────────────────────────────────────────────────────────────
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
@@ -273,7 +276,7 @@ export default function AddExpenseScreen() {
   }, [payerId, splitMode, memberPercentages, participantIds]);
 
   // ── Dirty check ────────────────────────────────────────────────────────────
-  const isDirty = title.trim().length > 0 || description.trim().length > 0 || amountText.length > 0;
+  const isDirty = title.trim().length > 0 || description.trim().length > 0 || amountText.length > 0 || receiptUri !== null;
 
   function handleClose() {
     if (!isDirty) {
@@ -331,6 +334,11 @@ export default function AddExpenseScreen() {
 
     setIsSaving(true);
     try {
+      let receipt_url: string | null = null;
+      if (receiptUri) {
+        const path = `${session?.user.id ?? 'unknown'}-${Date.now()}.jpg`;
+        receipt_url = await uploadReceipt(supabase, path, receiptUri);
+      }
       await createExpense(
         supabase,
         {
@@ -343,6 +351,7 @@ export default function AddExpenseScreen() {
           payer_id: payerId!,
           split_method: splitMode,
           expense_date: date,
+          receipt_url,
         },
         splits
       );
@@ -532,6 +541,39 @@ export default function AddExpenseScreen() {
               </Text>
               <ChevronDown size={14} color={Colors.dark.textSecondary} strokeWidth={2} />
             </TouchableOpacity>
+          </View>
+
+          {/* Receipt */}
+          <View>
+            <Text className="font-body text-text-secondary text-xs mb-1 uppercase tracking-wider">
+              Receipt (optional)
+            </Text>
+            {receiptUri ? (
+              <View className="relative">
+                <Image
+                  testID="receipt-thumbnail"
+                  source={{ uri: receiptUri }}
+                  className="w-full h-40 rounded-xl"
+                  resizeMode="cover"
+                />
+                <TouchableOpacity
+                  testID="receipt-remove-button"
+                  onPress={() => setReceiptUri(null)}
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 items-center justify-center"
+                >
+                  <X size={16} color="#ffffff" strokeWidth={2.5} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                testID="receipt-attach-button"
+                onPress={handleAttachReceipt}
+                className="bg-surface-2 rounded-xl px-4 py-3 flex-row items-center gap-3"
+              >
+                <Paperclip size={18} color={Colors.dark.textSecondary} strokeWidth={1.5} />
+                <Text className="font-body text-text-secondary text-base">Attach receipt</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Split method selector */}

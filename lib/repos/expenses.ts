@@ -16,6 +16,7 @@ export interface CreateExpenseParams {
   payer_id: string;
   split_method: 'equal' | 'unequal' | 'percentage';
   expense_date: string;
+  receipt_url?: string | null;
 }
 
 export async function createExpense(
@@ -74,6 +75,7 @@ export interface ExpenseListItem {
   expense_date: string;
   is_edited: boolean;
   participant_member_ids: string[];
+  receipt_url: string | null;
 }
 
 type ParticipantRow = { member_id: string };
@@ -87,7 +89,7 @@ export async function fetchGroupExpenses(
     .from('expenses')
     .select(
       `id, title, description, amount, currency, category, payer_id,
-       split_method, expense_date, is_edited,
+       split_method, expense_date, is_edited, receipt_url,
        payer:payer_id(display_name, email, user_id),
        expense_participants(member_id)`
     )
@@ -114,6 +116,7 @@ export async function fetchGroupExpenses(
       expense_date: row.expense_date,
       is_edited: row.is_edited,
       participant_member_ids: participants.map((p) => p.member_id),
+      receipt_url: row.receipt_url,
     };
   });
 }
@@ -136,6 +139,7 @@ export interface UpdateExpenseMetadataParams {
   title: string;
   description: string | null;
   category: string;
+  receipt_url?: string | null;
 }
 
 export async function updateExpenseMetadata(
@@ -143,12 +147,38 @@ export async function updateExpenseMetadata(
   expenseId: string,
   params: UpdateExpenseMetadataParams
 ): Promise<void> {
+  type ExpenseUpdate = Database['public']['Tables']['expenses']['Update'];
+  const update: ExpenseUpdate = {
+    title: params.title,
+    description: params.description,
+    category: params.category,
+    is_edited: true,
+    ...(params.receipt_url !== undefined ? { receipt_url: params.receipt_url } : {}),
+  };
   const { error } = await client
     .from('expenses')
-    .update({ ...params, is_edited: true })
+    .update(update)
     .eq('id', expenseId);
 
   if (error) throw error;
+}
+
+export async function uploadReceipt(
+  client: SupabaseClient<Database>,
+  path: string,
+  imageUri: string
+): Promise<string> {
+  const response = await fetch(imageUri);
+  const blob = await response.blob();
+
+  const { error: uploadError } = await client.storage
+    .from('receipts')
+    .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+
+  if (uploadError) throw uploadError;
+
+  const { data } = client.storage.from('receipts').getPublicUrl(path);
+  return data.publicUrl;
 }
 
 export async function deleteExpense(
