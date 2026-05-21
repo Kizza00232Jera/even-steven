@@ -197,66 +197,18 @@ CREATE POLICY "expense_participants_select"
 CREATE POLICY "expense_participants_insert"
   ON expense_participants FOR INSERT
   TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1
-      FROM expenses e
-      JOIN group_members gm ON gm.id = e.payer_id
-      WHERE e.id        = expense_id
-        AND gm.user_id  = auth.uid()
-    )
-    OR
-    EXISTS (
-      SELECT 1
-      FROM expenses e
-      JOIN groups g ON g.id = e.group_id
-      WHERE e.id      = expense_id
-        AND g.admin_id = auth.uid()
-    )
-  );
+  WITH CHECK (is_expense_payer_or_group_admin(expense_id));
 
 -- Payer or admin can update split distributions.
 CREATE POLICY "expense_participants_update"
   ON expense_participants FOR UPDATE
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1
-      FROM expenses e
-      JOIN group_members gm ON gm.id = e.payer_id
-      WHERE e.id        = expense_id
-        AND gm.user_id  = auth.uid()
-    )
-    OR
-    EXISTS (
-      SELECT 1
-      FROM expenses e
-      JOIN groups g ON g.id = e.group_id
-      WHERE e.id      = expense_id
-        AND g.admin_id = auth.uid()
-    )
-  );
+  USING (is_expense_payer_or_group_admin(expense_id));
 
 CREATE POLICY "expense_participants_delete"
   ON expense_participants FOR DELETE
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1
-      FROM expenses e
-      JOIN group_members gm ON gm.id = e.payer_id
-      WHERE e.id        = expense_id
-        AND gm.user_id  = auth.uid()
-    )
-    OR
-    EXISTS (
-      SELECT 1
-      FROM expenses e
-      JOIN groups g ON g.id = e.group_id
-      WHERE e.id      = expense_id
-        AND g.admin_id = auth.uid()
-    )
-  );
+  USING (is_expense_payer_or_group_admin(expense_id));
 
 -- ---------------------------------------------------------------------------
 -- settlements
@@ -315,18 +267,11 @@ CREATE POLICY "settlements_delete"
 -- invite_tokens
 -- ---------------------------------------------------------------------------
 -- Active members can read tokens for their groups (to share or reset).
--- Anyone can read a specific token by value (invite acceptance flow;
--- checked via token equality, no group membership required yet).
+-- Invite acceptance validation is done server-side via service role in Edge Functions.
 CREATE POLICY "invite_tokens_select"
   ON invite_tokens FOR SELECT
   TO authenticated
-  USING (
-    is_group_member(group_id)
-    OR
-    -- Allow reading by token value so unauthenticated invite page can check
-    -- validity (must be done server-side via service role in Edge Function).
-    FALSE
-  );
+  USING (is_group_member(group_id));
 
 -- Any group member can insert a new token (e.g. after a reset).
 CREATE POLICY "invite_tokens_insert"

@@ -618,6 +618,10 @@ export type Database = {
         Args: { p_expense_id: string }
         Returns: boolean
       }
+      is_expense_payer_or_group_admin: {
+        Args: { p_expense_id: string }
+        Returns: boolean
+      }
       current_member_id: {
         Args: { p_group_id: string }
         Returns: string | null

@@ -65,6 +65,30 @@ AS $$
   );
 $$;
 
+-- Returns true if the current user is the payer of an expense or the group admin.
+CREATE OR REPLACE FUNCTION is_expense_payer_or_group_admin(p_expense_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM expenses e
+    JOIN group_members gm ON gm.id = e.payer_id
+    WHERE e.id       = p_expense_id
+      AND gm.user_id = auth.uid()
+  )
+  OR EXISTS (
+    SELECT 1
+    FROM expenses e
+    JOIN groups g ON g.id = e.group_id
+    WHERE e.id       = p_expense_id
+      AND g.admin_id = auth.uid()
+  );
+$$;
+
 -- ---------------------------------------------------------------------------
 -- 1. profiles
 -- ---------------------------------------------------------------------------
@@ -406,7 +430,6 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- Link any invited (placeholder) group_members rows to this new profile
   UPDATE public.group_members
   SET user_id = NEW.id,
       status  = 'active'
@@ -414,7 +437,6 @@ BEGIN
     AND user_id IS NULL
     AND status  = 'invited';
 
-  -- Activate pending friendships
   UPDATE public.friendships
   SET friend_id = NEW.id,
       status    = 'active'
