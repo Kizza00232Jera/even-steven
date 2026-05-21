@@ -20,6 +20,7 @@ import Constants from 'expo-constants';
 import { useAuthStore } from '../../../store/auth';
 import { signOut } from '../../../lib/auth';
 import { updateProfile, uploadProfilePhoto } from '../../../lib/repos/profiles';
+import { getGroupsWithOutstandingBalances, anonymiseAccount } from '../../../lib/repos/account';
 import { supabase } from '../../../lib/supabase';
 import { resolveAvatarUrl } from '../../../lib/displayName';
 import { hapticOnToggle } from '../../../lib/haptics';
@@ -27,6 +28,8 @@ import { Colors } from '../../../constants/colors';
 import type { Database } from '../../../lib/database.types';
 
 type Currency = Database['public']['Tables']['profiles']['Row']['preferred_currency'];
+
+type DeleteStep = 'closed' | 'balance-warning' | 'confirm-anonymise' | 'confirm-delete';
 
 const CURRENCIES: { code: Currency; label: string; symbol: string }[] = [
   { code: 'USD', label: 'US Dollar', symbol: '$' },
@@ -52,8 +55,11 @@ export default function AccountScreen() {
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [isSavingCurrency, setIsSavingCurrency] = useState(false);
 
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteStep, setDeleteStep] = useState<DeleteStep>('closed');
+  const [groupsWithBalances, setGroupsWithBalances] = useState<Array<{ id: string; name: string }>>([]);
+  const [isCheckingBalances, setIsCheckingBalances] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const gmailName = (session?.user?.user_metadata?.full_name as string | undefined) ?? '';
   const displayName = profile?.display_name || gmailName;
@@ -160,18 +166,164 @@ export default function AccountScreen() {
     }
   }
 
-  async function handleDeleteAccount() {
-    setIsDeletingAccount(true);
+  async function openDeleteFlow() {
+    setIsCheckingBalances(true);
     try {
-      await updateProfile(supabase, session!.user.id, {
-        display_name: null,
-        avatar_url: null,
-      });
-      await signOut(queryClient);
+      const groups = await getGroupsWithOutstandingBalances(supabase, session!.user.id);
+      setGroupsWithBalances(groups);
+      setDeleteStep(groups.length > 0 ? 'balance-warning' : 'confirm-anonymise');
     } catch {
-      Alert.alert('Error', 'Could not delete account. Please try again.');
+      Alert.alert('Error', 'Could not check your balances. Please try again.');
+    } finally {
+      setIsCheckingBalances(false);
+    }
+  }
+
+  async function handleAnonymise() {
+    setIsDeletingAccount(true);
+    setDeleteError(null);
+    try {
+      await anonymiseAccount(supabase, session!.user.id);
+      setDeleteStep('confirm-delete');
+    } catch {
+      setDeleteError('Could not anonymise account. Please try again.');
+    } finally {
       setIsDeletingAccount(false);
     }
+  }
+
+  async function handleFullDelete() {
+    setIsDeletingAccount(true);
+    setDeleteError(null);
+    try {
+      const { error } = await supabase.functions.invoke('delete-account');
+      if (error) throw error;
+      await signOut(queryClient);
+    } catch {
+      setDeleteError('Could not delete account. Please try again.');
+      setIsDeletingAccount(false);
+    }
+  }
+
+  function closeDeleteFlow() {
+    if (isDeletingAccount) return;
+    setDeleteStep('closed');
+    setDeleteError(null);
+    setGroupsWithBalances([]);
+  }
+
+  function renderDeleteModalContent() {
+    if (deleteStep === 'balance-warning') {
+      return (
+        <>
+          <Text className="font-display text-xl font-bold text-text-primary mb-3">
+            Outstanding balances
+          </Text>
+          <Text className="font-body text-base text-text-secondary mb-4">
+            You have unsettled balances in the following groups. Other members will still see your
+            expense history after your data is anonymised.
+          </Text>
+          <View className="mb-6">
+            {groupsWithBalances.map((g) => (
+              <Text
+                key={g.id}
+                className="font-body text-base text-text-primary py-2 border-b border-border"
+              >
+                {g.name}
+              </Text>
+            ))}
+          </View>
+          <TouchableOpacity
+            onPress={() => setDeleteStep('confirm-anonymise')}
+            className="rounded-full py-4 items-center bg-destructive mb-3"
+          >
+            <Text className="font-body font-medium text-base text-white">Continue</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={closeDeleteFlow}
+            className="rounded-full py-4 items-center border border-border"
+          >
+            <Text className="font-body font-medium text-base text-text-primary">Cancel</Text>
+          </TouchableOpacity>
+        </>
+      );
+    }
+
+    if (deleteStep === 'confirm-anonymise') {
+      return (
+        <>
+          <Text className="font-display text-xl font-bold text-text-primary mb-3">
+            Anonymise your data?
+          </Text>
+          <Text className="font-body text-base text-text-secondary mb-6">
+            Your name will become &ldquo;Deleted User&rdquo;, your profile photo and email will be
+            permanently removed. Expense records remain visible to other group members.
+          </Text>
+          {deleteError && (
+            <Text className="font-body text-sm text-destructive mb-4">{deleteError}</Text>
+          )}
+          <TouchableOpacity
+            onPress={handleAnonymise}
+            disabled={isDeletingAccount}
+            accessibilityLabel="Confirm anonymise account"
+            className="rounded-full py-4 items-center bg-destructive mb-3"
+          >
+            {isDeletingAccount ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text className="font-body font-medium text-base text-white">Anonymise my data</Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={closeDeleteFlow}
+            disabled={isDeletingAccount}
+            className="rounded-full py-4 items-center border border-border"
+          >
+            <Text className="font-body font-medium text-base text-text-primary">Cancel</Text>
+          </TouchableOpacity>
+        </>
+      );
+    }
+
+    if (deleteStep === 'confirm-delete') {
+      return (
+        <>
+          <Text className="font-display text-xl font-bold text-text-primary mb-3">
+            Permanently delete account?
+          </Text>
+          <Text className="font-body text-base text-text-secondary mb-6">
+            Your account and all personal data will be permanently deleted. You will not be able to
+            sign in again. This cannot be undone.
+          </Text>
+          {deleteError && (
+            <Text className="font-body text-sm text-destructive mb-4">{deleteError}</Text>
+          )}
+          <TouchableOpacity
+            onPress={handleFullDelete}
+            disabled={isDeletingAccount}
+            accessibilityLabel="Confirm full account deletion"
+            className="rounded-full py-4 items-center bg-destructive mb-3"
+          >
+            {isDeletingAccount ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text className="font-body font-medium text-base text-white">
+                Yes, permanently delete
+              </Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={closeDeleteFlow}
+            disabled={isDeletingAccount}
+            className="rounded-full py-4 items-center border border-border"
+          >
+            <Text className="font-body font-medium text-base text-text-primary">Cancel</Text>
+          </TouchableOpacity>
+        </>
+      );
+    }
+
+    return null;
   }
 
   return (
@@ -261,11 +413,16 @@ export default function AccountScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => setShowDeleteModal(true)}
+            onPress={openDeleteFlow}
+            disabled={isCheckingBalances}
             className="py-3 items-center mb-6"
             accessibilityLabel="Delete account"
           >
-            <Text className="font-body text-sm text-text-tertiary">Delete account</Text>
+            {isCheckingBalances ? (
+              <ActivityIndicator size="small" color={Colors.destructive} />
+            ) : (
+              <Text className="font-body text-sm text-text-tertiary">Delete account</Text>
+            )}
           </TouchableOpacity>
 
           <Text className="font-body text-xs text-text-tertiary text-center">
@@ -385,44 +542,21 @@ export default function AccountScreen() {
       </Modal>
 
       <Modal
-        visible={showDeleteModal}
+        visible={deleteStep !== 'closed'}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowDeleteModal(false)}
+        onRequestClose={closeDeleteFlow}
       >
         <TouchableOpacity
           className="flex-1 bg-black/70 justify-end"
           activeOpacity={1}
-          onPress={() => setShowDeleteModal(false)}
+          onPress={closeDeleteFlow}
         >
           <TouchableOpacity
             activeOpacity={1}
             className="bg-surface rounded-t-3xl px-6 pt-6 pb-10"
           >
-            <Text className="font-display text-xl font-bold text-text-primary mb-3">
-              Delete account?
-            </Text>
-            <Text className="font-body text-base text-text-secondary mb-6">
-              Your personal data will be anonymised. Expense records remain visible to other group members. This cannot be undone.
-            </Text>
-            <TouchableOpacity
-              onPress={handleDeleteAccount}
-              disabled={isDeletingAccount}
-              className="rounded-full py-4 items-center bg-destructive mb-3"
-              accessibilityLabel="Confirm delete account"
-            >
-              {isDeletingAccount ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <Text className="font-body font-medium text-base text-white">Yes, delete my account</Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setShowDeleteModal(false)}
-              className="rounded-full py-4 items-center border border-border"
-            >
-              <Text className="font-body font-medium text-base text-text-primary">Cancel</Text>
-            </TouchableOpacity>
+            {renderDeleteModalContent()}
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
