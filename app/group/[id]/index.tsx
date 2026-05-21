@@ -6,22 +6,27 @@ import {
   TouchableOpacity,
   Pressable,
   Alert,
+  Share,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useColorScheme } from 'nativewind';
-import { Settings, ChevronLeft, LogOut, Users, BellOff, Bell, X, ChevronRight, Plus } from 'lucide-react-native';
+import { Settings, ChevronLeft, LogOut, Users, BellOff, Bell, X, ChevronRight, Plus, Share2 } from 'lucide-react-native';
 import { SkeletonExpenseCard } from '../../../components/SkeletonExpenseCard';
 import { SkeletonBalanceRow } from '../../../components/SkeletonBalanceRow';
 import { ErrorState } from '../../../components/ErrorState';
 import { RemovedMemberState } from '../../../components/RemovedMemberState';
 import { Colors } from '../../../constants/colors';
 import { fetchGroupDetail, leaveGroup } from '../../../lib/repos/groups';
+import { getOrCreateInviteToken } from '../../../lib/repos/invites';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/auth';
 import { useToast } from '../../../hooks/useToast';
 import type { GroupDetail } from '../../../lib/repos/groups';
+
+const INVITE_BASE = 'even-steven.vercel.app/invite';
 
 function useGroupDetail(id: string, userId: string) {
   return useQuery({
@@ -146,6 +151,7 @@ export default function GroupDetailScreen() {
 
   const { data: group, isLoading, isError, refetch } = useGroupDetail(id, userId);
   const [showSettings, setShowSettings] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   const leaveMutation = useMutation({
     mutationFn: ({ memberId, isAdmin }: { memberId: string; isAdmin: boolean }) =>
@@ -158,6 +164,23 @@ export default function GroupDetailScreen() {
       Alert.alert('Error', 'Could not leave the group. Please try again.');
     },
   });
+
+  async function handleShareInviteLink() {
+    if (!session || !id || !group?.memberId) return;
+    setIsSharing(true);
+    try {
+      const token = await getOrCreateInviteToken(supabase, id, group.memberId);
+      const url = `https://${INVITE_BASE}/${token}`;
+      await Share.share({
+        message: `Join my group on Even Steven: ${url}`,
+        url,
+      });
+    } catch {
+      // Share cancelled or error — no action needed
+    } finally {
+      setIsSharing(false);
+    }
+  }
 
   function handleLeave() {
     if (!group) return;
@@ -260,6 +283,19 @@ export default function GroupDetailScreen() {
         <Text className="font-display text-text-primary font-semibold text-lg flex-1" numberOfLines={1}>
           {group.name}
         </Text>
+        <TouchableOpacity
+          testID="share-invite-button"
+          onPress={handleShareInviteLink}
+          disabled={isSharing}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          className="mr-3"
+        >
+          {isSharing ? (
+            <ActivityIndicator size="small" color={Colors.accent} />
+          ) : (
+            <Share2 size={20} color={Colors.dark.textSecondary} strokeWidth={1.5} />
+          )}
+        </TouchableOpacity>
         <TouchableOpacity
           testID="settings-button"
           onPress={() => setShowSettings(true)}

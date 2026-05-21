@@ -43,24 +43,18 @@ function NavigationGuard() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuth = segments[0] === '(auth)';
+    const inAuth   = segments[0] === '(auth)';
+    const inInvite = segments[0] === 'invite';
 
     if (!session) {
-      if (!inAuth) router.replace('/(auth)');
+      // Invite screen is accessible without authentication so non-members can
+      // view group details before deciding to sign up and accept.
+      if (!inAuth && !inInvite) router.replace('/(auth)');
       return;
     }
 
-    // New user — signed in but no profile record yet
-    if (profile === null) {
-      const inOnboarding =
-        segments[0] === '(auth)' && (segments as string[])[1] === 'onboarding';
-      if (!inOnboarding) {
-        router.replace('/(auth)/onboarding/display-name');
-      }
-      return;
-    }
-
-    if (!profile.onboarding_done) {
+    // New user (no profile yet) or onboarding not complete
+    if (profile === null || !profile.onboarding_done) {
       const inOnboarding =
         segments[0] === '(auth)' && (segments as string[])[1] === 'onboarding';
       if (!inOnboarding) {

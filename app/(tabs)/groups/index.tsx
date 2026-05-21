@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import {
   MoreHorizontal,
   Filter,
   X,
+  Link,
 } from 'lucide-react-native';
 import { SkeletonGroupCard } from '../../../components/SkeletonGroupCard';
 import { ErrorState } from '../../../components/ErrorState';
@@ -32,6 +33,7 @@ import {
   muteGroup,
   unmuteGroup,
 } from '../../../lib/repos/groups';
+import { updateProfile } from '../../../lib/repos/profiles';
 import { filterGroups } from '../../../lib/groupFilters';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/auth';
@@ -211,6 +213,37 @@ function GroupContextMenu({ visible, group, onClose, onPin, onMute }: ContextMen
           </TouchableOpacity>
         </View>
       </Pressable>
+    </Modal>
+  );
+}
+
+function BalanceNudgeModal({
+  visible,
+  onDismiss,
+}: {
+  visible: boolean;
+  onDismiss: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View className="flex-1 bg-black/60 items-center justify-end pb-8 px-4">
+        <View className="bg-surface rounded-2xl border border-border p-6 w-full">
+          <Text className="font-display text-text-primary text-lg font-bold mb-2">
+            Welcome back!
+          </Text>
+          <Text className="font-body text-text-secondary text-sm mb-6 leading-5">
+            While you were away, you were added to some expenses. Open a group to view your balance.
+          </Text>
+          <TouchableOpacity
+            onPress={onDismiss}
+            className="bg-accent rounded-full py-4 items-center"
+          >
+            <Text className="font-display text-white font-semibold text-base">
+              View balances
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -402,7 +435,7 @@ function useGroups(userId: string) {
 
 export default function GroupsScreen() {
   const router = useRouter();
-  const { session } = useAuthStore();
+  const { session, profile, setProfile } = useAuthStore();
   const queryClient = useQueryClient();
   const userId = session?.user.id ?? '';
 
@@ -450,6 +483,27 @@ export default function GroupsScreen() {
     (filters.balance ? 1 : 0) +
     (filters.tripTiming ? 1 : 0);
 
+  const [showNudge, setShowNudge] = useState(false);
+
+  useEffect(() => {
+    if (profile?.show_balance_nudge) {
+      setShowNudge(true);
+    }
+  }, [profile?.show_balance_nudge]);
+
+  async function handleDismissNudge() {
+    setShowNudge(false);
+    if (!session) return;
+    try {
+      const updated = await updateProfile(supabase, session.user.id, {
+        show_balance_nudge: false,
+      });
+      setProfile(updated);
+    } catch {
+      // Non-critical — nudge will reappear next open but that's acceptable
+    }
+  }
+
   function renderContent() {
     if (isLoading) {
       return (
@@ -472,9 +526,18 @@ export default function GroupsScreen() {
             {hasActiveFilters(filters) ? 'No groups match your filters.' : 'No groups yet.'}
           </Text>
           {!hasActiveFilters(filters) && (
-            <Text className="font-body text-text-tertiary text-xs text-center">
-              Tap + to create your first group.
-            </Text>
+            <>
+              <Text className="font-body text-text-tertiary text-xs text-center mb-6">
+                Tap + to create your first group.
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.push('/invite' as never)}
+                className="flex-row items-center gap-2 px-5 py-3 rounded-full border border-border"
+              >
+                <Link size={16} color={Colors.accent} />
+                <Text className="font-body text-text-secondary text-sm">Join with a link</Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
       );
@@ -608,6 +671,8 @@ export default function GroupsScreen() {
         visible={popupGroup !== null}
         onDismiss={dismissPopup}
       />
+
+      <BalanceNudgeModal visible={showNudge} onDismiss={handleDismissNudge} />
     </SafeAreaView>
   );
 }

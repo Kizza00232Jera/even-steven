@@ -493,4 +493,20 @@ export async function markGroupArchived(
   if (error) throw error;
 }
 
+export async function getGroupMemberId(
+  client: SupabaseClient<Database>,
+  groupId: string,
+  userId: string,
+): Promise<string | null> {
+  const { data, error } = await client
+    .from('group_members')
+    .select('id')
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .single();
+  if (error) return null;
+  return data?.id ?? null;
+}
+
 export type { GroupMember };
