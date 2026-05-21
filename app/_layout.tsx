@@ -16,6 +16,8 @@ import {
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ToastProvider } from '../components/ToastProvider';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -42,9 +44,13 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Stack screenOptions={{ headerShown: false }} />
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-    </QueryClientProvider>
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <Stack screenOptions={{ headerShown: false }} />
+          <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+        </ToastProvider>
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }
