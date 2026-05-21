@@ -11,7 +11,7 @@ export const Colors = {
     surface2: '#242424',
     textPrimary: '#ffffff',
     textSecondary: 'rgba(255,255,255,0.55)',
-    textTertiary: 'rgba(255,255,255,0.30)',
+    textTertiary: 'rgba(255,255,255,0.3)',
     border: 'rgba(255,255,255,0.08)',
   },
 
