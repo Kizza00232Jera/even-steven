@@ -194,17 +194,7 @@ describe('resetInviteToken', () => {
 
 describe('acceptInvite', () => {
   it('inserts an active group_members row and returns the group_id', async () => {
-    const newMember = {
-      id: 'gm-new',
-      group_id: 'group-1',
-      user_id: 'user-1',
-      email: 'alice@example.com',
-      status: 'active',
-    };
-
-    const single = jest.fn().mockResolvedValue({ data: newMember, error: null });
-    const select = jest.fn().mockReturnValue({ single });
-    const insert = jest.fn().mockReturnValue({ select });
+    const insert = jest.fn().mockResolvedValue({ data: null, error: null });
     const from   = jest.fn().mockReturnValue({ insert });
 
     const client = { from } as unknown as Parameters<typeof acceptInvite>[0];
@@ -224,12 +214,7 @@ describe('acceptInvite', () => {
 
   it('handles duplicate (upsert) without throwing when user is already a member', async () => {
     // 23505 = unique_violation in Postgres — treated as "already a member"
-    const single = jest.fn().mockResolvedValue({
-      data: null,
-      error: { code: '23505', message: 'duplicate key' },
-    });
-    const select = jest.fn().mockReturnValue({ single });
-    const insert = jest.fn().mockReturnValue({ select });
+    const insert = jest.fn().mockResolvedValue({ data: null, error: { code: '23505', message: 'duplicate key' } });
     const from   = jest.fn().mockReturnValue({ insert });
 
     const client = { from } as unknown as Parameters<typeof acceptInvite>[0];
@@ -238,12 +223,7 @@ describe('acceptInvite', () => {
   });
 
   it('throws on unexpected insert errors', async () => {
-    const single = jest.fn().mockResolvedValue({
-      data: null,
-      error: { code: '42501', message: 'permission denied' },
-    });
-    const select = jest.fn().mockReturnValue({ single });
-    const insert = jest.fn().mockReturnValue({ select });
+    const insert = jest.fn().mockResolvedValue({ data: null, error: { code: '42501', message: 'permission denied' } });
     const from   = jest.fn().mockReturnValue({ insert });
 
     const client = { from } as unknown as Parameters<typeof acceptInvite>[0];

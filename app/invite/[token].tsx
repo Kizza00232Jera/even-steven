@@ -72,10 +72,6 @@ export default function InviteScreen() {
     router.replace('/(tabs)/groups');
   }
 
-  function handleOpenApp() {
-    router.replace('/(tabs)/groups');
-  }
-
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center">
@@ -101,7 +97,7 @@ export default function InviteScreen() {
         </Text>
         <TouchableOpacity
           testID="open-app-button"
-          onPress={handleOpenApp}
+          onPress={handleDecline}
           className="bg-accent rounded-full px-8 py-4 w-full items-center"
         >
           <Text className="font-display text-white font-semibold text-base">
@@ -117,7 +113,6 @@ export default function InviteScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background px-6 justify-center">
-      {/* Inviter + group name */}
       <View className="items-center mb-8">
         <Text className="font-body text-text-secondary text-sm text-center mb-2">
           {details.inviter_name
@@ -132,7 +127,6 @@ export default function InviteScreen() {
         </Text>
       </View>
 
-      {/* Group meta */}
       <View className="bg-surface rounded-2xl border border-border p-5 gap-4 mb-8">
         <View className="flex-row items-center gap-3">
           <Users size={18} color={Colors.accent} />
@@ -151,7 +145,6 @@ export default function InviteScreen() {
         )}
       </View>
 
-      {/* Actions */}
       <View className="gap-3">
         <TouchableOpacity
           testID="accept-button"

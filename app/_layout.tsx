@@ -53,17 +53,8 @@ function NavigationGuard() {
       return;
     }
 
-    // New user — signed in but no profile record yet
-    if (profile === null) {
-      const inOnboarding =
-        segments[0] === '(auth)' && (segments as string[])[1] === 'onboarding';
-      if (!inOnboarding) {
-        router.replace('/(auth)/onboarding/display-name');
-      }
-      return;
-    }
-
-    if (!profile.onboarding_done) {
+    // New user (no profile yet) or onboarding not complete
+    if (profile === null || !profile.onboarding_done) {
       const inOnboarding =
         segments[0] === '(auth)' && (segments as string[])[1] === 'onboarding';
       if (!inOnboarding) {

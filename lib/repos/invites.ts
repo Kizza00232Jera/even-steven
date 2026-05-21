@@ -17,7 +17,6 @@ interface InvalidTokenResponse {
   error: 'not_found' | 'invalidated';
 }
 
-// Returns InviteTokenDetails for a valid token, null for invalid/expired.
 export async function lookupInviteToken(
   client: SupabaseClient<Database>,
   token: string,
@@ -30,7 +29,6 @@ export async function lookupInviteToken(
   return result as InviteTokenDetails;
 }
 
-// Returns the current active invite token for the group, creating one if none exists.
 // Any group member can call this (RLS: is_group_member).
 export async function getOrCreateInviteToken(
   client: SupabaseClient<Database>,
@@ -58,7 +56,6 @@ export async function getOrCreateInviteToken(
   return created.token;
 }
 
-// Invalidates all active tokens for the group and creates a new one.
 // Only the group admin can invalidate tokens (RLS: admin_id = auth.uid()).
 export async function resetInviteToken(
   client: SupabaseClient<Database>,
@@ -82,9 +79,6 @@ export async function resetInviteToken(
   return created.token;
 }
 
-// Adds a person by email as an Invited Member (status='invited').
-// If they're already registered, returns their user_id so the caller can
-// send them a push notification instead.
 export async function addInvitedMember(
   client: SupabaseClient<Database>,
   groupId: string,
@@ -92,7 +86,6 @@ export async function addInvitedMember(
 ): Promise<void> {
   const normalised = email.trim().toLowerCase();
 
-  // Check if already a registered user
   const { data: profile } = await client
     .from('profiles')
     .select('id')
@@ -113,8 +106,7 @@ export async function addInvitedMember(
   if (error && error.code !== '23505') throw error;
 }
 
-// Adds the authenticated user as an active group member.
-// Silently succeeds if they're already a member (unique-constraint duplicate).
+// Silently succeeds if already a member (unique-constraint duplicate).
 export async function acceptInvite(
   client: SupabaseClient<Database>,
   groupId: string,
@@ -129,9 +121,7 @@ export async function acceptInvite(
       email,
       role: 'member',
       status: 'active',
-    })
-    .select()
-    .single();
+    });
 
   if (error && error.code !== '23505') throw error;
   return groupId;

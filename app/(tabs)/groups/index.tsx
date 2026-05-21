@@ -130,7 +130,7 @@ export default function GroupsScreen() {
             Tap + to create your first group.
           </Text>
           <TouchableOpacity
-            onPress={() => router.push('/invite'  as never)}
+            onPress={() => router.push('/invite' as never)}
             className="flex-row items-center gap-2 px-5 py-3 rounded-full border border-border"
           >
             <Link size={16} color={Colors.accent} />

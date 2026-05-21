@@ -80,7 +80,6 @@ export async function fetchGroups(
   return data ?? [];
 }
 
-// Returns the group_members.id for the current user in the given group.
 export async function getGroupMemberId(
   client: SupabaseClient<Database>,
   groupId: string,
