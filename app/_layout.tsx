@@ -42,7 +42,6 @@ function NavigationGuard() {
       return;
     }
 
-    // Authenticated — check onboarding state
     if (profile && !profile.onboarding_done) {
       // Allow navigation within the onboarding flow
       const inOnboarding =
@@ -81,31 +80,26 @@ function RootContent() {
   }, [fontsLoaded]);
 
   useEffect(() => {
-    // Restore session on startup
+    async function fetchAndSetProfile(userId: string) {
+      try {
+        const profile = await getProfile(supabase, userId);
+        setProfile(profile);
+      } catch {
+        setProfile(null);
+      }
+    }
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
-      if (session) {
-        try {
-          const profile = await getProfile(supabase, session.user.id);
-          setProfile(profile);
-        } catch {
-          setProfile(null);
-        }
-      }
+      if (session) await fetchAndSetProfile(session.user.id);
       setIsLoading(false);
     });
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
         if (session) {
-          try {
-            const profile = await getProfile(supabase, session.user.id);
-            setProfile(profile);
-          } catch {
-            setProfile(null);
-          }
+          await fetchAndSetProfile(session.user.id);
         } else {
           setProfile(null);
         }

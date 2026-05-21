@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { signInWithGoogle } from '../../lib/auth';
 
@@ -53,11 +53,9 @@ export default function SignInScreen() {
             {isLoading ? (
               <ActivityIndicator color="#00C896" />
             ) : (
-              <>
-                <Text className="font-body font-medium text-base text-text-primary">
-                  Sign in with Google
-                </Text>
-              </>
+              <Text className="font-body font-medium text-base text-text-primary">
+                Sign in with Google
+              </Text>
             )}
           </TouchableOpacity>
         </View>

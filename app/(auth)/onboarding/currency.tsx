@@ -18,7 +18,7 @@ const CURRENCIES: { code: Currency; label: string; symbol: string }[] = [
 
 export default function CurrencyScreen() {
   const router = useRouter();
-  const { session, profile, setProfile } = useAuthStore();
+  const { session, setProfile } = useAuthStore();
 
   const [selected, setSelected] = useState<Currency | null>(null);
   const [isSaving, setIsSaving] = useState(false);
