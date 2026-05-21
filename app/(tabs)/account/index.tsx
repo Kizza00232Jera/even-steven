@@ -23,6 +23,7 @@ import { updateProfile, uploadProfilePhoto } from '../../../lib/repos/profiles';
 import { supabase } from '../../../lib/supabase';
 import { resolveAvatarUrl } from '../../../lib/displayName';
 import { hapticOnToggle } from '../../../lib/haptics';
+import { Colors } from '../../../constants/colors';
 import type { Database } from '../../../lib/database.types';
 
 type Currency = Database['public']['Tables']['profiles']['Row']['preferred_currency'];
@@ -59,6 +60,16 @@ export default function AccountScreen() {
   const email = session?.user?.email ?? '';
   const avatarUrl = resolveAvatarUrl(profile?.avatar_url, profile?.google_avatar_url);
   const preferredCurrency = profile?.preferred_currency ?? 'USD';
+
+  function renderAvatarContent() {
+    if (isUploadingPhoto) return <ActivityIndicator color={Colors.accent} />;
+    if (avatarUrl) return <Image source={{ uri: avatarUrl }} className="w-24 h-24" />;
+    return (
+      <Text className="font-display text-3xl font-semibold text-text-secondary">
+        {displayName.charAt(0).toUpperCase()}
+      </Text>
+    );
+  }
 
   async function handleSignOut() {
     setIsSigningOut(true);
@@ -171,7 +182,6 @@ export default function AccountScreen() {
             Account
           </Text>
 
-          {/* Profile photo + name */}
           <View className="items-center mb-8">
             <TouchableOpacity
               onPress={handlePhotoChange}
@@ -180,15 +190,7 @@ export default function AccountScreen() {
               accessibilityLabel="Change profile photo"
             >
               <View className="w-24 h-24 rounded-full bg-surface-2 items-center justify-center overflow-hidden border-2 border-border">
-                {isUploadingPhoto ? (
-                  <ActivityIndicator color="#00C896" />
-                ) : avatarUrl ? (
-                  <Image source={{ uri: avatarUrl }} className="w-24 h-24" />
-                ) : (
-                  <Text className="font-display text-3xl font-semibold text-text-secondary">
-                    {displayName.charAt(0).toUpperCase()}
-                  </Text>
-                )}
+                {renderAvatarContent()}
               </View>
               <View className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-accent items-center justify-center">
                 <Text className="text-white text-xs font-bold">✎</Text>
@@ -200,9 +202,7 @@ export default function AccountScreen() {
             <Text className="font-body text-sm text-text-secondary mt-1">{email}</Text>
           </View>
 
-          {/* Settings rows */}
           <View className="bg-surface rounded-2xl border border-border overflow-hidden mb-4">
-            {/* Display name */}
             <TouchableOpacity
               onPress={openNameModal}
               className="flex-row items-center justify-between px-5 py-4 border-b border-border"
@@ -211,13 +211,12 @@ export default function AccountScreen() {
               <Text className="font-body text-base text-text-primary">Display name</Text>
               <View className="flex-row items-center gap-2">
                 <Text className="font-body text-base text-text-secondary">
-                  {profile?.display_name || gmailName}
+                  {displayName}
                 </Text>
                 <Text className="text-text-tertiary">›</Text>
               </View>
             </TouchableOpacity>
 
-            {/* Preferred currency */}
             <TouchableOpacity
               onPress={() => setShowCurrencyModal(true)}
               className="flex-row items-center justify-between px-5 py-4"
@@ -231,7 +230,6 @@ export default function AccountScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Legal links */}
           <View className="bg-surface rounded-2xl border border-border overflow-hidden mb-4">
             <TouchableOpacity
               onPress={() => Linking.openURL('https://even-steven.vercel.app/privacy')}
@@ -249,7 +247,6 @@ export default function AccountScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Sign out */}
           <TouchableOpacity
             onPress={handleSignOut}
             disabled={isSigningOut}
@@ -257,13 +254,12 @@ export default function AccountScreen() {
             accessibilityLabel="Sign out"
           >
             {isSigningOut ? (
-              <ActivityIndicator color="#FF4444" />
+              <ActivityIndicator color={Colors.destructive} />
             ) : (
               <Text className="font-body font-medium text-base text-destructive">Sign out</Text>
             )}
           </TouchableOpacity>
 
-          {/* Delete account */}
           <TouchableOpacity
             onPress={() => setShowDeleteModal(true)}
             className="py-3 items-center mb-6"
@@ -272,14 +268,12 @@ export default function AccountScreen() {
             <Text className="font-body text-sm text-text-tertiary">Delete account</Text>
           </TouchableOpacity>
 
-          {/* Version */}
           <Text className="font-body text-xs text-text-tertiary text-center">
             Version {APP_VERSION}
           </Text>
         </View>
       </ScrollView>
 
-      {/* Edit display name modal */}
       <Modal
         visible={showNameModal}
         transparent
@@ -335,7 +329,6 @@ export default function AccountScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Currency picker modal */}
       <Modal
         visible={showCurrencyModal}
         transparent
@@ -391,7 +384,6 @@ export default function AccountScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Delete account confirmation modal */}
       <Modal
         visible={showDeleteModal}
         transparent
