@@ -7,7 +7,6 @@ const mockBack = jest.fn();
 const mockFetchGroupDetail = jest.fn();
 const mockFetchGroupExpenses = jest.fn();
 const mockFetchGroupBalances = jest.fn();
-const mockHasGroupSettlements = jest.fn();
 const mockInvalidateQueries = jest.fn();
 const mockUseQuery = jest.fn();
 
@@ -116,7 +115,6 @@ jest.mock('../../../lib/repos/invites', () => ({
 
 jest.mock('../../../lib/repos/expenses', () => ({
   fetchGroupExpenses: (...args: unknown[]) => mockFetchGroupExpenses(...args),
-  hasGroupSettlements: (...args: unknown[]) => mockHasGroupSettlements(...args),
 }));
 
 jest.mock('../../../lib/repos/balances', () => ({
@@ -197,7 +195,6 @@ beforeEach(() => {
   setupGroupQuery();
   mockFetchGroupExpenses.mockResolvedValue(EXPENSES);
   mockFetchGroupBalances.mockResolvedValue(BALANCES_DATA);
-  mockHasGroupSettlements.mockResolvedValue(false);
 });
 
 describe('ExpensesTab — filter chips', () => {

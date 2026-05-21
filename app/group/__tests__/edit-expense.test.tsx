@@ -5,7 +5,6 @@ import EditExpenseScreen from '../[id]/edit-expense';
 
 const mockBack = jest.fn();
 const mockFetchGroupExpenses = jest.fn();
-const mockFetchGroupMembers = jest.fn();
 const mockHasGroupSettlements = jest.fn();
 const mockUpdateExpenseMetadata = jest.fn();
 const mockDeleteExpense = jest.fn();
@@ -16,33 +15,6 @@ const GROUP_ID = 'group-1';
 const PAYER_MEMBER_ID = 'member-1';
 const OTHER_MEMBER_ID = 'member-2';
 const CURRENT_USER_ID = 'user-1';
-
-const MEMBERS = [
-  {
-    id: PAYER_MEMBER_ID,
-    group_id: GROUP_ID,
-    user_id: CURRENT_USER_ID,
-    display_name: 'Alice',
-    email: 'alice@example.com',
-    role: 'admin' as const,
-    status: 'active' as const,
-    is_pinned: false,
-    is_muted: false,
-    joined_at: '2026-01-01T00:00:00Z',
-  },
-  {
-    id: OTHER_MEMBER_ID,
-    group_id: GROUP_ID,
-    user_id: 'user-2',
-    display_name: 'Bob',
-    email: 'bob@example.com',
-    role: 'member' as const,
-    status: 'active' as const,
-    is_pinned: false,
-    is_muted: false,
-    joined_at: '2026-01-02T00:00:00Z',
-  },
-];
 
 const BASE_EXPENSE = {
   id: EXPENSE_ID,
@@ -67,7 +39,6 @@ jest.mock('expo-router', () => ({
 
 jest.mock('../../../lib/repos/expenses', () => ({
   fetchGroupExpenses: (...args: unknown[]) => mockFetchGroupExpenses(...args),
-  fetchGroupMembers: (...args: unknown[]) => mockFetchGroupMembers(...args),
   hasGroupSettlements: (...args: unknown[]) => mockHasGroupSettlements(...args),
   updateExpenseMetadata: (...args: unknown[]) => mockUpdateExpenseMetadata(...args),
   deleteExpense: (...args: unknown[]) => mockDeleteExpense(...args),
@@ -96,10 +67,6 @@ jest.mock('../../../hooks/useToast', () => ({
 
 jest.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
-  useQuery: jest.fn(({ queryFn }: { queryFn: () => Promise<unknown> }) => {
-    queryFn();
-    return { data: MEMBERS, isLoading: false, isError: false };
-  }),
 }));
 
 jest.mock('../../../lib/haptics', () => ({
@@ -121,7 +88,6 @@ jest.mock('nativewind', () => ({
 beforeEach(() => {
   jest.clearAllMocks();
   mockFetchGroupExpenses.mockResolvedValue([BASE_EXPENSE]);
-  mockFetchGroupMembers.mockResolvedValue(MEMBERS);
   mockHasGroupSettlements.mockResolvedValue(false);
   mockUpdateExpenseMetadata.mockResolvedValue(undefined);
   mockDeleteExpense.mockResolvedValue(undefined);

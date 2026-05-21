@@ -358,7 +358,7 @@ export default function GroupDetailScreen() {
                 color: activeTab === tab ? Colors.accent : theme.textSecondary,
               }}
             >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab}
             </Text>
             {activeTab === tab && (
               <View

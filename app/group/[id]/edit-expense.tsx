@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,10 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { X, ChevronDown, Check, Trash2, AlertCircle } from 'lucide-react-native';
-import { useAuthStore } from '../../../store/auth';
 import { useNetworkStatus } from '../../../hooks/useNetworkStatus';
 import { useOfflineGuard } from '../../../hooks/useOfflineGuard';
-import { useToast } from '../../../hooks/useToast';
 import {
   fetchGroupExpenses,
   hasGroupSettlements,
@@ -26,7 +24,7 @@ import {
   deleteExpense,
   type ExpenseListItem,
 } from '../../../lib/repos/expenses';
-import { detectCategory, type Category } from '../../../lib/categories';
+import { type Category } from '../../../lib/categories';
 import { supabase } from '../../../lib/supabase';
 import { Colors } from '../../../constants/colors';
 
@@ -75,10 +73,8 @@ export default function EditExpenseScreen() {
   const router = useRouter();
   const { id: groupId, expenseId } = useLocalSearchParams<{ id: string; expenseId: string }>();
   const queryClient = useQueryClient();
-  const { session } = useAuthStore();
   const { isOnline } = useNetworkStatus();
   const { writesDisabled } = useOfflineGuard(isOnline);
-  const toast = useToast();
 
   const [expense, setExpense] = useState<ExpenseListItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -93,8 +89,6 @@ export default function EditExpenseScreen() {
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  const titleRef = useRef<TextInput>(null);
 
   useEffect(() => {
     async function load() {
@@ -123,14 +117,6 @@ export default function EditExpenseScreen() {
     setCategory(cat);
     setCategoryModalVisible(false);
   }
-
-  const isParticipant = expense?.participant_member_ids.some(
-    (id) => id === expense?.payer_id
-      ? expense?.payer_user_id === session?.user.id
-      : false
-  ) ?? false;
-
-  const isPayer = expense?.payer_user_id === session?.user.id;
 
   const canSave =
     title.trim().length > 0 && !writesDisabled && !isSaving && expense !== null;
@@ -242,7 +228,6 @@ export default function EditExpenseScreen() {
               Title
             </Text>
             <TextInput
-              ref={titleRef}
               testID="title-input"
               value={title}
               onChangeText={setTitle}
