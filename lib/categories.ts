@@ -44,9 +44,7 @@ export type Category =
   // Electronics (§12)
   | 'Other Electronics';
 
-// Keyword-to-category map from spec §11.
-// Each entry pairs a keyword list with the category it signals.
-// Matching is case-insensitive substring — the first match wins.
+// §11 keyword map — case-insensitive substring match, first match wins.
 const KEYWORD_MAP: ReadonlyArray<[keywords: readonly string[], category: Category]> = [
   [['taxi', 'uber', 'lyft', 'bolt', 'cab'], 'Taxi'],
   [['hotel', 'hostel', 'airbnb', 'accommodation', 'motel'], 'Hotel'],
