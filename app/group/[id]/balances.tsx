@@ -62,8 +62,6 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
     queryFn: () => fetchGroupSettlements(supabase, groupId),
   });
 
-
-
   const simplifiedDebts = useMemo(() => {
     if (!data) return [];
     return simplifyDebts(data.members.map((m) => ({ memberId: m.memberId, balance: m.balance })));

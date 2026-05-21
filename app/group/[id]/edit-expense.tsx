@@ -81,17 +81,16 @@ export default function EditExpenseScreen() {
   const [expense, setExpense] = useState<ExpenseListItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [groupHasSettlements, setGroupHasSettlements] = useState(false);
-
-  // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [amountText, setAmountText] = useState('');
   const [category, setCategory] = useState<Category>('Other');
-
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const isSavingRef = useRef(false);
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
 
   useEffect(() => {
     async function load() {
@@ -133,7 +132,7 @@ export default function EditExpenseScreen() {
             setAmountText(String(found.amount));
             setCategory(found.category as Category);
             queryClient.invalidateQueries({ queryKey: ['expenses', groupId] });
-            toast.info('This expense was just edited.');
+            toastRef.current.info('This expense was just edited.');
           }
         }
       )
@@ -142,7 +141,7 @@ export default function EditExpenseScreen() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [groupId, expenseId, queryClient, toast]);
+  }, [groupId, expenseId, queryClient]);
 
   function handleManualCategorySelect(cat: Category) {
     setCategory(cat);
