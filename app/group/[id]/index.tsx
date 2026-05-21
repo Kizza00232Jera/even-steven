@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Share,
   ActivityIndicator,
   ScrollView,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -28,6 +29,7 @@ import { format } from '../../../lib/currency';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/auth';
 import { useToast } from '../../../hooks/useToast';
+import { useRealtime } from '../../../hooks/useRealtime';
 import { BalancesTab } from './balances';
 import { SummaryTab } from './summary';
 import type { GroupDetail } from '../../../lib/repos/groups';
@@ -171,6 +173,7 @@ export default function GroupDetailScreen() {
   const userId = session?.user.id ?? '';
 
   const { data: group, isLoading, isError, refetch } = useGroupDetail(id, userId);
+  useRealtime(id);
   const [showSettings, setShowSettings] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('balances');
@@ -423,10 +426,28 @@ function ExpensesTab({ groupId, currentMemberId }: ExpensesTabProps) {
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
   const [activeFilter, setActiveFilter] = useState<ExpenseFilter>('all');
 
+  const seenIdsRef = useRef<Set<string> | null>(null);
+  const slideAnims = useRef(new Map<string, Animated.Value>()).current;
+
   const { data: expenses = [], isLoading } = useQuery<ExpenseListItem[]>({
     queryKey: ['expenses', groupId],
     queryFn: () => fetchGroupExpenses(supabase, groupId),
   });
+
+  useEffect(() => {
+    if (seenIdsRef.current === null) {
+      seenIdsRef.current = new Set(expenses.map((e) => e.id));
+      return;
+    }
+    for (const expense of expenses) {
+      if (!seenIdsRef.current.has(expense.id) && !slideAnims.has(expense.id)) {
+        const anim = new Animated.Value(-40);
+        slideAnims.set(expense.id, anim);
+        Animated.timing(anim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
+        seenIdsRef.current.add(expense.id);
+      }
+    }
+  }, [expenses, slideAnims]);
 
   const { data: balancesData } = useQuery<GroupBalanceData>({
     queryKey: ['group-balances', groupId],
@@ -514,50 +535,55 @@ function ExpensesTab({ groupId, currentMemberId }: ExpensesTabProps) {
         >
           {filteredExpenses.map((expense) => {
             const settled = isExpenseSettled(expense.participant_member_ids, memberBalances);
+            const slideAnim = slideAnims.get(expense.id);
             return (
-              <TouchableOpacity
+              <Animated.View
                 key={expense.id}
-                testID={`expense-card-${expense.id}`}
-                onPress={() =>
-                  router.push(
-                    `/group/${groupId}/edit-expense?expenseId=${expense.id}` as never
-                  )
-                }
-                className="rounded-2xl p-4"
-                style={{
-                  backgroundColor: theme.surface,
-                  opacity: settled ? 0.5 : 1,
-                }}
+                style={slideAnim ? { transform: [{ translateY: slideAnim }] } : undefined}
               >
-                <View className="flex-row items-start justify-between">
-                  <View className="flex-1 mr-3">
-                    <View className="flex-row items-center gap-2 flex-wrap">
-                      <Text
-                        testID={`expense-title-${expense.id}`}
-                        className="font-display font-semibold text-text-primary text-base"
-                        style={{ color: settled ? theme.textSecondary : theme.textPrimary }}
-                      >
-                        {expense.title}
-                      </Text>
-                      {expense.is_edited && (
-                        <View
-                          testID={`edited-badge-${expense.id}`}
-                          className="px-1.5 py-0.5 rounded"
-                          style={{ backgroundColor: theme.surface2 }}
+                <TouchableOpacity
+                  testID={`expense-card-${expense.id}`}
+                  onPress={() =>
+                    router.push(
+                      `/group/${groupId}/edit-expense?expenseId=${expense.id}` as never
+                    )
+                  }
+                  className="rounded-2xl p-4"
+                  style={{
+                    backgroundColor: theme.surface,
+                    opacity: settled ? 0.5 : 1,
+                  }}
+                >
+                  <View className="flex-row items-start justify-between">
+                    <View className="flex-1 mr-3">
+                      <View className="flex-row items-center gap-2 flex-wrap">
+                        <Text
+                          testID={`expense-title-${expense.id}`}
+                          className="font-display font-semibold text-text-primary text-base"
+                          style={{ color: settled ? theme.textSecondary : theme.textPrimary }}
                         >
-                          <Text className="text-text-tertiary text-xs font-body">edited</Text>
-                        </View>
-                      )}
+                          {expense.title}
+                        </Text>
+                        {expense.is_edited && (
+                          <View
+                            testID={`edited-badge-${expense.id}`}
+                            className="px-1.5 py-0.5 rounded"
+                            style={{ backgroundColor: theme.surface2 }}
+                          >
+                            <Text className="text-text-tertiary text-xs font-body">edited</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text className="font-body text-text-secondary text-sm mt-0.5">
+                        {expense.category} · {expense.payer_name} paid · {expense.expense_date}
+                      </Text>
                     </View>
-                    <Text className="font-body text-text-secondary text-sm mt-0.5">
-                      {expense.category} · {expense.payer_name} paid · {expense.expense_date}
+                    <Text className="font-display font-semibold text-text-primary text-base">
+                      {format(expense.amount, expense.currency)}
                     </Text>
                   </View>
-                  <Text className="font-display font-semibold text-text-primary text-base">
-                    {format(expense.amount, expense.currency)}
-                  </Text>
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
+              </Animated.View>
             );
           })}
         </ScrollView>

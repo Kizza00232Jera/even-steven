@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { X, ChevronDown, Check, Trash2, AlertCircle } from 'lucide-react-native';
 import { useNetworkStatus } from '../../../hooks/useNetworkStatus';
 import { useOfflineGuard } from '../../../hooks/useOfflineGuard';
+import { useToast } from '../../../hooks/useToast';
 import {
   fetchGroupExpenses,
   hasGroupSettlements,
@@ -73,6 +74,7 @@ export default function EditExpenseScreen() {
   const router = useRouter();
   const { id: groupId, expenseId } = useLocalSearchParams<{ id: string; expenseId: string }>();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const { isOnline } = useNetworkStatus();
   const { writesDisabled } = useOfflineGuard(isOnline);
 
@@ -89,6 +91,7 @@ export default function EditExpenseScreen() {
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const isSavingRef = useRef(false);
 
   useEffect(() => {
     async function load() {
@@ -113,6 +116,34 @@ export default function EditExpenseScreen() {
     load();
   }, [groupId, expenseId]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel(`expense-detail-${expenseId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'expenses', filter: `id=eq.${expenseId}` },
+        async () => {
+          if (isSavingRef.current) return;
+          const expenses = await fetchGroupExpenses(supabase, groupId);
+          const found = expenses.find((e) => e.id === expenseId);
+          if (found) {
+            setExpense(found);
+            setTitle(found.title);
+            setDescription(found.description ?? '');
+            setAmountText(String(found.amount));
+            setCategory(found.category as Category);
+            queryClient.invalidateQueries({ queryKey: ['expenses', groupId] });
+            toast.info('This expense was just edited.');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [groupId, expenseId, queryClient, toast]);
+
   function handleManualCategorySelect(cat: Category) {
     setCategory(cat);
     setCategoryModalVisible(false);
@@ -123,6 +154,7 @@ export default function EditExpenseScreen() {
 
   async function handleSave() {
     if (!canSave || !expense) return;
+    isSavingRef.current = true;
     setIsSaving(true);
     try {
       await updateExpenseMetadata(supabase, expense.id, {
@@ -135,6 +167,7 @@ export default function EditExpenseScreen() {
     } catch {
       Alert.alert('Error', 'Could not save changes. Please try again.');
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   }
