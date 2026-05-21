@@ -29,6 +29,7 @@ import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/auth';
 import { useToast } from '../../../hooks/useToast';
 import { BalancesTab } from './balances';
+import { SummaryTab } from './summary';
 import type { GroupDetail } from '../../../lib/repos/groups';
 
 const INVITE_BASE = 'even-steven.vercel.app/invite';
@@ -358,7 +359,7 @@ export default function GroupDetailScreen() {
                 color: activeTab === tab ? Colors.accent : theme.textSecondary,
               }}
             >
-              {tab}
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
             </Text>
             {activeTab === tab && (
               <View
@@ -381,7 +382,7 @@ export default function GroupDetailScreen() {
         {activeTab === 'balances' && group.currentMemberId && (
           <BalancesTab groupId={id} currentMemberId={group.currentMemberId} />
         )}
-        {activeTab === 'summary' && <SummaryTabStub />}
+        {activeTab === 'summary' && <SummaryTab groupId={id} />}
       </View>
 
       <AddExpenseFab group={group} groupId={id} />
@@ -561,14 +562,6 @@ function ExpensesTab({ groupId, currentMemberId }: ExpensesTabProps) {
           })}
         </ScrollView>
       )}
-    </View>
-  );
-}
-
-function SummaryTabStub() {
-  return (
-    <View className="flex-1 items-center justify-center px-4">
-      <Text className="text-text-secondary text-base">Summary coming soon</Text>
     </View>
   );
 }
