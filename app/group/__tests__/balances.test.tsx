@@ -5,6 +5,8 @@ import { BalancesTab } from '../[id]/balances';
 
 const mockFetchGroupBalances = jest.fn();
 const mockRecordSettlement = jest.fn();
+const mockFetchGroupSettlements = jest.fn();
+const mockVoidSettlement = jest.fn();
 const mockShowToast = jest.fn();
 const mockHaptic = jest.fn();
 
@@ -14,6 +16,8 @@ jest.mock('../../../lib/repos/balances', () => ({
 
 jest.mock('../../../lib/repos/settlements', () => ({
   recordSettlement: (...args: unknown[]) => mockRecordSettlement(...args),
+  fetchGroupSettlements: (...args: unknown[]) => mockFetchGroupSettlements(...args),
+  voidSettlement: (...args: unknown[]) => mockVoidSettlement(...args),
 }));
 
 // Inline channel mock — no outer variable reference (jest.mock is hoisted)
@@ -44,6 +48,7 @@ jest.mock('lucide-react-native', () => ({
   User: () => null,
   Check: () => null,
   X: () => null,
+  RotateCcw: () => null,
 }));
 
 function makeQueryClient() {
@@ -71,6 +76,7 @@ describe('BalancesTab', () => {
   beforeEach(() => {
     queryClient = makeQueryClient();
     jest.clearAllMocks();
+    mockFetchGroupSettlements.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -262,5 +268,132 @@ describe('BalancesTab', () => {
       </Wrapper>
     );
     await waitFor(() => expect(getByText(/retry/i)).toBeTruthy());
+  });
+
+  describe('Settlement Correction', () => {
+    const sampleSettlement = {
+      id: 's-1',
+      payerMemberId: 'm-bob',
+      payeeMemberId: 'm-alice',
+      amount: 10,
+      currency: 'EUR',
+      recordedBy: 'm-bob',
+      createdAt: '2024-01-01T00:00:00Z',
+    };
+
+    it('shows recorded settlements when they exist', async () => {
+      mockFetchGroupBalances.mockResolvedValue({
+        groupId: 'g-1',
+        currency: 'EUR',
+        members: [
+          { memberId: 'm-alice', userId: 'u-alice', name: 'Alice', email: 'a@x.com', avatarUrl: null, balance: 0 },
+          { memberId: 'm-bob', userId: 'u-bob', name: 'Bob', email: 'b@x.com', avatarUrl: null, balance: 0 },
+        ],
+      });
+      mockFetchGroupSettlements.mockResolvedValue([sampleSettlement]);
+
+      const { getByText } = render(
+        <Wrapper queryClient={queryClient}>
+          <BalancesTab groupId="g-1" currentMemberId="m-alice" />
+        </Wrapper>
+      );
+      // currentMemberId is alice (payee), so label should be "Bob paid you"
+      await waitFor(() => expect(getByText('Bob paid you')).toBeTruthy());
+    });
+
+    it('shows Undo button only on settlements recorded by current user', async () => {
+      mockFetchGroupBalances.mockResolvedValue({
+        groupId: 'g-1',
+        currency: 'EUR',
+        members: [
+          { memberId: 'm-alice', userId: 'u-alice', name: 'Alice', email: 'a@x.com', avatarUrl: null, balance: 0 },
+          { memberId: 'm-bob', userId: 'u-bob', name: 'Bob', email: 'b@x.com', avatarUrl: null, balance: 0 },
+        ],
+      });
+      mockFetchGroupSettlements.mockResolvedValue([sampleSettlement]);
+
+      const { getByText } = render(
+        <Wrapper queryClient={queryClient}>
+          <BalancesTab groupId="g-1" currentMemberId="m-bob" />
+        </Wrapper>
+      );
+      await waitFor(() => expect(getByText('Undo')).toBeTruthy());
+    });
+
+    it('does not show Undo button for settlements recorded by others', async () => {
+      mockFetchGroupBalances.mockResolvedValue({
+        groupId: 'g-1',
+        currency: 'EUR',
+        members: [
+          { memberId: 'm-alice', userId: 'u-alice', name: 'Alice', email: 'a@x.com', avatarUrl: null, balance: 0 },
+          { memberId: 'm-bob', userId: 'u-bob', name: 'Bob', email: 'b@x.com', avatarUrl: null, balance: 0 },
+        ],
+      });
+      mockFetchGroupSettlements.mockResolvedValue([sampleSettlement]);
+
+      const { queryByText, getByText } = render(
+        <Wrapper queryClient={queryClient}>
+          <BalancesTab groupId="g-1" currentMemberId="m-alice" />
+        </Wrapper>
+      );
+      // Wait for the settlement row to render (Bob paid you — alice is the payee)
+      await waitFor(() => expect(getByText(/Bob paid you/)).toBeTruthy());
+      expect(queryByText('Undo')).toBeNull();
+    });
+
+    it('calls voidSettlement with correct args and shows success toast', async () => {
+      mockFetchGroupBalances.mockResolvedValue({
+        groupId: 'g-1',
+        currency: 'EUR',
+        members: [
+          { memberId: 'm-alice', userId: 'u-alice', name: 'Alice', email: 'a@x.com', avatarUrl: null, balance: 0 },
+          { memberId: 'm-bob', userId: 'u-bob', name: 'Bob', email: 'b@x.com', avatarUrl: null, balance: 0 },
+        ],
+      });
+      mockFetchGroupSettlements.mockResolvedValue([sampleSettlement]);
+      mockVoidSettlement.mockResolvedValue(undefined);
+
+      const { getByText } = render(
+        <Wrapper queryClient={queryClient}>
+          <BalancesTab groupId="g-1" currentMemberId="m-bob" />
+        </Wrapper>
+      );
+      await waitFor(() => getByText('Undo'));
+      fireEvent.press(getByText('Undo'));
+
+      await waitFor(() => {
+        expect(mockVoidSettlement).toHaveBeenCalledWith(
+          expect.anything(),
+          's-1',
+          'm-bob'
+        );
+      });
+      expect(mockShowToast).toHaveBeenCalledWith('Settlement undone', 'success');
+    });
+
+    it('shows error toast when void fails', async () => {
+      mockFetchGroupBalances.mockResolvedValue({
+        groupId: 'g-1',
+        currency: 'EUR',
+        members: [
+          { memberId: 'm-alice', userId: 'u-alice', name: 'Alice', email: 'a@x.com', avatarUrl: null, balance: 0 },
+          { memberId: 'm-bob', userId: 'u-bob', name: 'Bob', email: 'b@x.com', avatarUrl: null, balance: 0 },
+        ],
+      });
+      mockFetchGroupSettlements.mockResolvedValue([sampleSettlement]);
+      mockVoidSettlement.mockRejectedValue(new Error('DB error'));
+
+      const { getByText } = render(
+        <Wrapper queryClient={queryClient}>
+          <BalancesTab groupId="g-1" currentMemberId="m-bob" />
+        </Wrapper>
+      );
+      await waitFor(() => getByText('Undo'));
+      fireEvent.press(getByText('Undo'));
+
+      await waitFor(() =>
+        expect(mockShowToast).toHaveBeenCalledWith(expect.stringMatching(/failed.*undo/i), 'error')
+      );
+    });
   });
 });

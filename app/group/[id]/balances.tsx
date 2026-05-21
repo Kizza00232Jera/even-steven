@@ -11,11 +11,16 @@ import {
   Platform,
 } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { User } from 'lucide-react-native';
+import { User, Check, RotateCcw } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { simplifyDebts, type Settlement } from '../../../lib/debt';
 import { fetchGroupBalances } from '../../../lib/repos/balances';
-import { recordSettlement } from '../../../lib/repos/settlements';
+import {
+  recordSettlement,
+  fetchGroupSettlements,
+  voidSettlement,
+  type SettlementRecord,
+} from '../../../lib/repos/settlements';
 import { supabase } from '../../../lib/supabase';
 import { format, type Currency } from '../../../lib/currency';
 import { hapticOnSettlementRecorded } from '../../../lib/haptics';
@@ -52,6 +57,11 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
     queryFn: () => fetchGroupBalances(supabase, groupId),
   });
 
+  const { data: settlements = [] } = useQuery({
+    queryKey: ['group-settlements', groupId],
+    queryFn: () => fetchGroupSettlements(supabase, groupId),
+  });
+
   useEffect(() => {
     const channel = supabase
       .channel(`balances-${groupId}`)
@@ -63,7 +73,10 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'settlements', filter: `group_id=eq.${groupId}` },
-        () => queryClient.invalidateQueries({ queryKey: ['group-balances', groupId] })
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['group-balances', groupId] });
+          queryClient.invalidateQueries({ queryKey: ['group-settlements', groupId] });
+        }
       )
       .subscribe();
 
@@ -128,11 +141,32 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
       toast.success('Settlement recorded');
       closeModal();
       queryClient.invalidateQueries({ queryKey: ['group-balances', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-settlements', groupId] });
     } catch {
       toast.error('Failed to record settlement');
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function handleVoid(settlementId: string) {
+    try {
+      await voidSettlement(supabase, settlementId, currentMemberId);
+      hapticOnSettlementRecorded();
+      toast.success('Settlement undone');
+      queryClient.invalidateQueries({ queryKey: ['group-balances', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-settlements', groupId] });
+    } catch {
+      toast.error('Failed to undo settlement');
+    }
+  }
+
+  function getSettlementLabel(s: SettlementRecord): string {
+    const payerName = memberMap.get(s.payerMemberId)?.name ?? 'Unknown';
+    const payeeName = memberMap.get(s.payeeMemberId)?.name ?? 'Unknown';
+    if (s.payerMemberId === currentMemberId) return `You paid ${payeeName}`;
+    if (s.payeeMemberId === currentMemberId) return `${payerName} paid you`;
+    return `${payerName} paid ${payeeName}`;
   }
 
   if (isLoading) {
@@ -186,6 +220,27 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
               theme={theme}
             />
           ))
+        )}
+
+        {settlements.length > 0 && (
+          <>
+            <Text
+              className="text-xs font-semibold uppercase tracking-wider px-1 pt-4 pb-1"
+              style={{ color: theme.textSecondary }}
+            >
+              Settlements
+            </Text>
+            {settlements.map((s) => (
+              <SettlementRow
+                key={s.id}
+                label={getSettlementLabel(s)}
+                amount={format(s.amount, s.currency)}
+                canUndo={s.recordedBy === currentMemberId}
+                onUndo={() => handleVoid(s.id)}
+                theme={theme}
+              />
+            ))}
+          </>
         )}
       </ScrollView>
 
@@ -291,6 +346,48 @@ function DebtRow({ label, amount, isYouInvolved, onSettleUp, theme }: DebtRowPro
           Settle Up
         </Text>
       </TouchableOpacity>
+    </View>
+  );
+}
+
+interface SettlementRowProps {
+  label: string;
+  amount: string;
+  canUndo: boolean;
+  onUndo: () => void;
+  theme: typeof Colors.dark | typeof Colors.light;
+}
+
+function SettlementRow({ label, amount, canUndo, onUndo, theme }: SettlementRowProps) {
+  return (
+    <View
+      className="flex-row items-center gap-3 rounded-2xl border border-border p-4"
+      style={{ backgroundColor: theme.surface }}
+    >
+      <View
+        className="w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: Colors.accentDim }}
+      >
+        <Check size={20} color={Colors.accent} strokeWidth={1.5} />
+      </View>
+      <View className="flex-1">
+        <Text className="text-text-primary font-medium text-sm">{label}</Text>
+        <Text className="text-xs mt-0.5 font-semibold" style={{ color: Colors.accent }}>
+          {amount}
+        </Text>
+      </View>
+      {canUndo && (
+        <TouchableOpacity
+          onPress={onUndo}
+          className="rounded-full px-4 py-2 flex-row items-center gap-1"
+          style={{ backgroundColor: theme.surface2 }}
+        >
+          <RotateCcw size={12} color={theme.textSecondary} strokeWidth={2} />
+          <Text className="font-semibold text-xs" style={{ color: theme.textSecondary }}>
+            Undo
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
