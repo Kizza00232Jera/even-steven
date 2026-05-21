@@ -66,6 +66,13 @@ export async function removeFriendship(
   if (error) throw error;
 }
 
+type ProfileRow = {
+  display_name: string | null;
+  email: string;
+  avatar_url: string | null;
+  google_avatar_url: string | null;
+};
+
 export async function listFriendships(
   client: SupabaseClient<Database>,
   userId: string
@@ -86,14 +93,8 @@ export async function listFriendships(
 
   for (const row of data ?? []) {
     if (row.status === 'active' && row.friend_id) {
-      const p = Array.isArray(row.friend_profile)
-        ? row.friend_profile[0]
-        : (row.friend_profile as {
-            display_name: string | null;
-            email: string;
-            avatar_url: string | null;
-            google_avatar_url: string | null;
-          } | null);
+      const raw = row.friend_profile;
+      const p = (Array.isArray(raw) ? raw[0] : raw) as ProfileRow | null;
       active.push({
         friendshipId: row.id,
         friendId: row.friend_id,

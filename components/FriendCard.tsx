@@ -4,8 +4,6 @@ import { Colors } from '../constants/colors';
 import { useColorScheme } from 'nativewind';
 import type { ActiveFriend } from '../lib/repos/friends';
 
-export type { ActiveFriend };
-
 interface FriendCardProps {
   friend: ActiveFriend;
   onPress: () => void;

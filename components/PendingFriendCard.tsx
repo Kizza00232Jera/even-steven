@@ -4,8 +4,6 @@ import { Colors } from '../constants/colors';
 import { useColorScheme } from 'nativewind';
 import type { PendingFriend } from '../lib/repos/friends';
 
-export type { PendingFriend };
-
 interface PendingFriendCardProps {
   friend: PendingFriend;
   onRemove: () => void;

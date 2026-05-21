@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import {
   View,
   Text,
-  FlatList,
+  ScrollView,
   TextInput,
   TouchableOpacity,
   Modal,
@@ -225,47 +225,38 @@ export default function FriendsScreen() {
     }
 
     return (
-      <FlatList
-        data={[]}
-        ListHeaderComponent={
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {hasActive && (
           <>
-            {hasActive && (
-              <>
-                <SectionHeader title="Friends" />
-                {filteredActive.map((friend) => (
-                  <FriendCard
-                    key={friend.friendshipId}
-                    friend={friend}
-                    onPress={() => router.push(`/friends/${friend.friendId}`)}
-                  />
-                ))}
-              </>
-            )}
-            {hasPending && (
-              <>
-                <SectionHeader title="Pending" />
-                {filteredPending.map((pending) => (
-                  <PendingFriendCard
-                    key={pending.friendshipId}
-                    friend={pending}
-                    onRemove={() => removeMutation.mutate(pending.friendshipId)}
-                  />
-                ))}
-              </>
-            )}
+            <SectionHeader title="Friends" />
+            {filteredActive.map((friend) => (
+              <FriendCard
+                key={friend.friendshipId}
+                friend={friend}
+                onPress={() => router.push(`/friends/${friend.friendId}`)}
+              />
+            ))}
           </>
-        }
-        renderItem={null}
-        keyExtractor={() => ''}
-        showsVerticalScrollIndicator={false}
-      />
+        )}
+        {hasPending && (
+          <>
+            <SectionHeader title="Pending" />
+            {filteredPending.map((pending) => (
+              <PendingFriendCard
+                key={pending.friendshipId}
+                friend={pending}
+                onRemove={() => removeMutation.mutate(pending.friendshipId)}
+              />
+            ))}
+          </>
+        )}
+      </ScrollView>
     );
   }
 
   return (
     <SafeAreaView className="flex-1 bg-background">
       <View className="flex-1 px-4">
-        {/* Header */}
         <View className="flex-row items-center justify-between mt-4 mb-4">
           <Text className="text-text-primary font-bold text-2xl" style={{ fontFamily: 'SpaceGrotesk_700Bold' }}>
             Friends
@@ -280,7 +271,6 @@ export default function FriendsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Search bar */}
         <TextInput
           className="bg-surface border border-border rounded-xl px-4 py-3 text-text-primary mb-2"
           placeholder="Search by name or email"

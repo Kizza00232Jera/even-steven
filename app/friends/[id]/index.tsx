@@ -125,7 +125,6 @@ export default function FriendDetailScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Top navigation row */}
         <View className="flex-row items-center justify-between px-4 pt-4 mb-6">
           <TouchableOpacity
             onPress={() => router.back()}
@@ -145,7 +144,6 @@ export default function FriendDetailScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Profile section */}
         <View className="items-center px-4 mb-8">
           <View
             className="w-20 h-20 rounded-full items-center justify-center mb-3"
@@ -164,7 +162,6 @@ export default function FriendDetailScreen() {
         </View>
 
         <View className="px-4 gap-3">
-          {/* Settle Up button — only when non-zero balance */}
           {friend.totalBalance !== 0 && (
             <TouchableOpacity
               className="rounded-full py-3.5 items-center border border-border"
@@ -175,7 +172,6 @@ export default function FriendDetailScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Add Expense button */}
           <TouchableOpacity
             className="rounded-full py-3.5 items-center"
             style={{ backgroundColor: Colors.accent }}
@@ -184,8 +180,7 @@ export default function FriendDetailScreen() {
             <Text className="text-white font-semibold text-base">Add Expense</Text>
           </TouchableOpacity>
 
-          {/* Shared groups section */}
-          {friend.sharedGroups.length > 0 && (
+          {friend.sharedGroups.length > 0 ? (
             <View className="mt-4">
               <Text className="text-text-secondary text-xs font-semibold uppercase tracking-widest mb-2">
                 Shared Groups
@@ -221,9 +216,7 @@ export default function FriendDetailScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-          )}
-
-          {friend.sharedGroups.length === 0 && (
+          ) : (
             <View className="mt-4 items-center py-6">
               <Text className="text-text-secondary text-sm text-center">
                 No shared groups yet.
