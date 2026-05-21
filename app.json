@@ -30,10 +30,20 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/even-steven"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "plugins": [
       "expo-router",
       "expo-secure-store",
       "expo-font",
+      "expo-updates",
       [
         "@react-native-google-signin/google-signin",
         {

@@ -16,6 +16,9 @@ import {
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { VersionGateScreen } from '../components/VersionGateScreen';
+import { useVersionGate } from '../hooks/useVersionGate';
+import { useOTAUpdates } from '../hooks/useOTAUpdates';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -33,13 +36,20 @@ export default function RootLayout() {
     Inter_500Medium,
   });
 
+  const versionGate = useVersionGate();
+  useOTAUpdates();
+
   useEffect(() => {
-    if (fontsLoaded) {
+    if (fontsLoaded && versionGate !== 'loading') {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, versionGate]);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded || versionGate === 'loading') return null;
+
+  if (versionGate === 'blocked') {
+    return <VersionGateScreen />;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
