@@ -1,11 +1,3 @@
-/**
- * Summary tab for group detail screen.
- *
- * Chart library decision: Victory Native XL (default per spec) was not evaluated
- * against Gifted Charts — working autonomously per spec §13 guidance. A custom
- * SVG donut chart using react-native-svg (already installed) was implemented
- * instead to avoid adding a new native dependency.
- */
 import React, { useEffect } from 'react';
 import {
   View,
@@ -58,7 +50,9 @@ function DonutChart({ segments }: { segments: CategoryBreakdown[] }) {
         {segments.map((seg, i) => {
           const dash = (seg.amount / total) * circumference;
           const gap = circumference - dash;
-          const circle = (
+          const segOffset = offset;
+          offset += dash;
+          return (
             <Circle
               key={seg.category}
               cx={cx}
@@ -68,11 +62,9 @@ function DonutChart({ segments }: { segments: CategoryBreakdown[] }) {
               stroke={CATEGORY_COLORS[i % CATEGORY_COLORS.length]}
               strokeWidth={strokeWidth}
               strokeDasharray={`${dash} ${gap}`}
-              strokeDashoffset={-offset}
+              strokeDashoffset={-segOffset}
             />
           );
-          offset += dash;
-          return circle;
         })}
       </G>
     </Svg>
@@ -146,7 +138,6 @@ export function SummaryTab({ groupId }: SummaryTabProps) {
 
   return (
     <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, gap: 16 }}>
-      {/* Total spending card */}
       <View
         className="rounded-2xl p-5 border border-border"
         style={{ backgroundColor: theme.surface }}
@@ -160,7 +151,6 @@ export function SummaryTab({ groupId }: SummaryTabProps) {
         </Text>
       </View>
 
-      {/* Category breakdown */}
       <View
         className="rounded-2xl p-5 border border-border"
         style={{ backgroundColor: theme.surface }}
@@ -190,7 +180,6 @@ export function SummaryTab({ groupId }: SummaryTabProps) {
         </View>
       </View>
 
-      {/* Per-person contributions */}
       <View
         className="rounded-2xl p-5 border border-border"
         style={{ backgroundColor: theme.surface }}
