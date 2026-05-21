@@ -1,9 +1,29 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../database.types';
+import type { GroupWithMembership } from '../groupFilters';
+import { sortGroups } from '../groupFilters';
 
 type Group = Database['public']['Tables']['groups']['Row'];
+type GroupMember = Database['public']['Tables']['group_members']['Row'];
 type GroupType = Group['type'];
 type Currency = Group['base_currency'];
+
+export type { GroupWithMembership };
+
+export interface GroupMemberWithProfile {
+  id: string;
+  group_id: string;
+  user_id: string | null;
+  email: string;
+  display_name: string | null;
+  role: 'admin' | 'member';
+  status: 'active' | 'invited' | 'removed';
+  is_pinned: boolean;
+  is_muted: boolean;
+  joined_at: string;
+  avatar_url: string | null;
+  google_avatar_url: string | null;
+}
 
 export interface CreateGroupParams {
   name: string;
@@ -79,3 +99,243 @@ export async function fetchGroups(
   if (error) throw error;
   return data ?? [];
 }
+
+export async function fetchGroupsWithMembership(
+  client: SupabaseClient<Database>,
+  userId: string,
+): Promise<GroupWithMembership[]> {
+  const { data, error } = await client
+    .from('group_members')
+    .select('id, is_pinned, is_muted, role, groups(*)')
+    .eq('user_id', userId)
+    .eq('status', 'active');
+
+  if (error) throw error;
+
+  const groups: GroupWithMembership[] = (data ?? []).map((row) => {
+    const g = row.groups as Group;
+    return {
+      ...g,
+      member_id: row.id,
+      is_pinned: row.is_pinned,
+      is_muted: row.is_muted,
+      role: row.role,
+      balance: 0,
+    };
+  });
+
+  return sortGroups(groups);
+}
+
+export async function pinGroup(
+  client: SupabaseClient<Database>,
+  memberId: string,
+): Promise<void> {
+  const { error } = await client
+    .from('group_members')
+    .update({ is_pinned: true })
+    .eq('id', memberId);
+  if (error) throw error;
+}
+
+export async function unpinGroup(
+  client: SupabaseClient<Database>,
+  memberId: string,
+): Promise<void> {
+  const { error } = await client
+    .from('group_members')
+    .update({ is_pinned: false })
+    .eq('id', memberId);
+  if (error) throw error;
+}
+
+export async function muteGroup(
+  client: SupabaseClient<Database>,
+  memberId: string,
+): Promise<void> {
+  const { error } = await client
+    .from('group_members')
+    .update({ is_muted: true })
+    .eq('id', memberId);
+  if (error) throw error;
+}
+
+export async function unmuteGroup(
+  client: SupabaseClient<Database>,
+  memberId: string,
+): Promise<void> {
+  const { error } = await client
+    .from('group_members')
+    .update({ is_muted: false })
+    .eq('id', memberId);
+  if (error) throw error;
+}
+
+export interface LeaveGroupResult {
+  groupDeleted: boolean;
+}
+
+export async function leaveGroup(
+  client: SupabaseClient<Database>,
+  groupId: string,
+  currentUserId: string,
+): Promise<LeaveGroupResult> {
+  const { data: members, error: membersError } = await client
+    .from('group_members')
+    .select('id, user_id, role, joined_at')
+    .eq('group_id', groupId)
+    .eq('status', 'active')
+    .order('joined_at', { ascending: true });
+
+  if (membersError) throw membersError;
+
+  const activeMembers = members ?? [];
+  const currentMember = activeMembers.find((m) => m.user_id === currentUserId);
+  if (!currentMember) throw new Error('You are not a member of this group');
+
+  const otherMembers = activeMembers.filter((m) => m.user_id !== currentUserId);
+
+  if (otherMembers.length === 0) {
+    const { error: deleteError } = await client.from('groups').delete().eq('id', groupId);
+    if (deleteError) throw deleteError;
+    return { groupDeleted: true };
+  }
+
+  if (currentMember.role === 'admin') {
+    const nextAdmin = otherMembers[0];
+    const { error: transferError } = await client
+      .from('group_members')
+      .update({ role: 'admin' })
+      .eq('id', nextAdmin.id);
+    if (transferError) throw transferError;
+
+    const { error: groupUpdateError } = await client
+      .from('groups')
+      .update({ admin_id: nextAdmin.user_id! })
+      .eq('id', groupId);
+    if (groupUpdateError) throw groupUpdateError;
+  }
+
+  const { error: leaveError } = await client
+    .from('group_members')
+    .update({ status: 'removed' })
+    .eq('id', currentMember.id);
+  if (leaveError) throw leaveError;
+
+  return { groupDeleted: false };
+}
+
+export async function fetchGroupMembers(
+  client: SupabaseClient<Database>,
+  groupId: string,
+): Promise<GroupMemberWithProfile[]> {
+  const { data, error } = await client
+    .from('group_members')
+    .select('*, profiles(avatar_url, google_avatar_url)')
+    .eq('group_id', groupId)
+    .in('status', ['active', 'invited'])
+    .order('joined_at', { ascending: true });
+
+  if (error) throw error;
+
+  return (data ?? []).map((row) => {
+    const profile = row.profiles as { avatar_url: string | null; google_avatar_url: string | null } | null;
+    return {
+      id: row.id,
+      group_id: row.group_id,
+      user_id: row.user_id,
+      email: row.email,
+      display_name: row.display_name,
+      role: row.role,
+      status: row.status,
+      is_pinned: row.is_pinned,
+      is_muted: row.is_muted,
+      joined_at: row.joined_at,
+      avatar_url: profile?.avatar_url ?? null,
+      google_avatar_url: profile?.google_avatar_url ?? null,
+    };
+  });
+}
+
+export async function removeMember(
+  client: SupabaseClient<Database>,
+  memberId: string,
+): Promise<void> {
+  const { error } = await client
+    .from('group_members')
+    .update({ status: 'removed' })
+    .eq('id', memberId);
+  if (error) throw error;
+}
+
+export interface GroupDetail {
+  id: string;
+  name: string;
+  type: GroupType;
+  base_currency: string;
+  admin_id: string;
+  status: 'active' | 'expired' | 'archived';
+  start_date: string | null;
+  end_date: string | null;
+  settlement_visibility: 'public' | 'private';
+  background_image_url: string | null;
+  isMember: boolean;
+  isAdmin: boolean;
+  memberId: string | null;
+  isMuted: boolean;
+  balance: number;
+  memberCount: number;
+}
+
+export async function fetchGroupDetail(
+  client: SupabaseClient<Database>,
+  groupId: string,
+  userId: string,
+): Promise<GroupDetail | null> {
+  const { data: group, error: groupError } = await client
+    .from('groups')
+    .select('*')
+    .eq('id', groupId)
+    .single();
+
+  if (groupError) {
+    if (groupError.code === 'PGRST116') return null;
+    throw groupError;
+  }
+
+  const { data: myMember } = await client
+    .from('group_members')
+    .select('id, role, is_muted, status')
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .single();
+
+  const { count: memberCount } = await client
+    .from('group_members')
+    .select('id', { count: 'exact', head: true })
+    .eq('group_id', groupId)
+    .in('status', ['active', 'invited']);
+
+  const isMember = !!myMember && myMember.status === 'active';
+
+  return {
+    id: group.id,
+    name: group.name,
+    type: group.type,
+    base_currency: group.base_currency,
+    admin_id: group.admin_id,
+    status: group.status,
+    start_date: group.start_date,
+    end_date: group.end_date,
+    settlement_visibility: group.settlement_visibility,
+    background_image_url: group.background_image_url,
+    isMember,
+    isAdmin: myMember?.role === 'admin',
+    memberId: myMember?.id ?? null,
+    isMuted: myMember?.is_muted ?? false,
+    balance: 0,
+    memberCount: memberCount ?? 0,
+  };
+}
+
+export type { GroupMember };
