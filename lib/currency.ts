@@ -2,7 +2,7 @@ export type Currency = "USD" | "EUR" | "DKK" | "SEK";
 
 const THOUSANDS_SEP = " "; // regular space — not non-breaking space
 
-// §39: period decimal sep, space thousands sep, symbol prefix (USD/EUR), code suffix (DKK/SEK)
+// §39
 export function format(amount: number, currency: Currency): string {
   const negative = amount < 0;
   const abs = Math.abs(amount);
@@ -10,21 +10,14 @@ export function format(amount: number, currency: Currency): string {
   const [intPart, decPart] = abs.toFixed(2).split(".");
   const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, THOUSANDS_SEP);
   const numeric = `${grouped}.${decPart}`;
+  const sign = negative ? "-" : "";
 
-  let result: string;
-  if (currency === "USD") {
-    result = `$${numeric}`;
-  } else if (currency === "EUR") {
-    result = `€${numeric}`;
-  } else {
-    result = `${numeric} ${currency}`;
-  }
-
-  return negative ? `-${result}` : result;
+  if (currency === "USD") return `${sign}$${numeric}`;
+  if (currency === "EUR") return `${sign}€${numeric}`;
+  return `${sign}${numeric} ${currency}`;
 }
 
-// Rates object is keyed by currency code with values relative to a common base (e.g. USD=1).
-// Caller is responsible for fetching and passing rates — no side effects here.
+// Rates are keyed by currency code, values relative to a common base (e.g. USD=1).
 export function convert(
   amount: number,
   from: Currency,
