@@ -22,6 +22,7 @@ import { supabase } from '../lib/supabase';
 import { configureGoogleSignIn } from '../lib/auth';
 import { getProfile } from '../lib/repos/profiles';
 import { useAuthStore } from '../store/auth';
+import { useRatesStore } from '../store/rates';
 import { VersionGateScreen } from '../components/VersionGateScreen';
 import { useVersionGate } from '../hooks/useVersionGate';
 import { useOTAUpdates } from '../hooks/useOTAUpdates';
@@ -47,14 +48,21 @@ function NavigationGuard() {
     const inInvite = segments[0] === 'invite';
 
     if (!session) {
-      // Invite screen is accessible without authentication so non-members can
-      // view group details before deciding to sign up and accept.
       if (!inAuth && !inInvite) router.replace('/(auth)');
       return;
     }
 
-    // New user (no profile yet) or onboarding not complete
-    if (profile === null || !profile.onboarding_done) {
+    // New user — signed in but no profile record yet
+    if (profile === null) {
+      const inOnboarding =
+        segments[0] === '(auth)' && (segments as string[])[1] === 'onboarding';
+      if (!inOnboarding) {
+        router.replace('/(auth)/onboarding/display-name');
+      }
+      return;
+    }
+
+    if (!profile.onboarding_done) {
       const inOnboarding =
         segments[0] === '(auth)' && (segments as string[])[1] === 'onboarding';
       if (!inOnboarding) {
@@ -87,6 +95,8 @@ function RootContent() {
 
   const versionGate = useVersionGate();
   useOTAUpdates();
+  const { fetchRates } = useRatesStore();
+  useEffect(() => { fetchRates(); }, []);
 
   useEffect(() => {
     if ((fontsLoaded || fontError) && versionGate !== 'loading') {

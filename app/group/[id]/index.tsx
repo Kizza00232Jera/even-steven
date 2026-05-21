@@ -121,7 +121,8 @@ function SettingsSheet({ visible, group, onClose, onLeave, onViewMembers }: Sett
   );
 }
 
-function AddExpenseFab({ group }: { group: GroupDetail }) {
+function AddExpenseFab({ group, groupId }: { group: GroupDetail; groupId: string }) {
+  const router = useRouter();
   const toast = useToast();
   const isExpiredOrArchived = group.status === 'expired' || group.status === 'archived';
 
@@ -130,6 +131,7 @@ function AddExpenseFab({ group }: { group: GroupDetail }) {
       toast.info('This trip has ended. Extend the trip in settings to add new expenses.');
       return;
     }
+    router.push(`/group/${groupId}/add-expense` as never);
   }
 
   return (
@@ -373,7 +375,7 @@ export default function GroupDetailScreen() {
         {activeTab === 'summary' && <SummaryTabStub />}
       </View>
 
-      <AddExpenseFab group={group} />
+      <AddExpenseFab group={group} groupId={id} />
 
       {showSettings && (
         <SettingsSheet
