@@ -20,7 +20,6 @@ serve(async (req: Request) => {
       })
     }
 
-    // Verify caller identity via their JWT
     const userClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -40,7 +39,6 @@ serve(async (req: Request) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    // Transfer admin role for groups where this user is admin
     const { data: adminGroups } = await adminClient
       .from('groups')
       .select('id, group_members(id, user_id, joined_at, status)')

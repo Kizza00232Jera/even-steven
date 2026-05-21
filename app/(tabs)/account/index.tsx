@@ -212,6 +212,43 @@ export default function AccountScreen() {
     setGroupsWithBalances([]);
   }
 
+  function renderConfirmStep(
+    title: string,
+    body: string,
+    buttonLabel: string,
+    buttonAccessibilityLabel: string,
+    onConfirm: () => void,
+  ) {
+    return (
+      <>
+        <Text className="font-display text-xl font-bold text-text-primary mb-3">{title}</Text>
+        <Text className="font-body text-base text-text-secondary mb-6">{body}</Text>
+        {deleteError && (
+          <Text className="font-body text-sm text-destructive mb-4">{deleteError}</Text>
+        )}
+        <TouchableOpacity
+          onPress={onConfirm}
+          disabled={isDeletingAccount}
+          accessibilityLabel={buttonAccessibilityLabel}
+          className="rounded-full py-4 items-center bg-destructive mb-3"
+        >
+          {isDeletingAccount ? (
+            <ActivityIndicator color="#ffffff" />
+          ) : (
+            <Text className="font-body font-medium text-base text-white">{buttonLabel}</Text>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={closeDeleteFlow}
+          disabled={isDeletingAccount}
+          className="rounded-full py-4 items-center border border-border"
+        >
+          <Text className="font-body font-medium text-base text-text-primary">Cancel</Text>
+        </TouchableOpacity>
+      </>
+    );
+  }
+
   function renderDeleteModalContent() {
     if (deleteStep === 'balance-warning') {
       return (
@@ -250,76 +287,22 @@ export default function AccountScreen() {
     }
 
     if (deleteStep === 'confirm-anonymise') {
-      return (
-        <>
-          <Text className="font-display text-xl font-bold text-text-primary mb-3">
-            Anonymise your data?
-          </Text>
-          <Text className="font-body text-base text-text-secondary mb-6">
-            Your name will become &ldquo;Deleted User&rdquo;, your profile photo and email will be
-            permanently removed. Expense records remain visible to other group members.
-          </Text>
-          {deleteError && (
-            <Text className="font-body text-sm text-destructive mb-4">{deleteError}</Text>
-          )}
-          <TouchableOpacity
-            onPress={handleAnonymise}
-            disabled={isDeletingAccount}
-            accessibilityLabel="Confirm anonymise account"
-            className="rounded-full py-4 items-center bg-destructive mb-3"
-          >
-            {isDeletingAccount ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text className="font-body font-medium text-base text-white">Anonymise my data</Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={closeDeleteFlow}
-            disabled={isDeletingAccount}
-            className="rounded-full py-4 items-center border border-border"
-          >
-            <Text className="font-body font-medium text-base text-text-primary">Cancel</Text>
-          </TouchableOpacity>
-        </>
+      return renderConfirmStep(
+        'Anonymise your data?',
+        '“Deleted User” will replace your name, and your profile photo and email will be permanently removed. Expense records remain visible to other group members.',
+        'Anonymise my data',
+        'Confirm anonymise account',
+        handleAnonymise,
       );
     }
 
     if (deleteStep === 'confirm-delete') {
-      return (
-        <>
-          <Text className="font-display text-xl font-bold text-text-primary mb-3">
-            Permanently delete account?
-          </Text>
-          <Text className="font-body text-base text-text-secondary mb-6">
-            Your account and all personal data will be permanently deleted. You will not be able to
-            sign in again. This cannot be undone.
-          </Text>
-          {deleteError && (
-            <Text className="font-body text-sm text-destructive mb-4">{deleteError}</Text>
-          )}
-          <TouchableOpacity
-            onPress={handleFullDelete}
-            disabled={isDeletingAccount}
-            accessibilityLabel="Confirm full account deletion"
-            className="rounded-full py-4 items-center bg-destructive mb-3"
-          >
-            {isDeletingAccount ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text className="font-body font-medium text-base text-white">
-                Yes, permanently delete
-              </Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={closeDeleteFlow}
-            disabled={isDeletingAccount}
-            className="rounded-full py-4 items-center border border-border"
-          >
-            <Text className="font-body font-medium text-base text-text-primary">Cancel</Text>
-          </TouchableOpacity>
-        </>
+      return renderConfirmStep(
+        'Permanently delete account?',
+        'Your account and all personal data will be permanently deleted. You will not be able to sign in again. This cannot be undone.',
+        'Yes, permanently delete',
+        'Confirm full account deletion',
+        handleFullDelete,
       );
     }
 
