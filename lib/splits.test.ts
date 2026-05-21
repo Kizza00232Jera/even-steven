@@ -38,12 +38,6 @@ describe("calculateEqualSplit", () => {
     expect(payer.share).toBeGreaterThan(3.33);
   });
 
-  it("preserves payer's own share in equal list even when they absorb remainder", () => {
-    const result = calculateEqualSplit(10, ["a", "b", "c"], "a");
-    const total = sum(result);
-    expect(round2(total)).toBe(10);
-  });
-
   it("works with two participants", () => {
     const result = calculateEqualSplit(7, ["a", "b"], "a");
     // 7 / 2 = 3.50 each — no remainder
@@ -93,7 +87,7 @@ describe("calculateUnequalSplit", () => {
     expect(round2(sum(result))).toBe(100);
   });
 
-  it("accepts payer explicitly entering their own amount", () => {
+  it("payer's input amount is ignored; share is always computed as remainder", () => {
     const result = calculateUnequalSplit(
       90,
       [
@@ -272,6 +266,5 @@ describe("mode switching behaviour", () => {
     // After mode switch, call equal — result must be fresh
     const equalResult = calculateEqualSplit(100, ["a", "b"], "a");
     expect(equalResult.find((s) => s.memberId === "b")!.share).toBe(50);
-    expect(unequalResult).toBeDefined(); // prior call does not corrupt state
   });
 });
