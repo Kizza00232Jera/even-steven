@@ -1,175 +1,201 @@
-import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Shield, UserX } from 'lucide-react-native';
-import { useAuthStore } from '../../../store/auth';
-import { supabase } from '../../../lib/supabase';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useColorScheme } from 'nativewind';
+import { ChevronLeft, Shield, UserMinus, Clock } from 'lucide-react-native';
+import { ErrorState } from '../../../components/ErrorState';
 import { Colors } from '../../../constants/colors';
-import { fetchGroupDetail, fetchGroupMembers, removeMember } from '../../../lib/repos/groups';
-import type { GroupMemberRow } from '../../../lib/repos/groups';
+import { fetchGroupMembers, removeMember } from '../../../lib/repos/groups';
+import { supabase } from '../../../lib/supabase';
+import { useAuthStore } from '../../../store/auth';
+import type { GroupMemberWithProfile } from '../../../lib/repos/groups';
 
-function getDisplayName(member: GroupMemberRow): string {
-  return member.display_name ?? member.profile_display_name ?? member.email;
-}
-
-function MemberRow({
-  member,
-  isCurrentUser,
-  isAdmin,
-  groupName,
-  onRemove,
+function AvatarPlaceholder({
+  name,
+  size = 40,
 }: {
-  member: GroupMemberRow;
-  isCurrentUser: boolean;
-  isAdmin: boolean;
-  groupName: string;
-  onRemove: (member: GroupMemberRow) => void;
+  name: string | null;
+  size?: number;
 }) {
-  const name = getDisplayName(member);
-  const initials = name.charAt(0).toUpperCase();
+  const { colorScheme } = useColorScheme();
+  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
+  const initial = name ? name.charAt(0).toUpperCase() : '?';
 
   return (
-    <View className="flex-row items-center px-4 py-3 border-b border-border">
-      <View className="w-10 h-10 rounded-full bg-surface-2 border border-border items-center justify-center mr-3">
-        <Text className="font-display text-base font-semibold text-text-secondary">{initials}</Text>
-      </View>
+    <View
+      style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: theme.surface2 }}
+      className="items-center justify-center"
+    >
+      <Text className="font-display font-semibold" style={{ color: theme.textSecondary, fontSize: size * 0.4 }}>
+        {initial}
+      </Text>
+    </View>
+  );
+}
 
-      <View className="flex-1 mr-2">
+interface MemberRowProps {
+  member: GroupMemberWithProfile;
+  isCurrentUser: boolean;
+  isCurrentUserAdmin: boolean;
+  onRemove: () => void;
+}
+
+function MemberRow({ member, isCurrentUser, isCurrentUserAdmin, onRemove }: MemberRowProps) {
+  const { colorScheme } = useColorScheme();
+  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
+  const displayName = member.display_name ?? member.email;
+  const isPending = member.status === 'invited';
+
+  return (
+    <View className="flex-row items-center py-3 border-b border-border">
+      <AvatarPlaceholder name={member.display_name} />
+      <View className="flex-1 ml-3">
         <View className="flex-row items-center gap-2">
-          <Text className="font-body text-base text-text-primary" numberOfLines={1}>
-            {name}
+          <Text className="font-body text-text-primary font-medium text-base" numberOfLines={1}>
+            {displayName}
           </Text>
           {member.role === 'admin' && (
-            <View testID={`admin-badge-${member.id}`} className="flex-row items-center bg-accent/15 rounded px-1.5 py-0.5">
-              <Shield size={10} color={Colors.accent} />
-              <Text className="font-body text-xs ml-0.5" style={{ color: Colors.accent }}>
+            <View
+              testID={`admin-badge-${member.id}`}
+              className="flex-row items-center gap-1 px-2 py-0.5 rounded"
+              style={{ backgroundColor: Colors.accentDim }}
+            >
+              <Shield size={10} color={Colors.accent} strokeWidth={2} />
+              <Text className="font-body text-xs" style={{ color: Colors.accent }}>
                 Admin
               </Text>
             </View>
           )}
-          {member.status === 'invited' && (
-            <View className="bg-surface-2 border border-border rounded px-1.5 py-0.5">
-              <Text className="font-body text-xs text-text-secondary">Invited</Text>
+          {isPending && (
+            <View
+              className="flex-row items-center gap-1 px-2 py-0.5 rounded"
+              style={{ backgroundColor: 'rgba(245,158,11,0.15)' }}
+            >
+              <Clock size={10} color={Colors.warning} strokeWidth={2} />
+              <Text className="font-body text-xs" style={{ color: Colors.warning }}>
+                Pending
+              </Text>
             </View>
           )}
         </View>
-        {name !== member.email && (
-          <Text className="font-body text-xs text-text-secondary" numberOfLines={1}>
+        {member.display_name && (
+          <Text className="font-body text-text-secondary text-xs mt-0.5" numberOfLines={1}>
             {member.email}
           </Text>
         )}
       </View>
-
-      {isAdmin && !isCurrentUser && (
+      {isCurrentUserAdmin && !isCurrentUser && (
         <TouchableOpacity
           testID={`remove-member-${member.id}`}
-          onPress={() => onRemove(member)}
-          className="w-8 h-8 items-center justify-center rounded-full bg-destructive/10"
+          onPress={onRemove}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          className="ml-2"
         >
-          <UserX size={16} color={Colors.destructive} />
+          <UserMinus size={18} color={Colors.destructive} strokeWidth={1.5} />
         </TouchableOpacity>
       )}
     </View>
   );
 }
 
-export default function GroupMembersScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+function useGroupMembers(groupId: string) {
+  return useQuery({
+    queryKey: ['group-members', groupId],
+    queryFn: () => fetchGroupMembers(supabase, groupId),
+  });
+}
+
+export default function MembersScreen() {
+  const { id: groupId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const { session } = useAuthStore();
-  const userId = session?.user?.id ?? '';
+  const queryClient = useQueryClient();
+  const currentUserId = session?.user.id ?? '';
 
-  const { data: detail } = useQuery({
-    queryKey: ['group', id, 'settings'],
-    queryFn: () => fetchGroupDetail(supabase, id, userId),
-    enabled: !!id && !!userId,
+  const { data: members, isLoading, isError, refetch } = useGroupMembers(groupId);
+
+  const removeMutation = useMutation({
+    mutationFn: (memberId: string) => removeMember(supabase, memberId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+    },
   });
 
-  const {
-    data: members,
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
-    queryKey: ['group', id, 'members'],
-    queryFn: () => fetchGroupMembers(supabase, id),
-    enabled: !!id,
-  });
+  const currentMember = members?.find((m) => m.user_id === currentUserId);
+  const isAdmin = currentMember?.role === 'admin';
 
-  const isAdmin = detail?.currentMemberRole === 'admin';
-  const currentMemberId = detail?.currentMemberId ?? '';
-  const groupName = detail?.group?.name ?? 'this group';
-
-  function handleRemove(member: GroupMemberRow) {
-    const name = getDisplayName(member);
+  function confirmRemove(member: GroupMemberWithProfile) {
+    const name = member.display_name ?? member.email;
     Alert.alert(
-      `Remove ${name}?`,
-      `${name} will be removed from ${groupName}. Their balance and expense history remain intact.`,
+      'Remove member',
+      `Remove ${name} from this group? Their expense history will remain intact.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await removeMember(supabase, member.id);
-              queryClient.invalidateQueries({ queryKey: ['group', id] });
-              queryClient.invalidateQueries({ queryKey: ['groups'] });
-            } catch {
-              Alert.alert('Error', 'Failed to remove member. Please try again.');
-            }
-          },
+          onPress: () => removeMutation.mutate(member.id),
         },
-      ]
+      ],
     );
   }
+
+  const count = members?.length ?? 0;
 
   return (
     <SafeAreaView className="flex-1 bg-background">
       <View className="flex-row items-center px-4 py-3 border-b border-border">
-        <TouchableOpacity onPress={() => router.back()} className="mr-3">
-          <ArrowLeft size={22} color={Colors.dark.textPrimary} />
+        <TouchableOpacity
+          testID="back-button"
+          onPress={() => router.back()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          className="mr-3"
+        >
+          <ChevronLeft size={24} color={Colors.accent} strokeWidth={2} />
         </TouchableOpacity>
-        <Text className="font-display text-lg font-semibold text-text-primary flex-1">
-          Members
+        <Text className="font-display text-text-primary font-semibold text-lg">
+          Members ({count})
         </Text>
       </View>
 
-      {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color={Colors.accent} />
-        </View>
-      ) : isError ? (
-        <View className="flex-1 items-center justify-center px-4">
-          <Text className="font-body text-text-secondary text-center mb-4">
-            Failed to load members.
-          </Text>
-          <TouchableOpacity
-            onPress={() => refetch()}
-            className="bg-surface border border-border rounded-xl px-4 py-2"
-          >
-            <Text className="font-body text-text-primary">Retry</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <ScrollView className="flex-1">
-          <View className="bg-surface rounded-2xl mx-4 mt-4 border border-border overflow-hidden">
-            {(members ?? []).map((member) => (
-              <MemberRow
-                key={member.id}
-                member={member}
-                isCurrentUser={member.id === currentMemberId}
-                isAdmin={isAdmin}
-                groupName={groupName}
-                onRemove={handleRemove}
-              />
+      <View className="flex-1 px-4">
+        {isLoading && (
+          <View className="gap-3 pt-4">
+            {[1, 2, 3].map((i) => (
+              <View key={i} className="flex-row items-center gap-3 py-3">
+                <View className="w-10 h-10 rounded-full bg-surface-2" />
+                <View className="flex-1 gap-2">
+                  <View className="h-4 w-32 bg-surface-2 rounded" />
+                  <View className="h-3 w-48 bg-surface-2 rounded" />
+                </View>
+              </View>
             ))}
           </View>
-        </ScrollView>
-      )}
+        )}
+
+        {isError && (
+          <View className="pt-4">
+            <ErrorState onRetry={refetch} />
+          </View>
+        )}
+
+        {!isLoading && !isError && (
+          <FlatList
+            data={members}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <MemberRow
+                member={item}
+                isCurrentUser={item.user_id === currentUserId}
+                isCurrentUserAdmin={isAdmin}
+                onRemove={() => confirmRemove(item)}
+              />
+            )}
+          />
+        )}
+      </View>
     </SafeAreaView>
   );
 }

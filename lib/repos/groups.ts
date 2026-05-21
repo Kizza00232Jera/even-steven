@@ -1,30 +1,54 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../database.types';
+import type { GroupWithMembership } from '../groupFilters';
+import { sortGroups } from '../groupFilters';
 
 type Group = Database['public']['Tables']['groups']['Row'];
+type GroupMember = Database['public']['Tables']['group_members']['Row'];
 type GroupType = Group['type'];
 type Currency = Group['base_currency'];
 
-export interface GroupDetail {
-  group: Group;
-  currentMemberId: string;
-  currentMemberRole: 'admin' | 'member';
-  currentMemberIsMuted: boolean;
-  memberCount: number;
-  hasUnsettledBalances: boolean;
-}
+export type { GroupWithMembership };
 
-export interface GroupMemberRow {
+export interface GroupMemberWithProfile {
   id: string;
+  group_id: string;
   user_id: string | null;
   email: string;
   display_name: string | null;
   role: 'admin' | 'member';
   status: 'active' | 'invited' | 'removed';
+  is_pinned: boolean;
+  is_muted: boolean;
   joined_at: string;
-  profile_display_name: string | null;
   avatar_url: string | null;
+  google_avatar_url: string | null;
+}
+
+export interface GroupDetail {
+  // Flat fields (used by group detail screen)
+  id: string;
+  name: string;
+  type: GroupType;
+  base_currency: string;
+  admin_id: string;
+  status: 'active' | 'expired' | 'archived';
+  start_date: string | null;
+  end_date: string | null;
+  settlement_visibility: 'public' | 'private';
+  background_image_url: string | null;
+  isMember: boolean;
+  isAdmin: boolean;
+  memberId: string | null;
+  isMuted: boolean;
   balance: number;
+  memberCount: number;
+  hasUnsettledBalances: boolean;
+  // Nested fields (used by settings screen)
+  group: Group;
+  currentMemberId: string;
+  currentMemberRole: 'admin' | 'member';
+  currentMemberIsMuted: boolean;
 }
 
 export interface CreateGroupParams {
@@ -102,88 +126,242 @@ export async function fetchGroups(
   return data ?? [];
 }
 
+export async function fetchGroupsWithMembership(
+  client: SupabaseClient<Database>,
+  userId: string,
+): Promise<GroupWithMembership[]> {
+  const { data, error } = await client
+    .from('group_members')
+    .select('id, is_pinned, is_muted, role, groups(*)')
+    .eq('user_id', userId)
+    .eq('status', 'active');
+
+  if (error) throw error;
+
+  const groups: GroupWithMembership[] = (data ?? []).map((row) => {
+    const g = row.groups as Group;
+    return {
+      ...g,
+      member_id: row.id,
+      is_pinned: row.is_pinned,
+      is_muted: row.is_muted,
+      role: row.role,
+      balance: 0,
+    };
+  });
+
+  return sortGroups(groups);
+}
+
 export async function fetchGroupDetail(
   client: SupabaseClient<Database>,
   groupId: string,
   userId: string,
-): Promise<GroupDetail> {
-  const [
-    { data: group, error: groupError },
-    { data: membership, error: membershipError },
-    { count: memberCount, error: countError },
-    { count: expenseCount, error: expenseCountError },
-  ] = await Promise.all([
-    client.from('groups').select('*').eq('id', groupId).single(),
-    client
-      .from('group_members')
-      .select('id, role, is_muted')
-      .eq('group_id', groupId)
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .single(),
-    client
-      .from('group_members')
-      .select('*', { count: 'exact', head: true })
-      .eq('group_id', groupId)
-      .neq('status', 'removed'),
-    client
-      .from('expenses')
-      .select('*', { count: 'exact', head: true })
-      .eq('group_id', groupId),
-  ]);
+): Promise<GroupDetail | null> {
+  const { data: group, error: groupError } = await client
+    .from('groups')
+    .select('*')
+    .eq('id', groupId)
+    .single();
 
-  if (groupError) throw groupError;
-  if (membershipError) throw membershipError;
-  if (countError) throw countError;
-  if (expenseCountError) throw expenseCountError;
+  if (groupError) {
+    if (groupError.code === 'PGRST116') return null;
+    throw groupError;
+  }
+
+  const { data: myMember } = await client
+    .from('group_members')
+    .select('id, role, is_muted, status')
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .single();
+
+  const { count: memberCount } = await client
+    .from('group_members')
+    .select('id', { count: 'exact', head: true })
+    .eq('group_id', groupId)
+    .in('status', ['active', 'invited']);
+
+  const { count: expenseCount } = await client
+    .from('expenses')
+    .select('*', { count: 'exact', head: true })
+    .eq('group_id', groupId);
+
+  const isMember = !!myMember && myMember.status === 'active';
+  const isAdmin = myMember?.role === 'admin';
+  const currentMemberRole = (myMember?.role ?? 'member') as 'admin' | 'member';
+  const currentMemberId = myMember?.id ?? '';
+  const isMuted = myMember?.is_muted ?? false;
+  const memberCountVal = memberCount ?? 0;
+  const hasUnsettledBalances = (expenseCount ?? 0) > 0;
 
   return {
+    // Flat fields
+    id: group.id,
+    name: group.name,
+    type: group.type,
+    base_currency: group.base_currency,
+    admin_id: group.admin_id,
+    status: group.status,
+    start_date: group.start_date,
+    end_date: group.end_date,
+    settlement_visibility: group.settlement_visibility,
+    background_image_url: group.background_image_url,
+    isMember,
+    isAdmin,
+    memberId: myMember?.id ?? null,
+    isMuted,
+    balance: 0,
+    memberCount: memberCountVal,
+    hasUnsettledBalances,
+    // Nested fields (for settings screen compat)
     group,
-    currentMemberId: membership.id,
-    currentMemberRole: membership.role,
-    currentMemberIsMuted: membership.is_muted,
-    memberCount: memberCount ?? 0,
-    hasUnsettledBalances: (expenseCount ?? 0) > 0,
+    currentMemberId,
+    currentMemberRole,
+    currentMemberIsMuted: isMuted,
   };
 }
-
-type ProfileRow = {
-  display_name: string | null;
-  avatar_url: string | null;
-  google_avatar_url: string | null;
-};
 
 export async function fetchGroupMembers(
   client: SupabaseClient<Database>,
   groupId: string,
-): Promise<GroupMemberRow[]> {
+): Promise<GroupMemberWithProfile[]> {
   const { data, error } = await client
     .from('group_members')
-    .select(
-      'id, user_id, email, display_name, role, status, joined_at, profile:profiles!group_members_user_id_fkey(display_name, avatar_url, google_avatar_url)'
-    )
+    .select('*, profiles(avatar_url, google_avatar_url)')
     .eq('group_id', groupId)
-    .neq('status', 'removed')
+    .in('status', ['active', 'invited'])
     .order('joined_at', { ascending: true });
 
   if (error) throw error;
 
-  return (data ?? []).map((m) => {
-    const raw = m.profile;
-    const p = (Array.isArray(raw) ? raw[0] : raw) as ProfileRow | null;
+  return (data ?? []).map((row) => {
+    const profile = row.profiles as { avatar_url: string | null; google_avatar_url: string | null } | null;
     return {
-      id: m.id,
-      user_id: m.user_id,
-      email: m.email,
-      display_name: m.display_name,
-      role: m.role,
-      status: m.status as 'active' | 'invited' | 'removed',
-      joined_at: m.joined_at,
-      profile_display_name: p?.display_name ?? null,
-      avatar_url: p?.avatar_url ?? p?.google_avatar_url ?? null,
-      balance: 0,
+      id: row.id,
+      group_id: row.group_id,
+      user_id: row.user_id,
+      email: row.email,
+      display_name: row.display_name,
+      role: row.role,
+      status: row.status,
+      is_pinned: row.is_pinned,
+      is_muted: row.is_muted,
+      joined_at: row.joined_at,
+      avatar_url: profile?.avatar_url ?? null,
+      google_avatar_url: profile?.google_avatar_url ?? null,
     };
   });
+}
+
+export async function removeMember(
+  client: SupabaseClient<Database>,
+  memberId: string,
+): Promise<void> {
+  const { error } = await client
+    .from('group_members')
+    .update({ status: 'removed' })
+    .eq('id', memberId);
+  if (error) throw error;
+}
+
+export async function pinGroup(
+  client: SupabaseClient<Database>,
+  memberId: string,
+): Promise<void> {
+  const { error } = await client
+    .from('group_members')
+    .update({ is_pinned: true })
+    .eq('id', memberId);
+  if (error) throw error;
+}
+
+export async function unpinGroup(
+  client: SupabaseClient<Database>,
+  memberId: string,
+): Promise<void> {
+  const { error } = await client
+    .from('group_members')
+    .update({ is_pinned: false })
+    .eq('id', memberId);
+  if (error) throw error;
+}
+
+export async function muteGroup(
+  client: SupabaseClient<Database>,
+  memberId: string,
+): Promise<void> {
+  const { error } = await client
+    .from('group_members')
+    .update({ is_muted: true })
+    .eq('id', memberId);
+  if (error) throw error;
+}
+
+export async function unmuteGroup(
+  client: SupabaseClient<Database>,
+  memberId: string,
+): Promise<void> {
+  const { error } = await client
+    .from('group_members')
+    .update({ is_muted: false })
+    .eq('id', memberId);
+  if (error) throw error;
+}
+
+export async function toggleMuteGroup(
+  client: SupabaseClient<Database>,
+  memberId: string,
+  isMuted: boolean,
+): Promise<void> {
+  const { error } = await client
+    .from('group_members')
+    .update({ is_muted: isMuted })
+    .eq('id', memberId);
+  if (error) throw error;
+}
+
+export async function leaveGroup(
+  client: SupabaseClient<Database>,
+  groupId: string,
+  memberId: string,
+  isAdmin: boolean,
+): Promise<void> {
+  if (isAdmin) {
+    const { data: nextAdmin } = await client
+      .from('group_members')
+      .select('id, user_id')
+      .eq('group_id', groupId)
+      .eq('status', 'active')
+      .neq('id', memberId)
+      .order('joined_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (!nextAdmin || !nextAdmin.user_id) {
+      const { error } = await client.from('groups').delete().eq('id', groupId);
+      if (error) throw error;
+      return;
+    }
+
+    const { error: adminUpdateError } = await client
+      .from('groups')
+      .update({ admin_id: nextAdmin.user_id })
+      .eq('id', groupId);
+    if (adminUpdateError) throw adminUpdateError;
+
+    const { error: roleUpdateError } = await client
+      .from('group_members')
+      .update({ role: 'admin' })
+      .eq('id', nextAdmin.id);
+    if (roleUpdateError) throw roleUpdateError;
+  }
+
+  const { error } = await client
+    .from('group_members')
+    .update({ status: 'removed' })
+    .eq('id', memberId);
+  if (error) throw error;
 }
 
 export async function renameGroup(
@@ -250,17 +428,6 @@ export async function extendTripEndDate(
   if (error) throw error;
 }
 
-export async function removeMember(
-  client: SupabaseClient<Database>,
-  memberId: string,
-): Promise<void> {
-  const { error } = await client
-    .from('group_members')
-    .update({ status: 'removed' })
-    .eq('id', memberId);
-  if (error) throw error;
-}
-
 export async function archiveGroup(
   client: SupabaseClient<Database>,
   groupId: string,
@@ -291,58 +458,4 @@ export async function deleteGroup(
   if (error) throw error;
 }
 
-export async function leaveGroup(
-  client: SupabaseClient<Database>,
-  groupId: string,
-  memberId: string,
-  isAdmin: boolean,
-): Promise<void> {
-  if (isAdmin) {
-    const { data: nextAdmin } = await client
-      .from('group_members')
-      .select('id, user_id')
-      .eq('group_id', groupId)
-      .eq('status', 'active')
-      .neq('id', memberId)
-      .order('joined_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    if (!nextAdmin || !nextAdmin.user_id) {
-      // Last member (or only invited members remain) — delete the group
-      const { error } = await client.from('groups').delete().eq('id', groupId);
-      if (error) throw error;
-      return;
-    }
-
-    const { error: adminUpdateError } = await client
-      .from('groups')
-      .update({ admin_id: nextAdmin.user_id })
-      .eq('id', groupId);
-    if (adminUpdateError) throw adminUpdateError;
-
-    const { error: roleUpdateError } = await client
-      .from('group_members')
-      .update({ role: 'admin' })
-      .eq('id', nextAdmin.id);
-    if (roleUpdateError) throw roleUpdateError;
-  }
-
-  const { error } = await client
-    .from('group_members')
-    .update({ status: 'removed' })
-    .eq('id', memberId);
-  if (error) throw error;
-}
-
-export async function toggleMuteGroup(
-  client: SupabaseClient<Database>,
-  memberId: string,
-  isMuted: boolean,
-): Promise<void> {
-  const { error } = await client
-    .from('group_members')
-    .update({ is_muted: isMuted })
-    .eq('id', memberId);
-  if (error) throw error;
-}
+export type { GroupMember };
