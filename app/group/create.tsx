@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,11 @@ import {
   StyleSheet,
   Platform,
   KeyboardAvoidingView,
-  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
-import { X, ChevronLeft, ChevronDown, Plane, Home, Heart, Zap, Users, Grid3X3 } from 'lucide-react-native';
-import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { X, ChevronLeft, Plane, Home, Heart, Zap, Users, Grid3X3 } from 'lucide-react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { useQueryClient } from '@tanstack/react-query';
 import { Colors } from '../../constants/colors';
@@ -55,8 +53,16 @@ function toISODate(d: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-function formatDisplayDate(d: Date): string {
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+function todayStart(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function daysFromToday(n: number): Date {
+  const d = todayStart();
+  d.setDate(d.getDate() + n);
+  return d;
 }
 
 function GradientBackground({ colors, id }: { colors: readonly [string, string]; id: string }) {
@@ -101,6 +107,8 @@ function ProgressIndicator({ step }: { step: 1 | 2 | 3 }) {
   );
 }
 
+// Pure-JS date field — no native modules required.
+// User types 8 digits; dashes are auto-inserted (YYYY-MM-DD).
 function DateField({
   label,
   value,
@@ -114,102 +122,77 @@ function DateField({
   minimumDate?: Date;
   testID?: string;
 }) {
-  const [show, setShow] = useState(false);
+  const isoValue = toISODate(value);
+  const [text, setText] = useState(isoValue);
   const { colorScheme } = useColorScheme();
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
 
-  function handleChange(_event: DateTimePickerEvent, selected?: Date) {
-    if (Platform.OS === 'android') setShow(false);
-    if (selected) onChange(selected);
+  // Sync display if the date was changed from outside (e.g. end clamped to start)
+  useEffect(() => {
+    setText(isoValue);
+  }, [isoValue]);
+
+  function handleChangeText(raw: string) {
+    const digits = raw.replace(/\D/g, '').slice(0, 8);
+    let formatted = digits;
+    if (digits.length > 4) formatted = `${digits.slice(0, 4)}-${digits.slice(4)}`;
+    if (digits.length > 6) formatted = `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+    setText(formatted);
+
+    if (digits.length === 8) {
+      const year = parseInt(digits.slice(0, 4), 10);
+      const month = parseInt(digits.slice(4, 6), 10) - 1;
+      const day = parseInt(digits.slice(6, 8), 10);
+      const d = new Date(year, month, day);
+      const isValid =
+        !isNaN(d.getTime()) &&
+        d.getFullYear() === year &&
+        d.getMonth() === month &&
+        d.getDate() === day;
+      if (isValid && (!minimumDate || d >= minimumDate)) {
+        onChange(d);
+      }
+    }
+  }
+
+  function handleBlur() {
+    setText(isoValue);
   }
 
   return (
-    <View>
-      <TouchableOpacity
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: theme.surface,
+        borderWidth: 1,
+        borderColor: theme.border,
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+      }}
+    >
+      <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 16, color: theme.textSecondary }}>
+        {label}
+      </Text>
+      <TextInput
         testID={testID}
-        onPress={() => setShow((v) => !v)}
+        value={text}
+        onChangeText={handleChangeText}
+        onBlur={handleBlur}
+        keyboardType="numeric"
+        maxLength={10}
         style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          backgroundColor: theme.surface,
-          borderWidth: 1,
-          borderColor: show ? Colors.accent : theme.border,
-          borderRadius: 16,
-          paddingHorizontal: 16,
-          paddingVertical: 16,
+          fontFamily: 'Inter_500Medium',
+          fontSize: 16,
+          color: Colors.accent,
+          textAlign: 'right',
+          minWidth: 110,
         }}
-      >
-        <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 16, color: theme.textSecondary }}>
-          {label}
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 16, color: Colors.accent }}>
-            {formatDisplayDate(value)}
-          </Text>
-          <ChevronDown
-            size={14}
-            color={Colors.accent}
-            strokeWidth={2.5}
-            style={{ transform: [{ rotate: show ? '180deg' : '0deg' }] }}
-          />
-        </View>
-      </TouchableOpacity>
-
-      {Platform.OS === 'ios' ? (
-        <Modal visible={show} transparent animationType="slide">
-          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <View
-              style={{
-                backgroundColor: theme.surface,
-                borderTopLeftRadius: 20,
-                borderTopRightRadius: 20,
-                paddingBottom: 32,
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  paddingHorizontal: 20,
-                  paddingVertical: 16,
-                  borderBottomWidth: 1,
-                  borderBottomColor: theme.border,
-                }}
-              >
-                <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 16, color: theme.textPrimary }}>
-                  {label}
-                </Text>
-                <TouchableOpacity onPress={() => setShow(false)}>
-                  <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 16, color: Colors.accent }}>
-                    Done
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <DateTimePicker
-                value={value}
-                mode="date"
-                display="spinner"
-                onChange={handleChange}
-                minimumDate={minimumDate}
-                themeVariant={colorScheme === 'dark' ? 'dark' : 'light'}
-                style={{ height: 180 }}
-              />
-            </View>
-          </View>
-        </Modal>
-      ) : (
-        show && (
-          <DateTimePicker
-            value={value}
-            mode="date"
-            display="default"
-            onChange={handleChange}
-            minimumDate={minimumDate}
-          />
-        )
-      )}
+        placeholder="YYYY-MM-DD"
+        placeholderTextColor={theme.textTertiary}
+      />
     </View>
   );
 }
@@ -358,7 +341,9 @@ function Step2Details({
 
       {isTrip && (
         <View style={{ gap: 10 }}>
-          <Text className="font-body text-sm font-medium text-text-secondary">Trip dates</Text>
+          <Text className="font-body text-sm font-medium text-text-secondary">
+            Trip dates <Text className="font-body text-xs text-text-tertiary">(YYYY-MM-DD)</Text>
+          </Text>
           <DateField
             label="Start"
             value={startDate}
@@ -487,18 +472,6 @@ function Step3Members({
       </View>
     </View>
   );
-}
-
-function todayStart(): Date {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function daysFromToday(n: number): Date {
-  const d = todayStart();
-  d.setDate(d.getDate() + n);
-  return d;
 }
 
 export default function CreateGroupScreen() {
