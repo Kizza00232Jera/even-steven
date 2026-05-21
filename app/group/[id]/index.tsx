@@ -22,6 +22,9 @@ import { RemovedMemberState } from '../../../components/RemovedMemberState';
 import { Colors } from '../../../constants/colors';
 import { fetchGroupDetail, leaveGroup } from '../../../lib/repos/groups';
 import { getOrCreateInviteToken } from '../../../lib/repos/invites';
+import { fetchGroupExpenses, type ExpenseListItem } from '../../../lib/repos/expenses';
+import { fetchGroupBalances, type GroupBalanceData } from '../../../lib/repos/balances';
+import { format } from '../../../lib/currency';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/auth';
 import { useToast } from '../../../hooks/useToast';
@@ -345,6 +348,7 @@ export default function GroupDetailScreen() {
         {(['expenses', 'balances', 'summary'] as Tab[]).map((tab) => (
           <TouchableOpacity
             key={tab}
+            testID={`tab-${tab}`}
             onPress={() => setActiveTab(tab)}
             className="flex-1 py-3 items-center"
           >
@@ -368,7 +372,12 @@ export default function GroupDetailScreen() {
 
       {/* Tab content */}
       <View className="flex-1">
-        {activeTab === 'expenses' && <ExpensesTabStub />}
+        {activeTab === 'expenses' && (
+          <ExpensesTab
+            groupId={id}
+            currentMemberId={group.currentMemberId ?? ''}
+          />
+        )}
         {activeTab === 'balances' && group.currentMemberId && (
           <BalancesTab groupId={id} currentMemberId={group.currentMemberId} />
         )}
@@ -393,11 +402,166 @@ export default function GroupDetailScreen() {
   );
 }
 
-function ExpensesTabStub() {
+type ExpenseFilter = 'all' | 'unsettled' | 'mine' | 'i-paid';
+
+interface ExpensesTabProps {
+  groupId: string;
+  currentMemberId: string;
+}
+
+function isExpenseSettled(
+  participantIds: string[],
+  memberBalances: Map<string, number>
+): boolean {
+  return participantIds.every((id) => (memberBalances.get(id) ?? 1) === 0);
+}
+
+function ExpensesTab({ groupId, currentMemberId }: ExpensesTabProps) {
+  const router = useRouter();
+  const { colorScheme } = useColorScheme();
+  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
+  const [activeFilter, setActiveFilter] = useState<ExpenseFilter>('all');
+
+  const { data: expenses = [], isLoading } = useQuery<ExpenseListItem[]>({
+    queryKey: ['expenses', groupId],
+    queryFn: () => fetchGroupExpenses(supabase, groupId),
+  });
+
+  const { data: balancesData } = useQuery<GroupBalanceData>({
+    queryKey: ['group-balances', groupId],
+    queryFn: () => fetchGroupBalances(supabase, groupId),
+  });
+
+  const memberBalances = new Map<string, number>(
+    (balancesData?.members ?? []).map((m) => [m.memberId, m.balance])
+  );
+
+  const filteredExpenses = expenses.filter((exp) => {
+    switch (activeFilter) {
+      case 'unsettled':
+        return !isExpenseSettled(exp.participant_member_ids, memberBalances);
+      case 'mine':
+        return exp.participant_member_ids.includes(currentMemberId);
+      case 'i-paid':
+        return exp.payer_id === currentMemberId;
+      default:
+        return true;
+    }
+  });
+
+  const filters: { key: ExpenseFilter; label: string; testID: string }[] = [
+    { key: 'all', label: 'All', testID: 'filter-all' },
+    { key: 'unsettled', label: 'Unsettled', testID: 'filter-unsettled' },
+    { key: 'mine', label: 'Mine', testID: 'filter-mine' },
+    { key: 'i-paid', label: 'I paid', testID: 'filter-i-paid' },
+  ];
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 px-4 pt-4 gap-3">
+        <SkeletonExpenseCard />
+        <SkeletonExpenseCard />
+        <SkeletonExpenseCard />
+      </View>
+    );
+  }
+
   return (
-    <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-      <Text className="text-text-secondary text-base">Expenses coming soon</Text>
-    </ScrollView>
+    <View className="flex-1">
+      {/* Filter chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}
+      >
+        {filters.map((f) => {
+          const isActive = activeFilter === f.key;
+          return (
+            <TouchableOpacity
+              key={f.key}
+              testID={f.testID}
+              accessibilityState={{ selected: isActive }}
+              onPress={() => setActiveFilter(f.key)}
+              className="px-4 py-1.5 rounded-full border"
+              style={{
+                backgroundColor: isActive ? Colors.accent : 'transparent',
+                borderColor: isActive ? Colors.accent : theme.border,
+              }}
+            >
+              <Text
+                className="font-body text-sm font-medium"
+                style={{ color: isActive ? '#ffffff' : theme.textSecondary }}
+              >
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Expense list */}
+      {filteredExpenses.length === 0 ? (
+        <View testID="expenses-empty-state" className="flex-1 items-center justify-center px-4">
+          <Text className="text-text-secondary text-base text-center">
+            {activeFilter === 'all' ? 'No expenses yet.' : 'No expenses match this filter.'}
+          </Text>
+        </View>
+      ) : (
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ padding: 16, gap: 12 }}
+        >
+          {filteredExpenses.map((expense) => {
+            const settled = isExpenseSettled(expense.participant_member_ids, memberBalances);
+            return (
+              <TouchableOpacity
+                key={expense.id}
+                testID={`expense-card-${expense.id}`}
+                onPress={() =>
+                  router.push(
+                    `/group/${groupId}/edit-expense?expenseId=${expense.id}` as never
+                  )
+                }
+                className="rounded-2xl p-4"
+                style={{
+                  backgroundColor: theme.surface,
+                  opacity: settled ? 0.5 : 1,
+                }}
+              >
+                <View className="flex-row items-start justify-between">
+                  <View className="flex-1 mr-3">
+                    <View className="flex-row items-center gap-2 flex-wrap">
+                      <Text
+                        testID={`expense-title-${expense.id}`}
+                        className="font-display font-semibold text-text-primary text-base"
+                        style={{ color: settled ? theme.textSecondary : theme.textPrimary }}
+                      >
+                        {expense.title}
+                      </Text>
+                      {expense.is_edited && (
+                        <View
+                          testID={`edited-badge-${expense.id}`}
+                          className="px-1.5 py-0.5 rounded"
+                          style={{ backgroundColor: theme.surface2 }}
+                        >
+                          <Text className="text-text-tertiary text-xs font-body">edited</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text className="font-body text-text-secondary text-sm mt-0.5">
+                      {expense.category} · {expense.payer_name} paid · {expense.expense_date}
+                    </Text>
+                  </View>
+                  <Text className="font-display font-semibold text-text-primary text-base">
+                    {format(expense.amount, expense.currency)}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+    </View>
   );
 }
 
