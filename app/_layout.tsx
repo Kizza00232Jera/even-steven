@@ -1,5 +1,5 @@
 import '../global.css';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -16,13 +16,53 @@ import {
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { configureGoogleSignIn } from '../lib/auth';
+import { getProfile } from '../lib/repos/profiles';
+import { useAuthStore } from '../store/auth';
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
-export default function RootLayout() {
+configureGoogleSignIn();
+
+function NavigationGuard() {
+  const router = useRouter();
+  const segments = useSegments();
+  const { session, profile, isLoading } = useAuthStore();
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const inAuth = segments[0] === '(auth)';
+
+    if (!session) {
+      if (!inAuth) router.replace('/(auth)');
+      return;
+    }
+
+    if (profile && !profile.onboarding_done) {
+      // Allow navigation within the onboarding flow
+      const inOnboarding =
+        segments[0] === '(auth)' && (segments as string[])[1] === 'onboarding';
+      if (!inOnboarding) {
+        router.replace('/(auth)/onboarding/display-name');
+      }
+      return;
+    }
+
+    if (profile?.onboarding_done && inAuth) {
+      router.replace('/(tabs)/groups');
+    }
+  }, [session, profile, isLoading, segments]);
+
+  return null;
+}
+
+function RootContent() {
   const { colorScheme } = useColorScheme();
+  const { setSession, setProfile, setIsLoading } = useAuthStore();
 
   const [fontsLoaded, fontError] = useFonts({
     SpaceGrotesk_400Regular,
@@ -39,12 +79,54 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError]);
 
+  useEffect(() => {
+    async function fetchAndSetProfile(userId: string) {
+      try {
+        const profile = await getProfile(supabase, userId);
+        setProfile(profile);
+      } catch {
+        setProfile(null);
+      }
+    }
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setSession(session);
+      if (session) await fetchAndSetProfile(session.user.id);
+      setIsLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        if (session) {
+          await fetchAndSetProfile(session.user.id);
+        } else {
+          setProfile(null);
+        }
+        if (event !== 'INITIAL_SESSION') {
+          setIsLoading(false);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <>
+      <NavigationGuard />
       <Stack screenOptions={{ headerShown: false }} />
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RootContent />
     </QueryClientProvider>
   );
 }

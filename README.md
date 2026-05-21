@@ -10,7 +10,8 @@ Available on iOS and Android.
 
 ## Features
 
-> This section grows as features are built. Nothing is listed until it's shipped.
+- **Google Sign-In** — OAuth via Google, session persisted across cold restarts
+- **First-launch onboarding** — set display name and preferred currency, shown exactly once
 
 ---
 
