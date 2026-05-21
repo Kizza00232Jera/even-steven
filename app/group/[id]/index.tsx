@@ -1,7 +1,8 @@
-import { View, Text } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
+import { Plus } from 'lucide-react-native';
 import { SkeletonExpenseCard } from '../../../components/SkeletonExpenseCard';
 import { SkeletonBalanceRow } from '../../../components/SkeletonBalanceRow';
 import { ErrorState } from '../../../components/ErrorState';
@@ -21,6 +22,7 @@ function useGroupDetail(id: string) {
 }
 
 export default function GroupDetailScreen() {
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: group, isLoading, isError, refetch } = useGroupDetail(id);
 
@@ -62,6 +64,14 @@ export default function GroupDetailScreen() {
       <View className="flex-1 px-4">
         <Text className="text-text-primary font-bold text-2xl mt-4">Group {id}</Text>
       </View>
+      <TouchableOpacity
+        testID="add-expense-fab"
+        onPress={() => router.push(`/group/${id}/add-expense` as never)}
+        className="absolute bottom-8 right-6 w-14 h-14 rounded-full bg-accent items-center justify-center"
+        style={{ elevation: 4 }}
+      >
+        <Plus size={24} color="#ffffff" strokeWidth={2.5} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

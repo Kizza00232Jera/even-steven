@@ -22,6 +22,7 @@ import { supabase } from '../lib/supabase';
 import { configureGoogleSignIn } from '../lib/auth';
 import { getProfile } from '../lib/repos/profiles';
 import { useAuthStore } from '../store/auth';
+import { useRatesStore } from '../store/rates';
 import { VersionGateScreen } from '../components/VersionGateScreen';
 import { useVersionGate } from '../hooks/useVersionGate';
 import { useOTAUpdates } from '../hooks/useOTAUpdates';
@@ -93,6 +94,8 @@ function RootContent() {
 
   const versionGate = useVersionGate();
   useOTAUpdates();
+  const { fetchRates } = useRatesStore();
+  useEffect(() => { fetchRates(); }, []);
 
   useEffect(() => {
     if ((fontsLoaded || fontError) && versionGate !== 'loading') {
