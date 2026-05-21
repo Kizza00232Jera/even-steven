@@ -74,12 +74,49 @@ const ALL_CATEGORIES: Category[] = [
   'Sports',
 ];
 
+const SPLIT_MODE_TAB_LABELS: Record<'equal' | 'unequal' | 'percentage', string> = {
+  equal: 'Equal',
+  unequal: 'Unequal',
+  percentage: '%',
+};
+
+const SPLIT_SECTION_LABELS: Record<'equal' | 'unequal' | 'percentage', string> = {
+  equal: 'Split equally between',
+  unequal: 'Split unequally between',
+  percentage: 'Split by percentage between',
+};
+
 function today(): string {
   return new Date().toISOString().split('T')[0];
 }
 
 function isDateInFuture(dateStr: string): boolean {
   return dateStr > today();
+}
+
+function sumOthers(
+  participantIds: Set<string>,
+  payerId: string,
+  values: Record<string, string>
+): number {
+  return Array.from(participantIds)
+    .filter((id) => id !== payerId)
+    .reduce((sum, id) => {
+      const val = parseFloat(values[id] ?? '0');
+      return sum + (isNaN(val) ? 0 : val);
+    }, 0);
+}
+
+function hasNegativeEntry(
+  values: Record<string, string>,
+  payerId: string,
+  participantIds: Set<string>
+): boolean {
+  return Object.entries(values).some(([id, val]) => {
+    if (id === payerId || !participantIds.has(id)) return false;
+    const num = parseFloat(val);
+    return !isNaN(num) && num < 0;
+  });
 }
 
 function getMemberDisplayName(
@@ -223,24 +260,14 @@ export default function AddExpenseScreen() {
   // ── Payer remainder (unequal) ───────────────────────────────────────────────
   const payerRemainder = useMemo(() => {
     if (!payerId || splitMode !== 'unequal') return amount;
-    const othersTotal = Array.from(participantIds)
-      .filter((id) => id !== payerId)
-      .reduce((sum, id) => {
-        const val = parseFloat(memberAmounts[id] ?? '0');
-        return sum + (isNaN(val) ? 0 : val);
-      }, 0);
+    const othersTotal = sumOthers(participantIds, payerId, memberAmounts);
     return Math.round((amount - othersTotal) * 100) / 100;
   }, [amount, payerId, splitMode, memberAmounts, participantIds]);
 
   // ── Payer percentage remainder ──────────────────────────────────────────────
   const payerPercentageRemainder = useMemo(() => {
     if (!payerId || splitMode !== 'percentage') return 100;
-    const othersTotal = Array.from(participantIds)
-      .filter((id) => id !== payerId)
-      .reduce((sum, id) => {
-        const val = parseFloat(memberPercentages[id] ?? '0');
-        return sum + (isNaN(val) ? 0 : val);
-      }, 0);
+    const othersTotal = sumOthers(participantIds, payerId, memberPercentages);
     return Math.round((100 - othersTotal) * 100) / 100;
   }, [payerId, splitMode, memberPercentages, participantIds]);
 
@@ -266,22 +293,10 @@ export default function AddExpenseScreen() {
   const canSave = useMemo(() => {
     if (title.trim().length === 0 || amount <= 0 || payerId === null || participantIds.size === 0 || writesDisabled) return false;
     if (splitMode === 'unequal') {
-      for (const [id, val] of Object.entries(memberAmounts)) {
-        if (id !== payerId && participantIds.has(id)) {
-          const num = parseFloat(val);
-          if (!isNaN(num) && num < 0) return false;
-        }
-      }
-      if (payerRemainder < 0) return false;
+      if (hasNegativeEntry(memberAmounts, payerId, participantIds) || payerRemainder < 0) return false;
     }
     if (splitMode === 'percentage') {
-      for (const [id, val] of Object.entries(memberPercentages)) {
-        if (id !== payerId && participantIds.has(id)) {
-          const num = parseFloat(val);
-          if (!isNaN(num) && num < 0) return false;
-        }
-      }
-      if (payerPercentageRemainder < 0) return false;
+      if (hasNegativeEntry(memberPercentages, payerId, participantIds) || payerPercentageRemainder < 0) return false;
     }
     return true;
   }, [title, amount, payerId, participantIds, writesDisabled, splitMode, memberAmounts, memberPercentages, payerRemainder, payerPercentageRemainder]);
@@ -519,7 +534,7 @@ export default function AddExpenseScreen() {
             </Text>
             <View className="flex-row bg-surface-2 rounded-xl overflow-hidden">
               {(['equal', 'unequal', 'percentage'] as const).map((mode) => {
-                const label = mode === 'equal' ? 'Equal' : mode === 'unequal' ? 'Unequal' : '%';
+                const label = SPLIT_MODE_TAB_LABELS[mode];
                 const isActive = splitMode === mode;
                 return (
                   <TouchableOpacity
@@ -542,7 +557,7 @@ export default function AddExpenseScreen() {
           <View>
             <View className="flex-row items-center justify-between mb-2">
               <Text className="font-body text-text-secondary text-xs uppercase tracking-wider">
-                {splitMode === 'equal' ? 'Split equally between' : splitMode === 'unequal' ? 'Split unequally between' : 'Split by percentage between'}
+                {SPLIT_SECTION_LABELS[splitMode]}
               </Text>
               <TouchableOpacity
                 onPress={() => setParticipantIds(new Set(members.map((m) => m.id)))}
