@@ -52,7 +52,6 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
     queryFn: () => fetchGroupBalances(supabase, groupId),
   });
 
-  // Realtime: invalidate on expense or settlement changes
   useEffect(() => {
     const channel = supabase
       .channel(`balances-${groupId}`)
@@ -214,7 +213,7 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
             {settleUpTarget && (
               <>
                 <Text className="text-text-secondary text-sm">
-                  {settleUpTarget.debtorName === 'You' || settleUpTarget.debtorMemberId === currentMemberId
+                  {settleUpTarget.debtorMemberId === currentMemberId
                     ? `You owe ${settleUpTarget.creditorName}`
                     : `${settleUpTarget.debtorName} owes ${settleUpTarget.creditorName}`}
                   {' · '}

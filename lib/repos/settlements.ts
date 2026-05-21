@@ -1,12 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../database.types';
+import type { Currency } from '../currency';
 
 export interface RecordSettlementParams {
   groupId: string;
   payerMemberId: string;
   payeeMemberId: string;
   amount: number;
-  currency: 'USD' | 'EUR' | 'DKK' | 'SEK';
+  currency: Currency;
   recordedBy: string;
 }
 

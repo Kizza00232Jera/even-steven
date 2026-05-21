@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../database.types';
+import type { Currency } from '../currency';
 
 export interface MemberWithBalance {
   memberId: string;
@@ -12,7 +13,7 @@ export interface MemberWithBalance {
 
 export interface GroupBalanceData {
   groupId: string;
-  currency: 'USD' | 'EUR' | 'DKK' | 'SEK';
+  currency: Currency;
   members: MemberWithBalance[];
 }
 
