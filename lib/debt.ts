@@ -17,7 +17,6 @@ export interface Settlement {
 export function simplifyDebts(members: MemberBalance[]): Settlement[] {
   const EPSILON = 0.005;
 
-  // Mutable copies at full precision — filter members that are already settled
   const balances = members
     .map(({ memberId, balance }) => ({ memberId, balance }))
     .filter(({ balance }) => Math.abs(balance) >= EPSILON);
