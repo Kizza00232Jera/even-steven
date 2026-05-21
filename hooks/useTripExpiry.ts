@@ -25,8 +25,6 @@ async function addShownId(groupId: string): Promise<void> {
   await SecureStore.setItemAsync(SHOWN_KEY, JSON.stringify(Array.from(ids)));
 }
 
-// allBalancesZero param will be wired from the balance system in a later issue.
-// Called from the settlement flow when a group's balances change.
 export async function checkAndAutoArchive(
   groupId: string,
   groupStatus: Group['status'],

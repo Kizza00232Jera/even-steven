@@ -89,7 +89,7 @@ export async function fetchGroupById(
     .from('groups')
     .select('*')
     .eq('id', id)
-    .single();
+    .maybeSingle();
   if (error) throw error;
   return data;
 }

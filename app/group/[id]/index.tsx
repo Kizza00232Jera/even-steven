@@ -31,7 +31,6 @@ function AddExpenseFab({ group }: { group: Group }) {
       toast.info('This trip has ended. Extend the trip in settings to add new expenses.');
       return;
     }
-    // Expense form entry point — wired in a later issue
   }
 
   return (
