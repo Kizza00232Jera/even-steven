@@ -16,6 +16,9 @@ import {
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { View } from 'react-native';
+import { OfflineBanner } from '../components/OfflineBanner';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -23,6 +26,7 @@ const queryClient = new QueryClient();
 
 export default function RootLayout() {
   const { colorScheme } = useColorScheme();
+  const { isOnline } = useNetworkStatus();
 
   const [fontsLoaded] = useFonts({
     SpaceGrotesk_400Regular,
@@ -43,7 +47,10 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Stack screenOptions={{ headerShown: false }} />
+      <View style={{ flex: 1 }}>
+        <OfflineBanner isOnline={isOnline} />
+        <Stack screenOptions={{ headerShown: false }} />
+      </View>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
     </QueryClientProvider>
   );
