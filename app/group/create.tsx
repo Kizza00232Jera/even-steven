@@ -61,6 +61,9 @@ function GradientBackground({ colors, id }: { colors: readonly [string, string];
 }
 
 function ProgressIndicator({ step }: { step: 1 | 2 | 3 }) {
+  const { colorScheme } = useColorScheme();
+  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
+
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       {([1, 2, 3] as const).map((s) => (
@@ -72,7 +75,7 @@ function ProgressIndicator({ step }: { step: 1 | 2 | 3 }) {
             borderRadius: 14,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: s <= step ? Colors.accent : Colors.dark.surface2,
+            backgroundColor: s <= step ? Colors.accent : theme.surface2,
             opacity: s < step ? 0.55 : 1,
           }}
         >
@@ -460,7 +463,6 @@ export default function CreateGroupScreen() {
         style={{ flex: 1 }}
       >
         <View style={{ flex: 1, paddingHorizontal: 16 }}>
-          {/* Header */}
           <View
             style={{
               flexDirection: 'row',
@@ -485,7 +487,6 @@ export default function CreateGroupScreen() {
             <View style={{ width: 40 }} />
           </View>
 
-          {/* Step content */}
           <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
             {step === 1 && (
               <Step1TypeSelection selected={groupType} onSelect={setGroupType} />
@@ -522,12 +523,10 @@ export default function CreateGroupScreen() {
             <View style={{ height: 24 }} />
           </ScrollView>
 
-          {/* Error */}
           {error && (
             <Text className="font-body text-sm text-destructive mt-1 mb-2">{error}</Text>
           )}
 
-          {/* Footer */}
           <View style={{ paddingBottom: 16, gap: 12 }}>
             {step === 3 ? (
               <TouchableOpacity

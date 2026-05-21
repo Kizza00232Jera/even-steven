@@ -11,8 +11,6 @@ function useGroupDetail(id: string) {
   return useQuery({
     queryKey: ['group', id],
     queryFn: async () => {
-      // Group detail will be fetched from Supabase here
-      // Returns null when the authenticated user is no longer a member
       return null as {
         id: string;
         name: string;
