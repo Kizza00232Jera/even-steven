@@ -5,8 +5,7 @@ import { Colors } from '../../constants/colors';
 
 export default function TabsLayout() {
   const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const theme = isDark ? Colors.dark : Colors.light;
+  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
 
   return (
     <Tabs
