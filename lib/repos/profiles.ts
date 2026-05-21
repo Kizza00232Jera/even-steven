@@ -32,6 +32,21 @@ export async function updateProfile(
   return data;
 }
 
+export async function upsertProfile(
+  client: SupabaseClient<Database>,
+  userId: string,
+  email: string,
+  update: ProfileUpdate
+): Promise<Profile> {
+  const { data, error } = await client
+    .from('profiles')
+    .upsert({ id: userId, email, ...update })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function uploadProfilePhoto(
   client: SupabaseClient<Database>,
   userId: string,

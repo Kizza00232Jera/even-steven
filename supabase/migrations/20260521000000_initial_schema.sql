@@ -12,84 +12,6 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ---------------------------------------------------------------------------
--- Helpers
--- ---------------------------------------------------------------------------
-
--- Returns the group_member row for the current authenticated user in a group.
-CREATE OR REPLACE FUNCTION current_member_id(p_group_id UUID)
-RETURNS UUID
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT id
-  FROM group_members
-  WHERE group_id = p_group_id
-    AND user_id  = auth.uid()
-    AND status   = 'active'
-  LIMIT 1;
-$$;
-
--- Returns true if the current user is an active member of the group.
-CREATE OR REPLACE FUNCTION is_group_member(p_group_id UUID)
-RETURNS BOOLEAN
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM group_members
-    WHERE group_id = p_group_id
-      AND user_id  = auth.uid()
-      AND status   = 'active'
-  );
-$$;
-
--- Returns true if the current user is a participant of an expense.
-CREATE OR REPLACE FUNCTION is_expense_participant(p_expense_id UUID)
-RETURNS BOOLEAN
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM expense_participants ep
-    JOIN group_members gm ON ep.member_id = gm.id
-    WHERE ep.expense_id = p_expense_id
-      AND gm.user_id    = auth.uid()
-  );
-$$;
-
--- Returns true if the current user is the payer of an expense or the group admin.
-CREATE OR REPLACE FUNCTION is_expense_payer_or_group_admin(p_expense_id UUID)
-RETURNS BOOLEAN
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM expenses e
-    JOIN group_members gm ON gm.id = e.payer_id
-    WHERE e.id       = p_expense_id
-      AND gm.user_id = auth.uid()
-  )
-  OR EXISTS (
-    SELECT 1
-    FROM expenses e
-    JOIN groups g ON g.id = e.group_id
-    WHERE e.id       = p_expense_id
-      AND g.admin_id = auth.uid()
-  );
-$$;
-
--- ---------------------------------------------------------------------------
 -- 1. profiles
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS profiles (
@@ -360,6 +282,84 @@ CREATE TABLE IF NOT EXISTS push_tokens (
 );
 
 CREATE INDEX IF NOT EXISTS idx_push_tokens_user_id ON push_tokens (user_id);
+
+-- ---------------------------------------------------------------------------
+-- Helpers (defined after tables so SQL function bodies can be validated)
+-- ---------------------------------------------------------------------------
+
+-- Returns the group_member row for the current authenticated user in a group.
+CREATE OR REPLACE FUNCTION current_member_id(p_group_id UUID)
+RETURNS UUID
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT id
+  FROM group_members
+  WHERE group_id = p_group_id
+    AND user_id  = auth.uid()
+    AND status   = 'active'
+  LIMIT 1;
+$$;
+
+-- Returns true if the current user is an active member of the group.
+CREATE OR REPLACE FUNCTION is_group_member(p_group_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM group_members
+    WHERE group_id = p_group_id
+      AND user_id  = auth.uid()
+      AND status   = 'active'
+  );
+$$;
+
+-- Returns true if the current user is a participant of an expense.
+CREATE OR REPLACE FUNCTION is_expense_participant(p_expense_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM expense_participants ep
+    JOIN group_members gm ON ep.member_id = gm.id
+    WHERE ep.expense_id = p_expense_id
+      AND gm.user_id    = auth.uid()
+  );
+$$;
+
+-- Returns true if the current user is the payer of an expense or the group admin.
+CREATE OR REPLACE FUNCTION is_expense_payer_or_group_admin(p_expense_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM expenses e
+    JOIN group_members gm ON gm.id = e.payer_id
+    WHERE e.id       = p_expense_id
+      AND gm.user_id = auth.uid()
+  )
+  OR EXISTS (
+    SELECT 1
+    FROM expenses e
+    JOIN groups g ON g.id = e.group_id
+    WHERE e.id       = p_expense_id
+      AND g.admin_id = auth.uid()
+  );
+$$;
 
 -- ---------------------------------------------------------------------------
 -- Auto-update updated_at columns

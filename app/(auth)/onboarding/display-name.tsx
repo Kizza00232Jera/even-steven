@@ -11,7 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../../store/auth';
-import { updateProfile } from '../../../lib/repos/profiles';
+import { upsertProfile } from '../../../lib/repos/profiles';
 import { supabase } from '../../../lib/supabase';
 
 export default function DisplayNameScreen() {
@@ -30,13 +30,13 @@ export default function DisplayNameScreen() {
     setIsSaving(true);
     setError(null);
     try {
-      const updated = await updateProfile(supabase, session!.user.id, {
+      const updated = await upsertProfile(supabase, session!.user.id, session!.user.email!, {
         display_name: name.trim(),
         google_avatar_url: session?.user?.user_metadata?.avatar_url ?? null,
       });
       setProfile(updated);
       router.replace('/(auth)/onboarding/currency');
-    } catch (e) {
+    } catch {
       setError('Something went wrong. Please try again.');
     } finally {
       setIsSaving(false);
