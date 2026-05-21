@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -64,29 +64,6 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
     queryKey: ['group-settlements', groupId],
     queryFn: () => fetchGroupSettlements(supabase, groupId),
   });
-
-  useEffect(() => {
-    const channel = supabase
-      .channel(`balances-${groupId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'expenses', filter: `group_id=eq.${groupId}` },
-        () => queryClient.invalidateQueries({ queryKey: ['group-balances', groupId] })
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'settlements', filter: `group_id=eq.${groupId}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['group-balances', groupId] });
-          queryClient.invalidateQueries({ queryKey: ['group-settlements', groupId] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [groupId, queryClient]);
 
   const simplifiedDebts = useMemo(() => {
     if (!data) return [];

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useColorScheme } from 'nativewind';
 import { User } from 'lucide-react-native';
 import { fetchGroupSummary, type CategoryBreakdown } from '../../../lib/repos/summary';
@@ -74,27 +74,11 @@ function DonutChart({ segments }: { segments: CategoryBreakdown[] }) {
 export function SummaryTab({ groupId }: SummaryTabProps) {
   const { colorScheme } = useColorScheme();
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
-  const queryClient = useQueryClient();
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['group-summary', groupId],
     queryFn: () => fetchGroupSummary(supabase, groupId),
   });
-
-  useEffect(() => {
-    const channel = supabase
-      .channel(`summary-${groupId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'expenses', filter: `group_id=eq.${groupId}` },
-        () => queryClient.invalidateQueries({ queryKey: ['group-summary', groupId] })
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [groupId, queryClient]);
 
   if (isLoading) {
     return (
