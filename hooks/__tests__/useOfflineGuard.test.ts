@@ -1,16 +1,15 @@
-import { renderHook } from '@testing-library/react-native';
 import { useOfflineGuard } from '../useOfflineGuard';
 
 describe('useOfflineGuard', () => {
   it('returns writesDisabled false when online', () => {
-    const { result } = renderHook(() => useOfflineGuard(true));
-    expect(result.current.writesDisabled).toBe(false);
-    expect(result.current.offlineMessage).toBeNull();
+    const guard = useOfflineGuard(true);
+    expect(guard.writesDisabled).toBe(false);
+    expect(guard.offlineMessage).toBeNull();
   });
 
   it('returns writesDisabled true and a message when offline', () => {
-    const { result } = renderHook(() => useOfflineGuard(false));
-    expect(result.current.writesDisabled).toBe(true);
-    expect(result.current.offlineMessage).toBe("You're offline. Connect to save changes.");
+    const guard = useOfflineGuard(false);
+    expect(guard.writesDisabled).toBe(true);
+    expect(guard.offlineMessage).toBe("You're offline. Connect to save changes.");
   });
 });

@@ -13,12 +13,15 @@ export function OfflineBanner({ isOnline }: Props) {
 
   if (isOnline) return null;
 
+  const backgroundColor = isDark ? '#2a1f00' : '#fef3c7';
+  const borderColor = isDark ? 'rgba(245,158,11,0.3)' : 'rgba(245,158,11,0.4)';
+
   return (
     <View
       style={{
-        backgroundColor: isDark ? '#2a1f00' : '#fef3c7',
+        backgroundColor,
         borderBottomWidth: 1,
-        borderBottomColor: isDark ? 'rgba(245,158,11,0.3)' : 'rgba(245,158,11,0.4)',
+        borderBottomColor: borderColor,
         paddingVertical: 8,
         paddingHorizontal: 16,
         alignItems: 'center',
