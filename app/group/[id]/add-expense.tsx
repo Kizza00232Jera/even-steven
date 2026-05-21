@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -80,6 +80,16 @@ function today(): string {
 
 function isDateInFuture(dateStr: string): boolean {
   return dateStr > today();
+}
+
+function getMemberDisplayName(
+  member: GroupMember,
+  currentUserId: string | undefined,
+  profileDisplayName: string | null | undefined
+): string {
+  if (member.display_name) return member.display_name;
+  if (member.user_id === currentUserId) return profileDisplayName ?? 'You';
+  return member.email ?? '—';
 }
 
 export default function AddExpenseScreen() {
@@ -256,9 +266,9 @@ export default function AddExpenseScreen() {
 
   // ── Payer display name ──────────────────────────────────────────────────────
   const payerMember = members.find((m) => m.id === payerId);
-  const payerDisplayName =
-    payerMember?.display_name ??
-    (payerMember?.user_id === session?.user.id ? profile?.display_name ?? 'You' : payerMember?.email ?? '—');
+  const payerDisplayName = payerMember
+    ? getMemberDisplayName(payerMember, session?.user.id, profile?.display_name)
+    : '—';
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -440,11 +450,7 @@ export default function AddExpenseScreen() {
             </View>
             <View className="bg-surface-2 rounded-xl overflow-hidden">
               {members.map((member, idx) => {
-                const name =
-                  member.display_name ??
-                  (member.user_id === session?.user.id
-                    ? profile?.display_name ?? 'You'
-                    : member.email);
+                const name = getMemberDisplayName(member, session?.user.id, profile?.display_name);
                 const isSelected = participantIds.has(member.id);
                 return (
                   <TouchableOpacity
@@ -561,11 +567,7 @@ export default function AddExpenseScreen() {
               </Text>
             </View>
             {members.map((member) => {
-              const name =
-                member.display_name ??
-                (member.user_id === session?.user.id
-                  ? profile?.display_name ?? 'You'
-                  : member.email);
+              const name = getMemberDisplayName(member, session?.user.id, profile?.display_name);
               return (
                 <TouchableOpacity
                   key={member.id}

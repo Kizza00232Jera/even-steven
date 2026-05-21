@@ -54,7 +54,7 @@ export async function fetchGroupMembers(
     .from('group_members')
     .select('*')
     .eq('group_id', groupId)
-    .in('status', ['active'])
+    .eq('status', 'active')
     .order('joined_at', { ascending: true });
   if (error) throw error;
   return data ?? [];

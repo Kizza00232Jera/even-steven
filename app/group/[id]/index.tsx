@@ -55,7 +55,7 @@ export default function GroupDetailScreen() {
     );
   }
 
-  if (group !== null && !group?.isMember) {
+  if (group != null && !group.isMember) {
     return <RemovedMemberState />;
   }
 
