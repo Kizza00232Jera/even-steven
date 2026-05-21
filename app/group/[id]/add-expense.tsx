@@ -17,12 +17,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { X, ChevronDown, Check, Paperclip } from 'lucide-react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { useAuthStore } from '../../../store/auth';
 import { useRatesStore } from '../../../store/rates';
 import { useNetworkStatus } from '../../../hooks/useNetworkStatus';
 import { useOfflineGuard } from '../../../hooks/useOfflineGuard';
+import { useReceiptPicker } from '../../../hooks/useReceiptPicker';
 import { createExpense, fetchGroupMembers, uploadReceipt } from '../../../lib/repos/expenses';
 import { detectCategory, type Category } from '../../../lib/categories';
 import { calculateEqualSplit, calculateUnequalSplit, calculatePercentageSplit } from '../../../lib/splits';
@@ -157,7 +156,7 @@ export default function AddExpenseScreen() {
   const [splitMode, setSplitMode] = useState<'equal' | 'unequal' | 'percentage'>('equal');
   const [memberAmounts, setMemberAmounts] = useState<Record<string, string>>({});
   const [memberPercentages, setMemberPercentages] = useState<Record<string, string>>({});
-  const [receiptUri, setReceiptUri] = useState<string | null>(null);
+  const { receiptUri, setReceiptUri, handleAttachReceipt } = useReceiptPicker();
 
   // ── Modal state ─────────────────────────────────────────────────────────────
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
@@ -274,48 +273,6 @@ export default function AddExpenseScreen() {
     const othersTotal = sumOthers(participantIds, payerId, memberPercentages);
     return Math.round((100 - othersTotal) * 100) / 100;
   }, [payerId, splitMode, memberPercentages, participantIds]);
-
-  // ── Receipt picker ──────────────────────────────────────────────────────────
-  async function compressAndSet(uri: string) {
-    const result = await manipulateAsync(
-      uri,
-      [{ resize: { width: 1200 } }],
-      { compress: 0.7, format: SaveFormat.JPEG }
-    );
-    setReceiptUri(result.uri);
-  }
-
-  async function handlePickFromLibrary() {
-    const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!granted) return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
-    });
-    if (!result.canceled && result.assets[0]) {
-      await compressAndSet(result.assets[0].uri);
-    }
-  }
-
-  async function handleTakePhoto() {
-    const { granted } = await ImagePicker.requestCameraPermissionsAsync();
-    if (!granted) return;
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
-    });
-    if (!result.canceled && result.assets[0]) {
-      await compressAndSet(result.assets[0].uri);
-    }
-  }
-
-  function handleAttachReceipt() {
-    Alert.alert('Attach Receipt', undefined, [
-      { text: 'Take Photo', onPress: handleTakePhoto },
-      { text: 'Choose from Library', onPress: handlePickFromLibrary },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  }
 
   // ── Dirty check ────────────────────────────────────────────────────────────
   const isDirty = title.trim().length > 0 || description.trim().length > 0 || amountText.length > 0 || receiptUri !== null;

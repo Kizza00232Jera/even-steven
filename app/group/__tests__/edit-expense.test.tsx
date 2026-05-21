@@ -109,7 +109,7 @@ jest.mock('expo-image-manipulator', () => ({
 }));
 
 async function waitForLoaded(getByTestId: (id: string) => unknown) {
-  await waitFor(() => (getByTestId as (id: string) => { props: Record<string, unknown> })('save-button'));
+  await waitFor(() => getByTestId('save-button'));
 }
 
 beforeEach(() => {

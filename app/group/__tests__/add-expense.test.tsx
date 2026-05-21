@@ -647,7 +647,7 @@ describe('AddExpenseScreen — receipt attachment', () => {
     alertSpy.mockRestore();
   });
 
-  it('does not show receipt thumbnail in dirty check (form closes without dialog when only receipt attached)', async () => {
+  it('treats receipt attachment as dirty — shows discard dialog when only a receipt is attached', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const { getByTestId } = render(<AddExpenseScreen />);
 

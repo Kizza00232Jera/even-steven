@@ -116,7 +116,7 @@ export async function fetchGroupExpenses(
       expense_date: row.expense_date,
       is_edited: row.is_edited,
       participant_member_ids: participants.map((p) => p.member_id),
-      receipt_url: (row as { receipt_url?: string | null }).receipt_url ?? null,
+      receipt_url: row.receipt_url,
     };
   });
 }

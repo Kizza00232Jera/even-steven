@@ -16,10 +16,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { X, ChevronDown, Check, Trash2, AlertCircle, Paperclip } from 'lucide-react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { useNetworkStatus } from '../../../hooks/useNetworkStatus';
 import { useOfflineGuard } from '../../../hooks/useOfflineGuard';
+import { useReceiptPicker } from '../../../hooks/useReceiptPicker';
 import {
   fetchGroupExpenses,
   hasGroupSettlements,
@@ -89,8 +88,8 @@ export default function EditExpenseScreen() {
   const [description, setDescription] = useState('');
   const [amountText, setAmountText] = useState('');
   const [category, setCategory] = useState<Category>('Other');
-  const [receiptUri, setReceiptUri] = useState<string | null>(null);
   const [receiptChanged, setReceiptChanged] = useState(false);
+  const { receiptUri, setReceiptUri, handleAttachReceipt } = useReceiptPicker(() => setReceiptChanged(true));
 
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -123,48 +122,6 @@ export default function EditExpenseScreen() {
   function handleManualCategorySelect(cat: Category) {
     setCategory(cat);
     setCategoryModalVisible(false);
-  }
-
-  async function compressAndSet(uri: string) {
-    const result = await manipulateAsync(
-      uri,
-      [{ resize: { width: 1200 } }],
-      { compress: 0.7, format: SaveFormat.JPEG }
-    );
-    setReceiptUri(result.uri);
-    setReceiptChanged(true);
-  }
-
-  async function handlePickFromLibrary() {
-    const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!granted) return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
-    });
-    if (!result.canceled && result.assets[0]) {
-      await compressAndSet(result.assets[0].uri);
-    }
-  }
-
-  async function handleTakePhoto() {
-    const { granted } = await ImagePicker.requestCameraPermissionsAsync();
-    if (!granted) return;
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
-    });
-    if (!result.canceled && result.assets[0]) {
-      await compressAndSet(result.assets[0].uri);
-    }
-  }
-
-  function handleAttachReceipt() {
-    Alert.alert('Attach Receipt', undefined, [
-      { text: 'Take Photo', onPress: handleTakePhoto },
-      { text: 'Choose from Library', onPress: handlePickFromLibrary },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
   }
 
   function handleRemoveReceipt() {
