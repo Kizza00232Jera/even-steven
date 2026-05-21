@@ -26,28 +26,28 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="groups"
+        name="groups/index"
         options={{
           title: 'Groups',
           tabBarIcon: ({ color, size }) => <Users size={size} color={color} strokeWidth={1.5} />,
         }}
       />
       <Tabs.Screen
-        name="friends"
+        name="friends/index"
         options={{
           title: 'Friends',
           tabBarIcon: ({ color, size }) => <UserPlus size={size} color={color} strokeWidth={1.5} />,
         }}
       />
       <Tabs.Screen
-        name="activity"
+        name="activity/index"
         options={{
           title: 'Activity',
           tabBarIcon: ({ color, size }) => <Activity size={size} color={color} strokeWidth={1.5} />,
         }}
       />
       <Tabs.Screen
-        name="account"
+        name="account/index"
         options={{
           title: 'Account',
           tabBarIcon: ({ color, size }) => <User size={size} color={color} strokeWidth={1.5} />,
