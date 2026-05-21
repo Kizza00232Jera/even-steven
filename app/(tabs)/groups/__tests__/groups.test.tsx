@@ -48,6 +48,7 @@ jest.mock('lucide-react-native', () => ({
   X: () => null,
   ChevronRight: () => null,
   Check: () => null,
+  Link: () => null,
 }));
 
 jest.mock('nativewind', () => ({

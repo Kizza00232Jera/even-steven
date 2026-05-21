@@ -122,25 +122,25 @@ describe('CreateGroupScreen — Step 2 (Details)', () => {
   });
 
   it('shows date fields for Trip type', () => {
-    const { getByPlaceholderText } = advanceToStep2('Trip');
-    expect(getByPlaceholderText('Start date (YYYY-MM-DD)')).toBeTruthy();
-    expect(getByPlaceholderText('End date (YYYY-MM-DD)')).toBeTruthy();
+    const { getByTestId } = advanceToStep2('Trip');
+    expect(getByTestId('start-date-input')).toBeTruthy();
+    expect(getByTestId('end-date-input')).toBeTruthy();
   });
 
   it('does not show date fields for non-Trip types', () => {
-    const { queryByPlaceholderText } = advanceToStep2('Home');
-    expect(queryByPlaceholderText('Start date (YYYY-MM-DD)')).toBeNull();
-    expect(queryByPlaceholderText('End date (YYYY-MM-DD)')).toBeNull();
+    const { queryByTestId } = advanceToStep2('Home');
+    expect(queryByTestId('start-date-input')).toBeNull();
+    expect(queryByTestId('end-date-input')).toBeNull();
   });
 
   it('Trip Next remains disabled until both dates are filled', () => {
     const { getByTestId, getByPlaceholderText } = advanceToStep2('Trip');
     fireEvent.changeText(getByPlaceholderText('Group name'), 'Ski Trip');
     // Only start date filled
-    fireEvent.changeText(getByPlaceholderText('Start date (YYYY-MM-DD)'), '2026-12-01');
+    fireEvent.changeText(getByTestId('start-date-input'), '2026-12-01');
     expect(getByTestId('next-button').props.accessibilityState?.disabled).toBe(true);
     // End date filled too
-    fireEvent.changeText(getByPlaceholderText('End date (YYYY-MM-DD)'), '2026-12-10');
+    fireEvent.changeText(getByTestId('end-date-input'), '2026-12-10');
     expect(getByTestId('next-button').props.accessibilityState?.disabled).not.toBe(true);
   });
 });

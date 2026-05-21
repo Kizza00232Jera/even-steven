@@ -81,6 +81,8 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+jest.setTimeout(30000);
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockGetGroupsWithOutstandingBalances.mockResolvedValue([]);

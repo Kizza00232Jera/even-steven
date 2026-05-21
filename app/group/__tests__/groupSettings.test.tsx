@@ -15,7 +15,20 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('../../../lib/repos/groups', () => ({
+  fetchGroupDetail: jest.fn(),
   leaveGroup: (...args: unknown[]) => mockLeaveGroup(...args),
+}));
+
+jest.mock('../../../lib/repos/invites', () => ({
+  getOrCreateInviteToken: jest.fn().mockResolvedValue('tok'),
+}));
+
+jest.mock('../../../hooks/useToast', () => ({
+  useToast: () => ({ info: jest.fn(), success: jest.fn(), error: jest.fn() }),
+}));
+
+jest.mock('../[id]/balances', () => ({
+  BalancesTab: () => null,
 }));
 
 jest.mock('../../../lib/supabase', () => ({ supabase: {} }));
@@ -41,6 +54,8 @@ jest.mock('lucide-react-native', () => ({
   Bell: () => null,
   X: () => null,
   ChevronRight: () => null,
+  Plus: () => null,
+  Share2: () => null,
 }));
 
 jest.mock('nativewind', () => ({
@@ -66,9 +81,12 @@ jest.mock('../../../components/SkeletonBalanceRow', () => ({
 const group = {
   id: 'group-1',
   name: 'Paris Trip',
+  type: 'Trip' as const,
+  status: 'active' as const,
   isMember: true,
   isAdmin: true,
   memberId: 'member-1',
+  currentMemberId: 'member-1',
   isMuted: false,
   balance: 0,
   memberCount: 2,

@@ -7,7 +7,7 @@ export interface GroupWithMembership {
   id: string;
   name: string;
   type: GroupType;
-  base_currency: string;
+  base_currency: Database['public']['Tables']['groups']['Row']['base_currency'];
   admin_id: string;
   status: GroupStatus;
   start_date: string | null;
