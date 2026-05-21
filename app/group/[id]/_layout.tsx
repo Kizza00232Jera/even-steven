@@ -5,6 +5,7 @@ export default function GroupDetailLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="add-expense" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="edit-expense" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }
