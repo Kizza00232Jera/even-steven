@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -22,7 +22,7 @@ import { useNetworkStatus } from '../../../hooks/useNetworkStatus';
 import { useOfflineGuard } from '../../../hooks/useOfflineGuard';
 import { createExpense, fetchGroupMembers } from '../../../lib/repos/expenses';
 import { detectCategory, type Category } from '../../../lib/categories';
-import { calculateEqualSplit } from '../../../lib/splits';
+import { calculateEqualSplit, calculateUnequalSplit, calculatePercentageSplit } from '../../../lib/splits';
 import { convert, format, type Currency } from '../../../lib/currency';
 import { hapticOnExpenseSaved } from '../../../lib/haptics';
 import { supabase } from '../../../lib/supabase';
@@ -114,6 +114,9 @@ export default function AddExpenseScreen() {
   const [manualCategory, setManualCategory] = useState(false);
   const [payerId, setPayerId] = useState<string | null>(null);
   const [participantIds, setParticipantIds] = useState<Set<string>>(new Set());
+  const [splitMode, setSplitMode] = useState<'equal' | 'unequal' | 'percentage'>('equal');
+  const [memberAmounts, setMemberAmounts] = useState<Record<string, string>>({});
+  const [memberPercentages, setMemberPercentages] = useState<Record<string, string>>({});
 
   // ── Modal state ─────────────────────────────────────────────────────────────
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
@@ -210,6 +213,37 @@ export default function AddExpenseScreen() {
     });
   }
 
+  // ── Split mode switch ───────────────────────────────────────────────────────
+  function handleSplitModeChange(mode: 'equal' | 'unequal' | 'percentage') {
+    setSplitMode(mode);
+    setMemberAmounts({});
+    setMemberPercentages({});
+  }
+
+  // ── Payer remainder (unequal) ───────────────────────────────────────────────
+  const payerRemainder = useMemo(() => {
+    if (!payerId || splitMode !== 'unequal') return amount;
+    const othersTotal = Array.from(participantIds)
+      .filter((id) => id !== payerId)
+      .reduce((sum, id) => {
+        const val = parseFloat(memberAmounts[id] ?? '0');
+        return sum + (isNaN(val) ? 0 : val);
+      }, 0);
+    return Math.round((amount - othersTotal) * 100) / 100;
+  }, [amount, payerId, splitMode, memberAmounts, participantIds]);
+
+  // ── Payer percentage remainder ──────────────────────────────────────────────
+  const payerPercentageRemainder = useMemo(() => {
+    if (!payerId || splitMode !== 'percentage') return 100;
+    const othersTotal = Array.from(participantIds)
+      .filter((id) => id !== payerId)
+      .reduce((sum, id) => {
+        const val = parseFloat(memberPercentages[id] ?? '0');
+        return sum + (isNaN(val) ? 0 : val);
+      }, 0);
+    return Math.round((100 - othersTotal) * 100) / 100;
+  }, [payerId, splitMode, memberPercentages, participantIds]);
+
   // ── Dirty check ────────────────────────────────────────────────────────────
   const isDirty = title.trim().length > 0 || description.trim().length > 0 || amountText.length > 0;
 
@@ -229,13 +263,55 @@ export default function AddExpenseScreen() {
   }
 
   // ── Save ────────────────────────────────────────────────────────────────────
-  const canSave = title.trim().length > 0 && amount > 0 && payerId !== null && participantIds.size > 0 && !writesDisabled;
+  const canSave = useMemo(() => {
+    if (title.trim().length === 0 || amount <= 0 || payerId === null || participantIds.size === 0 || writesDisabled) return false;
+    if (splitMode === 'unequal') {
+      for (const [id, val] of Object.entries(memberAmounts)) {
+        if (id !== payerId && participantIds.has(id)) {
+          const num = parseFloat(val);
+          if (!isNaN(num) && num < 0) return false;
+        }
+      }
+      if (payerRemainder < 0) return false;
+    }
+    if (splitMode === 'percentage') {
+      for (const [id, val] of Object.entries(memberPercentages)) {
+        if (id !== payerId && participantIds.has(id)) {
+          const num = parseFloat(val);
+          if (!isNaN(num) && num < 0) return false;
+        }
+      }
+      if (payerPercentageRemainder < 0) return false;
+    }
+    return true;
+  }, [title, amount, payerId, participantIds, writesDisabled, splitMode, memberAmounts, memberPercentages, payerRemainder, payerPercentageRemainder]);
 
   async function handleSave() {
     if (!canSave || isSaving) return;
 
     const participantList = Array.from(participantIds);
-    const splits = calculateEqualSplit(amount, participantList, payerId!);
+    let splits;
+    if (splitMode === 'equal') {
+      splits = calculateEqualSplit(amount, participantList, payerId!);
+    } else if (splitMode === 'unequal') {
+      splits = calculateUnequalSplit(
+        amount,
+        participantList.map((id) => ({
+          memberId: id,
+          amount: id === payerId ? 0 : parseFloat(memberAmounts[id] ?? '0') || 0,
+        })),
+        payerId!
+      );
+    } else {
+      splits = calculatePercentageSplit(
+        amount,
+        participantList.map((id) => ({
+          memberId: id,
+          percentage: id === payerId ? 0 : parseFloat(memberPercentages[id] ?? '0') || 0,
+        })),
+        payerId!
+      );
+    }
 
     setIsSaving(true);
     try {
@@ -249,7 +325,7 @@ export default function AddExpenseScreen() {
           currency,
           category,
           payer_id: payerId!,
-          split_method: 'equal',
+          split_method: splitMode,
           expense_date: date,
         },
         splits
@@ -436,11 +512,37 @@ export default function AddExpenseScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Participants — equal split */}
+          {/* Split method selector */}
+          <View>
+            <Text className="font-body text-text-secondary text-xs mb-2 uppercase tracking-wider">
+              Split method
+            </Text>
+            <View className="flex-row bg-surface-2 rounded-xl overflow-hidden">
+              {(['equal', 'unequal', 'percentage'] as const).map((mode) => {
+                const label = mode === 'equal' ? 'Equal' : mode === 'unequal' ? 'Unequal' : '%';
+                const isActive = splitMode === mode;
+                return (
+                  <TouchableOpacity
+                    key={mode}
+                    testID={`split-mode-${mode}`}
+                    onPress={() => handleSplitModeChange(mode)}
+                    accessibilityState={{ selected: isActive }}
+                    className={`flex-1 py-2.5 items-center ${isActive ? 'bg-accent' : ''}`}
+                  >
+                    <Text className={`font-body text-sm font-semibold ${isActive ? 'text-white' : 'text-text-secondary'}`}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Participants */}
           <View>
             <View className="flex-row items-center justify-between mb-2">
               <Text className="font-body text-text-secondary text-xs uppercase tracking-wider">
-                Split equally between
+                {splitMode === 'equal' ? 'Split equally between' : splitMode === 'unequal' ? 'Split unequally between' : 'Split by percentage between'}
               </Text>
               <TouchableOpacity
                 onPress={() => setParticipantIds(new Set(members.map((m) => m.id)))}
@@ -452,20 +554,62 @@ export default function AddExpenseScreen() {
               {members.map((member, idx) => {
                 const name = getMemberDisplayName(member, session?.user.id, profile?.display_name);
                 const isSelected = participantIds.has(member.id);
+                const isPayer = member.id === payerId;
+                const isPayerLocked = isPayer && splitMode !== 'equal';
                 return (
-                  <TouchableOpacity
+                  <View
                     key={member.id}
-                    onPress={() => toggleParticipant(member.id)}
                     className={`flex-row items-center px-4 py-3 ${idx < members.length - 1 ? 'border-b border-border' : ''}`}
                   >
                     <Switch
                       testID={`participant-checkbox-${member.id}`}
                       value={isSelected}
-                      onValueChange={() => toggleParticipant(member.id)}
+                      onValueChange={() => { if (!isPayerLocked) toggleParticipant(member.id); }}
+                      disabled={isPayerLocked}
                       trackColor={{ true: Colors.accent }}
                     />
-                    <Text className="text-text-primary font-body text-base ml-3">{name}</Text>
-                  </TouchableOpacity>
+                    <Text className="text-text-primary font-body text-base ml-3 flex-1">{name}</Text>
+                    {splitMode === 'unequal' && isSelected && (
+                      isPayer ? (
+                        <Text
+                          testID="payer-remainder-display"
+                          className="text-text-secondary font-body text-base w-20 text-right"
+                        >
+                          {payerRemainder.toFixed(2)}
+                        </Text>
+                      ) : (
+                        <TextInput
+                          testID={`member-amount-${member.id}`}
+                          value={memberAmounts[member.id] ?? ''}
+                          onChangeText={(val) => setMemberAmounts((prev) => ({ ...prev, [member.id]: val }))}
+                          placeholder="0.00"
+                          placeholderTextColor={Colors.dark.textTertiary}
+                          keyboardType="decimal-pad"
+                          className="bg-surface rounded-lg px-3 py-1.5 text-text-primary font-body text-base w-20 text-right"
+                        />
+                      )
+                    )}
+                    {splitMode === 'percentage' && isSelected && (
+                      isPayer ? (
+                        <Text
+                          testID="payer-percentage-display"
+                          className="text-text-secondary font-body text-base w-20 text-right"
+                        >
+                          {`${payerPercentageRemainder.toFixed(2)}%`}
+                        </Text>
+                      ) : (
+                        <TextInput
+                          testID={`member-percentage-${member.id}`}
+                          value={memberPercentages[member.id] ?? ''}
+                          onChangeText={(val) => setMemberPercentages((prev) => ({ ...prev, [member.id]: val }))}
+                          placeholder="0"
+                          placeholderTextColor={Colors.dark.textTertiary}
+                          keyboardType="decimal-pad"
+                          className="bg-surface rounded-lg px-3 py-1.5 text-text-primary font-body text-base w-20 text-right"
+                        />
+                      )
+                    )}
+                  </View>
                 );
               })}
             </View>

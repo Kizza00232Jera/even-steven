@@ -287,3 +287,185 @@ describe('AddExpenseScreen — save and navigation', () => {
     expect(saveButton.props.accessibilityState?.disabled).toBe(true);
   });
 });
+
+describe('AddExpenseScreen — split mode selector', () => {
+  it('renders Equal, Unequal, and Percentage mode buttons', () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    expect(getByTestId('split-mode-equal')).toBeTruthy();
+    expect(getByTestId('split-mode-unequal')).toBeTruthy();
+    expect(getByTestId('split-mode-percentage')).toBeTruthy();
+  });
+
+  it('defaults to Equal mode', () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    expect(getByTestId('split-mode-equal').props.accessibilityState?.selected).toBe(true);
+    expect(getByTestId('split-mode-unequal').props.accessibilityState?.selected).toBe(false);
+    expect(getByTestId('split-mode-percentage').props.accessibilityState?.selected).toBe(false);
+  });
+
+  it('switches to Unequal mode on press', () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.press(getByTestId('split-mode-unequal'));
+    expect(getByTestId('split-mode-unequal').props.accessibilityState?.selected).toBe(true);
+    expect(getByTestId('split-mode-equal').props.accessibilityState?.selected).toBe(false);
+  });
+
+  it('switches to Percentage mode on press', () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.press(getByTestId('split-mode-percentage'));
+    expect(getByTestId('split-mode-percentage').props.accessibilityState?.selected).toBe(true);
+  });
+});
+
+describe('AddExpenseScreen — unequal split mode', () => {
+  it('shows amount input for each non-payer participant in Unequal mode', () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.press(getByTestId('split-mode-unequal'));
+    expect(getByTestId('member-amount-member-2')).toBeTruthy();
+  });
+
+  it('shows payer remainder display in Unequal mode', () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.changeText(getByTestId('amount-input'), '100');
+    fireEvent.press(getByTestId('split-mode-unequal'));
+    expect(getByTestId('payer-remainder-display')).toBeTruthy();
+  });
+
+  it('payer remainder decreases as other participant amounts are entered', () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.changeText(getByTestId('amount-input'), '100');
+    fireEvent.press(getByTestId('split-mode-unequal'));
+    fireEvent.changeText(getByTestId('member-amount-member-2'), '30');
+    const remainder = getByTestId('payer-remainder-display');
+    expect(remainder.props.children).toBe('70.00');
+  });
+
+  it('payer checkbox is disabled in Unequal mode', () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.press(getByTestId('split-mode-unequal'));
+    const payerCheckbox = getByTestId('participant-checkbox-member-1');
+    expect(payerCheckbox.props.disabled).toBe(true);
+  });
+
+  it('saves with unequal split_method and correct shares', async () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.changeText(getByTestId('title-input'), 'Dinner');
+    fireEvent.changeText(getByTestId('amount-input'), '100');
+    fireEvent.press(getByTestId('split-mode-unequal'));
+    fireEvent.changeText(getByTestId('member-amount-member-2'), '30');
+    fireEvent.press(getByTestId('save-button'));
+
+    await waitFor(() =>
+      expect(mockCreateExpense).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ split_method: 'unequal' }),
+        expect.arrayContaining([
+          expect.objectContaining({ memberId: 'member-2', share: 30 }),
+          expect.objectContaining({ memberId: 'member-1', share: 70 }),
+        ])
+      )
+    );
+  });
+
+  it('disables save when a non-payer amount is negative', () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.changeText(getByTestId('title-input'), 'Dinner');
+    fireEvent.changeText(getByTestId('amount-input'), '100');
+    fireEvent.press(getByTestId('split-mode-unequal'));
+    fireEvent.changeText(getByTestId('member-amount-member-2'), '-10');
+    expect(getByTestId('save-button').props.accessibilityState?.disabled).toBe(true);
+  });
+
+  it('disables save when other amounts exceed the total (payer share would be negative)', () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.changeText(getByTestId('title-input'), 'Dinner');
+    fireEvent.changeText(getByTestId('amount-input'), '100');
+    fireEvent.press(getByTestId('split-mode-unequal'));
+    fireEvent.changeText(getByTestId('member-amount-member-2'), '110');
+    expect(getByTestId('save-button').props.accessibilityState?.disabled).toBe(true);
+  });
+
+  it('clears unequal amounts when switching back to Equal mode', () => {
+    const { getByTestId, queryByTestId } = render(<AddExpenseScreen />);
+    fireEvent.press(getByTestId('split-mode-unequal'));
+    fireEvent.changeText(getByTestId('member-amount-member-2'), '30');
+    fireEvent.press(getByTestId('split-mode-equal'));
+    // Switching back hides amount inputs
+    expect(queryByTestId('member-amount-member-2')).toBeNull();
+  });
+});
+
+describe('AddExpenseScreen — percentage split mode', () => {
+  it('shows percentage input for each non-payer participant in Percentage mode', () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.press(getByTestId('split-mode-percentage'));
+    expect(getByTestId('member-percentage-member-2')).toBeTruthy();
+  });
+
+  it('shows payer percentage remainder display', () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.press(getByTestId('split-mode-percentage'));
+    expect(getByTestId('payer-percentage-display')).toBeTruthy();
+    expect(getByTestId('payer-percentage-display').props.children).toBe('100.00%');
+  });
+
+  it('payer percentage remainder decreases as others get percentages', () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.press(getByTestId('split-mode-percentage'));
+    fireEvent.changeText(getByTestId('member-percentage-member-2'), '40');
+    const display = getByTestId('payer-percentage-display');
+    expect(display.props.children).toBe('60.00%');
+  });
+
+  it('payer checkbox is disabled in Percentage mode', () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.press(getByTestId('split-mode-percentage'));
+    expect(getByTestId('participant-checkbox-member-1').props.disabled).toBe(true);
+  });
+
+  it('saves with percentage split_method and correct shares', async () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.changeText(getByTestId('title-input'), 'Dinner');
+    fireEvent.changeText(getByTestId('amount-input'), '200');
+    fireEvent.press(getByTestId('split-mode-percentage'));
+    fireEvent.changeText(getByTestId('member-percentage-member-2'), '25');
+    fireEvent.press(getByTestId('save-button'));
+
+    await waitFor(() =>
+      expect(mockCreateExpense).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ split_method: 'percentage' }),
+        expect.arrayContaining([
+          expect.objectContaining({ memberId: 'member-2', share: 50 }),
+          expect.objectContaining({ memberId: 'member-1', share: 150 }),
+        ])
+      )
+    );
+  });
+
+  it('disables save when a percentage is negative', () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.changeText(getByTestId('title-input'), 'Dinner');
+    fireEvent.changeText(getByTestId('amount-input'), '100');
+    fireEvent.press(getByTestId('split-mode-percentage'));
+    fireEvent.changeText(getByTestId('member-percentage-member-2'), '-10');
+    expect(getByTestId('save-button').props.accessibilityState?.disabled).toBe(true);
+  });
+
+  it('disables save when percentages exceed 100 (payer percentage would be negative)', () => {
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.changeText(getByTestId('title-input'), 'Dinner');
+    fireEvent.changeText(getByTestId('amount-input'), '100');
+    fireEvent.press(getByTestId('split-mode-percentage'));
+    fireEvent.changeText(getByTestId('member-percentage-member-2'), '110');
+    expect(getByTestId('save-button').props.accessibilityState?.disabled).toBe(true);
+  });
+
+  it('clears percentage amounts when switching to Unequal mode', () => {
+    const { getByTestId, queryByTestId } = render(<AddExpenseScreen />);
+    fireEvent.press(getByTestId('split-mode-percentage'));
+    fireEvent.changeText(getByTestId('member-percentage-member-2'), '40');
+    fireEvent.press(getByTestId('split-mode-unequal'));
+    expect(queryByTestId('member-percentage-member-2')).toBeNull();
+  });
+});
