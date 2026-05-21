@@ -50,8 +50,8 @@ function NavigationGuard() {
       return;
     }
 
-    if (profile && !profile.onboarding_done) {
-      // Allow navigation within the onboarding flow
+    // New user — signed in but no profile record yet
+    if (profile === null) {
       const inOnboarding =
         segments[0] === '(auth)' && (segments as string[])[1] === 'onboarding';
       if (!inOnboarding) {
@@ -60,7 +60,16 @@ function NavigationGuard() {
       return;
     }
 
-    if (profile?.onboarding_done && inAuth) {
+    if (!profile.onboarding_done) {
+      const inOnboarding =
+        segments[0] === '(auth)' && (segments as string[])[1] === 'onboarding';
+      if (!inOnboarding) {
+        router.replace('/(auth)/onboarding/display-name');
+      }
+      return;
+    }
+
+    if (inAuth) {
       router.replace('/(tabs)/groups');
     }
   }, [session, profile, isLoading, segments]);
