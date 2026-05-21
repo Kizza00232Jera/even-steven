@@ -5,9 +5,11 @@ import { useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { SkeletonGroupCard } from '../../../components/SkeletonGroupCard';
 import { ErrorState } from '../../../components/ErrorState';
+import { TripExpiredModal } from '../../../components/TripExpiredModal';
 import { Colors } from '../../../constants/colors';
 import { fetchGroups } from '../../../lib/repos/groups';
 import { supabase } from '../../../lib/supabase';
+import { useTripExpiry } from '../../../hooks/useTripExpiry';
 import type { Database } from '../../../lib/database.types';
 
 type Group = Database['public']['Tables']['groups']['Row'];
@@ -48,6 +50,7 @@ function GroupCard({ group }: { group: Group }) {
 export default function GroupsScreen() {
   const router = useRouter();
   const { data: groups, isLoading, isError, refetch } = useGroups();
+  const { popupGroup, dismissPopup } = useTripExpiry(groups);
 
   function renderContent() {
     if (isLoading) {
@@ -102,6 +105,11 @@ export default function GroupsScreen() {
         </View>
         {renderContent()}
       </View>
+      <TripExpiredModal
+        groupName={popupGroup?.name ?? ''}
+        visible={popupGroup !== null}
+        onDismiss={dismissPopup}
+      />
     </SafeAreaView>
   );
 }
