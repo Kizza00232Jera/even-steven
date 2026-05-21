@@ -1,4 +1,4 @@
-import { View, Text, Pressable, Linking } from 'react-native';
+import { View, Text, Pressable, Linking, Platform } from 'react-native';
 
 const APP_STORE_URL =
   'https://apps.apple.com/app/even-steven/id0000000000';
@@ -7,8 +7,7 @@ const PLAY_STORE_URL =
 
 export function VersionGateScreen() {
   function openStore() {
-    const url =
-      /android/i.test(navigator?.userAgent ?? '') ? PLAY_STORE_URL : APP_STORE_URL;
+    const url = Platform.OS === 'android' ? PLAY_STORE_URL : APP_STORE_URL;
     Linking.openURL(url);
   }
 
