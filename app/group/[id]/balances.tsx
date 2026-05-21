@@ -15,6 +15,7 @@ import { User, Check, RotateCcw } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { simplifyDebts, type Settlement } from '../../../lib/debt';
 import { fetchGroupBalances } from '../../../lib/repos/balances';
+import { logActivityEvent } from '../../../lib/repos/activity';
 import {
   recordSettlement,
   fetchGroupSettlements,
@@ -23,6 +24,7 @@ import {
 } from '../../../lib/repos/settlements';
 import { supabase } from '../../../lib/supabase';
 import { format, type Currency } from '../../../lib/currency';
+import { useAuthStore } from '../../../store/auth';
 import { hapticOnSettlementRecorded } from '../../../lib/haptics';
 import { useToast } from '../../../hooks/useToast';
 import { SkeletonBalanceRow } from '../../../components/SkeletonBalanceRow';
@@ -47,6 +49,7 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
   const queryClient = useQueryClient();
   const toast = useToast();
+  const { session } = useAuthStore();
 
   const [settleUpTarget, setSettleUpTarget] = useState<SettleUpTarget | null>(null);
   const [amountText, setAmountText] = useState('');
@@ -138,6 +141,12 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
         recordedBy: currentMemberId,
       });
       hapticOnSettlementRecorded();
+      logActivityEvent(supabase, {
+        groupId,
+        actorId: session!.user.id,
+        eventType: 'settlement_recorded',
+        metadata: { amount: parsed, currency: settleUpTarget.currency },
+      }).catch(() => {});
       toast.success('Settlement recorded');
       closeModal();
       queryClient.invalidateQueries({ queryKey: ['group-balances', groupId] });
@@ -152,6 +161,11 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
   async function handleVoid(settlementId: string) {
     try {
       await voidSettlement(supabase, settlementId, currentMemberId);
+      logActivityEvent(supabase, {
+        groupId,
+        actorId: session!.user.id,
+        eventType: 'settlement_voided',
+      }).catch(() => {});
       hapticOnSettlementRecorded();
       toast.success('Settlement undone');
       queryClient.invalidateQueries({ queryKey: ['group-balances', groupId] });

@@ -47,6 +47,7 @@ import {
   extendTripEndDate,
   toggleMuteGroup,
 } from '../../../lib/repos/groups';
+import { logActivityEvent } from '../../../lib/repos/activity';
 
 const rowClass = 'flex-row items-center justify-between px-4 py-4 border-b border-border';
 const rowLabelClass = 'font-body text-base text-text-primary ml-3 flex-1';
@@ -203,6 +204,11 @@ export default function GroupSettingsScreen() {
             setIsArchiving(true);
             try {
               await archiveGroup(supabase, id);
+              logActivityEvent(supabase, {
+                groupId: id,
+                actorId: userId,
+                eventType: 'group_archived',
+              }).catch(() => {});
               invalidateGroupQueries();
               router.back();
             } finally {
@@ -301,6 +307,11 @@ export default function GroupSettingsScreen() {
             setIsLeaving(true);
             try {
               await leaveGroup(supabase, id, currentMemberId, isAdmin);
+              logActivityEvent(supabase, {
+                groupId: id,
+                actorId: userId,
+                eventType: 'member_left',
+              }).catch(() => {});
               queryClient.invalidateQueries({ queryKey: ['groups'] });
               router.replace('/(tabs)/groups');
             } finally {

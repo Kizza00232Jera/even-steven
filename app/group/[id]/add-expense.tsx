@@ -21,6 +21,7 @@ import { useRatesStore } from '../../../store/rates';
 import { useNetworkStatus } from '../../../hooks/useNetworkStatus';
 import { useOfflineGuard } from '../../../hooks/useOfflineGuard';
 import { createExpense, fetchGroupMembers } from '../../../lib/repos/expenses';
+import { logActivityEvent } from '../../../lib/repos/activity';
 import { detectCategory, type Category } from '../../../lib/categories';
 import { calculateEqualSplit, calculateUnequalSplit, calculatePercentageSplit } from '../../../lib/splits';
 import { convert, format, type Currency } from '../../../lib/currency';
@@ -346,6 +347,12 @@ export default function AddExpenseScreen() {
         splits
       );
       hapticOnExpenseSaved();
+      logActivityEvent(supabase, {
+        groupId,
+        actorId: session!.user.id,
+        eventType: 'expense_added',
+        metadata: { title: title.trim(), amount, currency },
+      }).catch(() => {});
       queryClient.invalidateQueries({ queryKey: ['expenses', groupId] });
       router.back();
     } catch {

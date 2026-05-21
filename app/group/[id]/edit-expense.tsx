@@ -14,6 +14,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '../../../store/auth';
+import { logActivityEvent } from '../../../lib/repos/activity';
 import { X, ChevronDown, Check, Trash2, AlertCircle } from 'lucide-react-native';
 import { useNetworkStatus } from '../../../hooks/useNetworkStatus';
 import { useOfflineGuard } from '../../../hooks/useOfflineGuard';
@@ -75,6 +77,7 @@ export default function EditExpenseScreen() {
   const queryClient = useQueryClient();
   const { isOnline } = useNetworkStatus();
   const { writesDisabled } = useOfflineGuard(isOnline);
+  const { session } = useAuthStore();
 
   const [expense, setExpense] = useState<ExpenseListItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -130,6 +133,12 @@ export default function EditExpenseScreen() {
         description: description.trim() || null,
         category,
       });
+      logActivityEvent(supabase, {
+        groupId,
+        actorId: session!.user.id,
+        eventType: 'expense_edited',
+        metadata: { title: title.trim() },
+      }).catch(() => {});
       queryClient.invalidateQueries({ queryKey: ['expenses', groupId] });
       router.back();
     } catch {
@@ -153,6 +162,12 @@ export default function EditExpenseScreen() {
             setIsDeleting(true);
             try {
               await deleteExpense(supabase, expense.id);
+              logActivityEvent(supabase, {
+                groupId,
+                actorId: session!.user.id,
+                eventType: 'expense_deleted',
+                metadata: { title: expense.title },
+              }).catch(() => {});
               queryClient.invalidateQueries({ queryKey: ['expenses', groupId] });
               router.back();
             } catch {

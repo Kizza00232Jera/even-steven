@@ -7,6 +7,7 @@ import { ChevronLeft, Shield, UserMinus, Clock } from 'lucide-react-native';
 import { ErrorState } from '../../../components/ErrorState';
 import { Colors } from '../../../constants/colors';
 import { fetchGroupMembers, removeMember } from '../../../lib/repos/groups';
+import { logActivityEvent } from '../../../lib/repos/activity';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/auth';
 import type { GroupMemberWithProfile } from '../../../lib/repos/groups';
@@ -118,6 +119,11 @@ export default function MembersScreen() {
   const removeMutation = useMutation({
     mutationFn: (memberId: string) => removeMember(supabase, memberId),
     onSuccess: () => {
+      logActivityEvent(supabase, {
+        groupId,
+        actorId: currentUserId,
+        eventType: 'member_removed',
+      }).catch(() => {});
       queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
       queryClient.invalidateQueries({ queryKey: ['groups'] });
     },

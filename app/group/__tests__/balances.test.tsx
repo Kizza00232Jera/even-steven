@@ -35,6 +35,16 @@ jest.mock('../../../lib/haptics', () => ({
   hapticOnSettlementRecorded: () => mockHaptic(),
 }));
 
+jest.mock('../../../store/auth', () => ({
+  useAuthStore: () => ({
+    session: { user: { id: 'user-1' } },
+  }),
+}));
+
+jest.mock('../../../lib/repos/activity', () => ({
+  logActivityEvent: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock('../../../lib/toast', () => ({
   useToastStore: (selector: (s: { show: typeof mockShowToast }) => unknown) =>
     selector({ show: mockShowToast }),

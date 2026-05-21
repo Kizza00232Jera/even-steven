@@ -22,6 +22,7 @@ import { useAuthStore } from '../../store/auth';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useOfflineGuard } from '../../hooks/useOfflineGuard';
 import { createGroup } from '../../lib/repos/groups';
+import { logActivityEvent } from '../../lib/repos/activity';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 
@@ -532,7 +533,7 @@ export default function CreateGroupScreen() {
     setIsSaving(true);
     setError(null);
     try {
-      await createGroup(
+      const newGroup = await createGroup(
         supabase,
         {
           name: name.trim(),
@@ -550,6 +551,12 @@ export default function CreateGroupScreen() {
         },
         inviteEmails,
       );
+      logActivityEvent(supabase, {
+        groupId: newGroup.id,
+        actorId: session.user.id,
+        eventType: 'group_created',
+        metadata: { name: name.trim() },
+      }).catch(() => {});
       queryClient.invalidateQueries({ queryKey: ['groups'] });
       router.back();
     } catch {

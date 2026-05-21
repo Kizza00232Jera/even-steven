@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Users, Calendar, AlertCircle } from 'lucide-react-native';
 import { lookupInviteToken, acceptInvite, type InviteTokenDetails } from '../../lib/repos/invites';
+import { logActivityEvent } from '../../lib/repos/activity';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/auth';
 import { Colors } from '../../constants/colors';
@@ -62,6 +63,11 @@ export default function InviteScreen() {
     setIsJoining(true);
     try {
       await acceptInvite(supabase, details.group_id, session.user.id, session.user.email!);
+      logActivityEvent(supabase, {
+        groupId: details.group_id,
+        actorId: session.user.id,
+        eventType: 'member_joined',
+      }).catch(() => {});
       router.replace(`/group/${details.group_id}` as never);
     } catch {
       setIsJoining(false);
