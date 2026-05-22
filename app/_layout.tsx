@@ -175,6 +175,10 @@ function RootContent() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        // Keep isLoading true until profile settles — prevents onboarding flash for returning users.
+        if (event !== 'INITIAL_SESSION') {
+          setIsLoading(true);
+        }
         setSession(session);
         if (session) {
           await fetchAndSetProfile(session.user.id);
