@@ -19,15 +19,9 @@ function balanceLabel(totalBalance: number, sharedGroupCount: number): {
   const groupSuffix =
     sharedGroupCount > 1 ? ` across ${sharedGroupCount} groups` : '';
   if (totalBalance > 0) {
-    return {
-      text: `Owes you $${totalBalance.toFixed(2)}${groupSuffix}`,
-      color: Colors.accent,
-    };
+    return { text: `Owes you${groupSuffix}`, color: Colors.accent };
   }
-  return {
-    text: `You owe $${Math.abs(totalBalance).toFixed(2)}${groupSuffix}`,
-    color: Colors.destructive,
-  };
+  return { text: `You owe${groupSuffix}`, color: Colors.destructive };
 }
 
 export function FriendCard({ friend, onPress }: FriendCardProps) {

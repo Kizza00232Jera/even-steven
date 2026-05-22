@@ -233,7 +233,7 @@ export default function FriendsScreen() {
               <FriendCard
                 key={friend.friendshipId}
                 friend={friend}
-                onPress={() => router.push(`/friends/${friend.friendId}` as any)}
+                onPress={() => router.push(`/friends/${friend.friendId}` as never)}
               />
             ))}
           </>

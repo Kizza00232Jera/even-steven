@@ -21,7 +21,9 @@ import { ErrorState } from '../../../components/ErrorState';
 import { Colors } from '../../../constants/colors';
 import { fetchGroupMembers, removeMember } from '../../../lib/repos/groups';
 import { addInvitedMember, getOrCreateInviteToken } from '../../../lib/repos/invites';
+import { resolveDisplayName } from '../../../lib/displayName';
 import { logActivityEvent } from '../../../lib/repos/activity';
+import { sendGroupNotification } from '../../../lib/notifications';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/auth';
 import type { GroupMemberWithProfile } from '../../../lib/repos/groups';
@@ -132,7 +134,7 @@ interface MemberRowProps {
 function MemberRow({ member, isCurrentUser, isCurrentUserAdmin, onRemove }: MemberRowProps) {
   const { colorScheme } = useColorScheme();
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
-  const displayName = member.display_name ?? member.email;
+  const displayName = resolveDisplayName(member.display_name, member.profile_display_name, member.google_name, member.email);
   const isPending = member.status === 'invited';
 
   return (
@@ -219,13 +221,20 @@ export default function MembersScreen() {
         actorId: currentUserId,
         eventType: 'member_removed',
       }).catch(() => {});
+      if (currentMember?.id) {
+        sendGroupNotification({
+          eventType: 'member_removed',
+          groupId,
+          actorMemberId: currentMember.id,
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
       queryClient.invalidateQueries({ queryKey: ['groups'] });
     },
   });
 
   const addMemberMutation = useMutation({
-    mutationFn: (email: string) => addInvitedMember(supabase, groupId, email),
+    mutationFn: (email: string) => addInvitedMember(supabase, groupId, email, currentMember?.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
       setIsAddSheetVisible(false);
@@ -252,9 +261,13 @@ export default function MembersScreen() {
 
   function confirmRemove(member: GroupMemberWithProfile) {
     const name = member.display_name ?? member.email;
+    const hasBalance = member.balance !== 0;
+    const balanceNote = hasBalance
+      ? ` This member has an outstanding balance of ${member.balance > 0 ? '+' : ''}${member.balance.toFixed(2)}.`
+      : '';
     Alert.alert(
       'Remove member',
-      `Remove ${name} from this group? Their expense history will remain intact.`,
+      `Remove ${name} from this group?${balanceNote} Their expense history will remain intact.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {

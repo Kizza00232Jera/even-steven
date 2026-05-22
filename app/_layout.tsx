@@ -15,12 +15,15 @@ import {
   Inter_500Medium,
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { View, Platform, AppState } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import { configureGoogleSignIn } from '../lib/auth';
 import { getProfile } from '../lib/repos/profiles';
+import { upsertPushToken } from '../lib/repos/pushTokens';
 import { useAuthStore } from '../store/auth';
 import { useRatesStore } from '../store/rates';
 import { VersionGateScreen } from '../components/VersionGateScreen';
@@ -29,6 +32,16 @@ import { useOTAUpdates } from '../hooks/useOTAUpdates';
 import { ToastProvider } from '../components/ToastProvider';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 SplashScreen.preventAutoHideAsync();
 
@@ -81,7 +94,7 @@ function NavigationGuard() {
 
 function RootContent() {
   const { colorScheme } = useColorScheme();
-  const { setSession, setProfile, setIsLoading } = useAuthStore();
+  const { session, setSession, setProfile, setIsLoading } = useAuthStore();
   const { isOnline } = useNetworkStatus();
 
   const [fontsLoaded, fontError] = useFonts({
@@ -97,6 +110,40 @@ function RootContent() {
   useOTAUpdates();
   const { fetchRates } = useRatesStore();
   useEffect(() => { fetchRates(); }, []);
+
+  // Re-register push token on every app open (handles token rotation)
+  useEffect(() => {
+    if (!session) return;
+    async function registerToken() {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') return;
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+      if (!projectId) return;
+      try {
+        const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
+        await upsertPushToken(supabase, session!.user.id, token, Platform.OS);
+      } catch { /* non-critical */ }
+    }
+    registerToken();
+  }, [session?.user.id]);
+
+  // Clear badge when app comes to foreground
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') Notifications.setBadgeCountAsync(0);
+    });
+    return () => sub.remove();
+  }, []);
+
+  // Deep-link routing on notification tap
+  const router = useRouter();
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as Record<string, string> | undefined;
+      if (data?.route) router.push(data.route as never);
+    });
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     if ((fontsLoaded || fontError) && versionGate !== 'loading') {

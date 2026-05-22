@@ -51,8 +51,8 @@ Two Edge Functions are written on disk but have never been deployed to the Supab
 ### `supabase/functions/delete-account/index.ts`
 - ✅ Deployed 2026-05-22
 
-### `send-push-notification` (not yet written)
-- Required by issue #29 (Push Notifications). Does not exist. See section 5.
+### `send-push-notification` — ✅ Done 2026-05-22
+- Built and deployed. Handles 12 event types, checks notification preferences, is_muted, and Expo push token per recipient.
 
 ---
 
@@ -72,7 +72,7 @@ The invite email flow exists end-to-end in code but is not working in production
 
 3. **Sender address:** Updated to `onboarding@resend.dev` (Resend shared domain) until `evensteven.app` is purchased and verified pre-launch. Edge function updated 2026-05-22.
 
-4. **Wire the call in `addInvitedMember`:** Issue #18 notes the push notification to already-registered users is "stubbed in `addInvitedMember`." Confirm the email send call is actually wired, not just the push stub.
+4. ~~**Wire the call in `addInvitedMember`:**~~ Done 2026-05-22. `addInvitedMember` now accepts `inviterMemberId?` and fires `send-invite-email` (fire-and-forget) when the invitee email is not yet registered.
 
 ---
 
@@ -97,7 +97,7 @@ In `even-steven-web/src/app/invite/[token]/page.tsx`:
 
 ---
 
-## 5. Push Notifications (#29) — Not Started
+## ~~5. Push Notifications (#29)~~ — Done 2026-05-22
 
 Issue #29 is the only fully OPEN issue. Nothing has been built. The `push_tokens` and `notification_preferences` tables already exist in the schema (created in migration #0).
 
@@ -247,13 +247,9 @@ Issue #16 comment: *"Add member / Invite via link in Members screen deferred (in
 
 The Members screen (`app/group/[id]/members.tsx`) has an add/invite button that was deferred. Now that invites are built, it should open the invite flow (email input → calls `addInvitedMember`).
 
-### 6e. Balance Warning on Member Remove — Uses Real Balances (issue #15) — TODO: blocked by 6f
+### ~~6e. Balance Warning on Member Remove — Uses Real Balances (issue #15)~~ — Done 2026-05-22
 
-Issue #15 comment: *"Balance warning on remove-member uses a placeholder message (real balance computation deferred until expense system is built)"*
-
-Blocked by 6f (balance column on `group_members`). Once that migration lands, check `member.balance !== 0` in `confirmRemove()` in `app/group/[id]/members.tsx` and prepend a balance warning to the alert message if non-zero. No extra query needed.
-
-### 6f. Balance on Group Cards — Seeded at Zero (issue #16) — TODO: Option B
+### ~~6f. Balance on Group Cards — Seeded at Zero (issue #16)~~ — Done 2026-05-22 (migration pending apply)
 
 Decision: **Option B — denormalized `balance` column on `group_members`**, updated by a DB trigger after any change to `expenses`, `expense_participants`, or `settlements`. Avoids N round-trips on Groups tab load.
 
@@ -261,7 +257,7 @@ Decision: **Option B — denormalized `balance` column on `group_members`**, upd
 1. Migration: add `balance DECIMAL(12,2) DEFAULT 0` to `group_members` + trigger function that recomputes balance after expense/settlement changes
 2. Update `fetchGroupsWithMembership` in `lib/repos/groups.ts` to use stored `balance` column instead of hardcoded `0`
 
-### 6g. Display Name Priority Enforcement (issue #30) — TODO
+### ~~6g. Display Name Priority Enforcement (issue #30)~~ — Done 2026-05-22
 
 Priority chain: **Group Display Name → Account Display Name → Gmail Name → Email**
 

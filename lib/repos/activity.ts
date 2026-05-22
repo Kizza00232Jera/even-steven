@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Json } from '../database.types';
+import { resolveDisplayName } from '../displayName';
 
 type EventType = Database['public']['Tables']['activity_events']['Row']['event_type'];
 
@@ -19,7 +20,8 @@ export interface FetchActivityOptions {
   offset?: number;
 }
 
-type ActorJoin = { display_name: string | null; email: string } | null;
+type ActorProfileJoin = { display_name: string | null; google_name: string | null } | null;
+type ActorJoin = { display_name: string | null; email: string; actor_profile: ActorProfileJoin } | null;
 type GroupJoin = { name: string } | null;
 
 export async function fetchActivityFeed(
@@ -31,7 +33,7 @@ export async function fetchActivityFeed(
     .from('activity_events')
     .select(
       `id, event_type, metadata, created_at, group_id,
-       actor:actor_id (display_name, email),
+       actor:actor_id (display_name, email, actor_profile:profiles!group_members_user_id_fkey(display_name, google_name)),
        group:group_id (name)`
     )
     .order('created_at', { ascending: false });
@@ -55,8 +57,11 @@ export async function fetchActivityFeed(
       group: GroupJoin;
     };
     const actor = r.actor;
+    const actorProfile = actor?.actor_profile
+      ? (Array.isArray(actor.actor_profile) ? actor.actor_profile[0] : actor.actor_profile) as ActorProfileJoin
+      : null;
     const actorName = actor
-      ? (actor.display_name ?? actor.email)
+      ? resolveDisplayName(actor.display_name, actorProfile?.display_name, actorProfile?.google_name, actor.email)
       : 'Unknown';
 
     return {

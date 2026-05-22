@@ -10,6 +10,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Users, Calendar, AlertCircle } from 'lucide-react-native';
 import { lookupInviteToken, acceptInvite, type InviteTokenDetails } from '../../lib/repos/invites';
 import { logActivityEvent } from '../../lib/repos/activity';
+import { getGroupMemberId } from '../../lib/repos/groups';
+import { sendGroupNotification } from '../../lib/notifications';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/auth';
 import { Colors } from '../../constants/colors';
@@ -67,6 +69,11 @@ export default function InviteScreen() {
         groupId: details.group_id,
         actorId: session.user.id,
         eventType: 'member_joined',
+      }).catch(() => {});
+      getGroupMemberId(supabase, details.group_id, session.user.id).then((memberId) => {
+        if (memberId) {
+          sendGroupNotification({ eventType: 'member_joined', groupId: details.group_id, actorMemberId: memberId });
+        }
       }).catch(() => {});
       router.replace(`/group/${details.group_id}` as never);
     } catch {

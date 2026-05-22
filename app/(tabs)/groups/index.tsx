@@ -435,6 +435,7 @@ function useGroups(userId: string) {
 
 export default function GroupsScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme();
   const { session, profile, setProfile } = useAuthStore();
   const queryClient = useQueryClient();
   const userId = session?.user.id ?? '';
@@ -445,6 +446,7 @@ export default function GroupsScreen() {
   const [filters, setFilters] = useState<GroupFilters>(EMPTY_FILTERS);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [contextGroup, setContextGroup] = useState<GroupWithMembership | null>(null);
+  const [showExpensePicker, setShowExpensePicker] = useState(false);
 
   const pinMutation = useMutation({
     mutationFn: ({ memberId, pin }: { memberId: string; pin: boolean }) =>
@@ -673,6 +675,112 @@ export default function GroupsScreen() {
       />
 
       <BalanceNudgeModal visible={showNudge} onDismiss={handleDismissNudge} />
+
+      {/* Floating Add Expense button */}
+      <TouchableOpacity
+        testID="global-add-expense-fab"
+        onPress={() => setShowExpensePicker(true)}
+        style={{
+          position: 'absolute',
+          bottom: 24,
+          right: 24,
+          height: 52,
+          paddingHorizontal: 20,
+          borderRadius: 26,
+          backgroundColor: Colors.accent,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+        }}
+        activeOpacity={0.85}
+      >
+        <Plus size={18} color="#ffffff" strokeWidth={2.5} />
+        <Text style={{ color: '#ffffff', fontFamily: 'SpaceGrotesk_600SemiBold', fontSize: 14 }}>
+          Add Expense
+        </Text>
+      </TouchableOpacity>
+
+      {/* Group picker for Add Expense from Groups tab */}
+      <Modal
+        visible={showExpensePicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowExpensePicker(false)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onPress={() => setShowExpensePicker(false)}
+        />
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: colorScheme === 'dark' ? Colors.dark.surface : Colors.light.surface,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            paddingBottom: 32,
+          }}
+        >
+          <View className="flex-row items-center justify-between px-6 py-5">
+            <Text className="font-display text-text-primary font-semibold text-lg">Add Expense</Text>
+            <TouchableOpacity onPress={() => setShowExpensePicker(false)}>
+              <X size={20} color={colorScheme === 'dark' ? Colors.dark.textSecondary : Colors.light.textSecondary} strokeWidth={1.5} />
+            </TouchableOpacity>
+          </View>
+          {(() => {
+            const activeGroups = (groups ?? []).filter((g) => g.status === 'active');
+            if (activeGroups.length === 0) {
+              return (
+                <View className="items-center px-6 py-8 gap-4">
+                  <Text className="font-body text-text-secondary text-sm text-center">
+                    No active groups. Create a group to start adding expenses.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => { setShowExpensePicker(false); router.push('/group/create'); }}
+                    className="rounded-full px-6 py-3"
+                    style={{ backgroundColor: Colors.accent }}
+                  >
+                    <Text className="font-body text-white font-semibold text-sm">Create a group</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            }
+            return (
+              <FlatList
+                data={activeGroups}
+                keyExtractor={(g) => g.id}
+                scrollEnabled={activeGroups.length > 6}
+                style={{ maxHeight: 360 }}
+                renderItem={({ item: g }) => (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowExpensePicker(false);
+                      router.push(`/group/${g.id}/add-expense` as never);
+                    }}
+                    className="flex-row items-center px-6 py-4 border-b border-border"
+                    activeOpacity={0.7}
+                  >
+                    <View className="flex-1">
+                      <Text className="font-body text-text-primary font-medium text-base">{g.name}</Text>
+                      <Text className="font-body text-text-secondary text-xs capitalize mt-0.5">{g.type}</Text>
+                    </View>
+                    {g.balance !== 0 && (
+                      <Text
+                        className="font-body text-sm font-medium"
+                        style={{ color: g.balance > 0 ? Colors.accent : Colors.destructive }}
+                      >
+                        {g.balance > 0 ? '+' : ''}{format(g.balance, g.base_currency as Currency)}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+              />
+            );
+          })()}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

@@ -7,11 +7,13 @@ import { useColorScheme } from 'nativewind';
 import { Colors } from '../../../constants/colors';
 import { Skeleton } from '../../../components/Skeleton';
 import { ErrorState } from '../../../components/ErrorState';
+import { format } from '../../../lib/currency';
+import type { Currency } from '../../../lib/currency';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/auth';
 import { getFriendDetail, removeFriendship } from '../../../lib/repos/friends';
 
-function BalanceBadge({ balance }: { balance: number }) {
+function BalanceBadge({ balance, groupCount }: { balance: number; groupCount: number }) {
   if (balance === 0) {
     return (
       <View className="px-4 py-2 rounded-full" style={{ backgroundColor: Colors.accentDim }}>
@@ -25,9 +27,10 @@ function BalanceBadge({ balance }: { balance: number }) {
   const isPositive = balance > 0;
   const bgColor = isPositive ? Colors.balance.positiveFrom : Colors.balance.negativeFrom;
   const textColor = isPositive ? Colors.accent : Colors.destructive;
+  const groupSuffix = groupCount > 1 ? ` across ${groupCount} groups` : '';
   const label = isPositive
-    ? `Owes you $${balance.toFixed(2)}`
-    : `You owe $${Math.abs(balance).toFixed(2)}`;
+    ? `Owes you${groupSuffix}`
+    : `You owe${groupSuffix}`;
 
   return (
     <View className="px-4 py-2 rounded-full" style={{ backgroundColor: bgColor }}>
@@ -158,7 +161,7 @@ export default function FriendDetailScreen() {
             {friend.name}
           </Text>
           <Text className="text-text-secondary text-sm mb-4">{friend.email}</Text>
-          <BalanceBadge balance={friend.totalBalance} />
+          <BalanceBadge balance={friend.totalBalance} groupCount={friend.sharedGroups.filter(g => g.balance !== 0).length} />
         </View>
 
         <View className="px-4 gap-3">
@@ -167,6 +170,24 @@ export default function FriendDetailScreen() {
               className="rounded-full py-3.5 items-center border border-border"
               style={{ backgroundColor: theme.surface }}
               activeOpacity={0.8}
+              onPress={() => {
+                const groupsWithBalance = friend.sharedGroups.filter(g => g.balance !== 0);
+                if (groupsWithBalance.length === 1) {
+                  router.push(`/group/${groupsWithBalance[0].groupId}` as never);
+                } else if (groupsWithBalance.length > 1) {
+                  Alert.alert(
+                    'Settle up in which group?',
+                    undefined,
+                    [
+                      ...groupsWithBalance.map(g => ({
+                        text: g.groupName,
+                        onPress: () => router.push(`/group/${g.groupId}` as never),
+                      })),
+                      { text: 'Cancel', style: 'cancel' as const },
+                    ]
+                  );
+                }
+              }}
             >
               <Text className="text-text-primary font-semibold text-base">Settle Up</Text>
             </TouchableOpacity>
@@ -176,6 +197,25 @@ export default function FriendDetailScreen() {
             className="rounded-full py-3.5 items-center"
             style={{ backgroundColor: Colors.accent }}
             activeOpacity={0.8}
+            onPress={() => {
+              if (friend.sharedGroups.length === 1) {
+                router.push(`/group/${friend.sharedGroups[0].groupId}/add-expense` as never);
+              } else if (friend.sharedGroups.length > 1) {
+                Alert.alert(
+                  'Add expense in which group?',
+                  undefined,
+                  [
+                    ...friend.sharedGroups.map(g => ({
+                      text: g.groupName,
+                      onPress: () => router.push(`/group/${g.groupId}/add-expense` as never),
+                    })),
+                    { text: 'Cancel', style: 'cancel' as const },
+                  ]
+                );
+              } else {
+                Alert.alert('No shared groups', 'You have no active shared groups with this person.');
+              }
+            }}
           >
             <Text className="text-white font-semibold text-base">Add Expense</Text>
           </TouchableOpacity>
@@ -207,10 +247,11 @@ export default function FriendDetailScreen() {
                         color: group.balance > 0 ? Colors.accent : Colors.destructive,
                       }}
                       className="text-sm font-medium"
+                      testID={`group-balance-${group.groupId}`}
                     >
                       {group.balance > 0
-                        ? `+$${group.balance.toFixed(2)}`
-                        : `-$${Math.abs(group.balance).toFixed(2)}`}
+                        ? `+${format(group.balance, group.currency as Currency)}`
+                        : `-${format(Math.abs(group.balance), group.currency as Currency)}`}
                     </Text>
                   )}
                 </TouchableOpacity>

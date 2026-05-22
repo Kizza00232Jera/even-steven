@@ -18,6 +18,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/auth';
 import { logActivityEvent } from '../../../lib/repos/activity';
+import { sendGroupNotification } from '../../../lib/notifications';
 import { X, ChevronDown, Check, Trash2, AlertCircle, Paperclip, Lock } from 'lucide-react-native';
 import { useNetworkStatus } from '../../../hooks/useNetworkStatus';
 import { useOfflineGuard } from '../../../hooks/useOfflineGuard';
@@ -348,6 +349,14 @@ export default function EditExpenseScreen() {
         eventType: 'expense_edited',
         metadata: { title: title.trim() },
       }).catch(() => {});
+      if (myMember?.id) {
+        sendGroupNotification({
+          eventType: 'expense_edited',
+          groupId,
+          actorMemberId: myMember.id,
+          metadata: { title: title.trim() },
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ['expenses', groupId] });
       router.back();
     } catch {
@@ -378,6 +387,14 @@ export default function EditExpenseScreen() {
                 eventType: 'expense_deleted',
                 metadata: { title: expense.title },
               }).catch(() => {});
+              if (myMember?.id) {
+                sendGroupNotification({
+                  eventType: 'expense_deleted',
+                  groupId,
+                  actorMemberId: myMember.id,
+                  metadata: { title: expense.title },
+                });
+              }
               queryClient.invalidateQueries({ queryKey: ['expenses', groupId] });
               router.back();
             } catch {

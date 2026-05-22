@@ -16,6 +16,7 @@ import { useColorScheme } from 'nativewind';
 import { simplifyDebts, type Settlement } from '../../../lib/debt';
 import { fetchGroupBalances } from '../../../lib/repos/balances';
 import { logActivityEvent } from '../../../lib/repos/activity';
+import { sendGroupNotification } from '../../../lib/notifications';
 import {
   recordSettlement,
   fetchGroupSettlements,
@@ -124,6 +125,20 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
         eventType: 'settlement_recorded',
         metadata: { amount: parsed, currency: settleUpTarget.currency },
       }).catch(() => {});
+      // Notify the group (payment_in_group) and the payee specifically (payment_received)
+      sendGroupNotification({
+        eventType: 'settlement_recorded',
+        groupId,
+        actorMemberId: currentMemberId,
+        metadata: { amount: parsed, currency: settleUpTarget.currency },
+      });
+      sendGroupNotification({
+        eventType: 'payment_received',
+        groupId,
+        actorMemberId: currentMemberId,
+        payeeMemberId: settleUpTarget.creditorMemberId,
+        metadata: { amount: parsed, currency: settleUpTarget.currency },
+      });
       toast.success('Settlement recorded');
       closeModal();
       queryClient.invalidateQueries({ queryKey: ['group-balances', groupId] });

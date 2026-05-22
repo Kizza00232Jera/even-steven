@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(gh issue *)"
+      "Bash(gh issue *)",
+      "Bash(npx supabase *)",
+      "Bash(npx tsc *)",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__deploy_edge_function"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }

@@ -23,6 +23,7 @@ import { useNetworkStatus } from '../../../hooks/useNetworkStatus';
 import { useOfflineGuard } from '../../../hooks/useOfflineGuard';
 import { useReceiptPicker } from '../../../hooks/useReceiptPicker';
 import { createExpense, fetchGroupMembers, uploadReceipt } from '../../../lib/repos/expenses';
+import { sendGroupNotification } from '../../../lib/notifications';
 import { logActivityEvent } from '../../../lib/repos/activity';
 import { detectCategory, type Category } from '../../../lib/categories';
 import { calculateEqualSplit, calculateUnequalSplit, calculatePercentageSplit } from '../../../lib/splits';
@@ -362,6 +363,12 @@ export default function AddExpenseScreen() {
         eventType: 'expense_added',
         metadata: { title: title.trim(), amount, currency },
       }).catch(() => {});
+      sendGroupNotification({
+        eventType: 'new_expense',
+        groupId,
+        actorMemberId: payerId!,
+        metadata: { title: title.trim(), amount, currency },
+      });
       queryClient.invalidateQueries({ queryKey: ['expenses', groupId] });
       router.back();
     } catch {

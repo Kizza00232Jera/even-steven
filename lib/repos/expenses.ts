@@ -103,7 +103,7 @@ export async function fetchGroupExpenses(
   if (error) throw error;
 
   return (data ?? []).map((row) => {
-    const payer = row.payer as PayerJoin | null;
+    const payer = (row as unknown as { payer: PayerJoin | null }).payer;
     const editor = (row as unknown as { editor: EditorJoin }).editor;
     const participants = (row.expense_participants as ParticipantRow[]) ?? [];
     return {
@@ -226,8 +226,7 @@ export async function updateExpenseFinancial(
   expenseId: string,
   params: UpdateExpenseFinancialParams,
 ): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: expError } = await (client.from('expenses') as any)
+  const { error: expError } = await client.from('expenses')
     .update({
       amount: params.amount,
       payer_id: params.payerId,

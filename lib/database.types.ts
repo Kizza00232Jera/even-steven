@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       activity_events: {
@@ -149,6 +124,7 @@ export type Database = {
           group_id: string
           id: string
           is_edited: boolean
+          last_edited_by: string | null
           payer_id: string
           receipt_url: string | null
           split_method: string
@@ -165,6 +141,7 @@ export type Database = {
           group_id: string
           id?: string
           is_edited?: boolean
+          last_edited_by?: string | null
           payer_id: string
           receipt_url?: string | null
           split_method: string
@@ -181,6 +158,7 @@ export type Database = {
           group_id?: string
           id?: string
           is_edited?: boolean
+          last_edited_by?: string | null
           payer_id?: string
           receipt_url?: string | null
           split_method?: string
@@ -193,6 +171,13 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_last_edited_by_fkey"
+            columns: ["last_edited_by"]
+            isOneToOne: false
+            referencedRelation: "group_members"
             referencedColumns: ["id"]
           },
           {
@@ -248,6 +233,7 @@ export type Database = {
       }
       group_members: {
         Row: {
+          balance: number
           display_name: string | null
           email: string
           group_id: string
@@ -260,6 +246,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          balance?: number
           display_name?: string | null
           email: string
           group_id: string
@@ -272,6 +259,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          balance?: number
           display_name?: string | null
           email?: string
           group_id?: string
@@ -467,6 +455,7 @@ export type Database = {
           display_name: string | null
           email: string
           google_avatar_url: string | null
+          google_name: string | null
           id: string
           onboarding_done: boolean
           preferred_currency: string
@@ -479,6 +468,7 @@ export type Database = {
           display_name?: string | null
           email: string
           google_avatar_url?: string | null
+          google_name?: string | null
           id: string
           onboarding_done?: boolean
           preferred_currency?: string
@@ -491,6 +481,7 @@ export type Database = {
           display_name?: string | null
           email?: string
           google_avatar_url?: string | null
+          google_name?: string | null
           id?: string
           onboarding_done?: boolean
           preferred_currency?: string
@@ -631,6 +622,10 @@ export type Database = {
         Returns: boolean
       }
       is_group_member: { Args: { p_group_id: string }; Returns: boolean }
+      recompute_group_member_balances: {
+        Args: { p_group_id: string }
+        Returns: undefined
+      }
       resolve_invite_token: { Args: { p_token: string }; Returns: Json }
     }
     Enums: {
@@ -760,9 +755,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

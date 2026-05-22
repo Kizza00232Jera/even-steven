@@ -16,6 +16,8 @@ export interface GroupMemberWithProfile {
   user_id: string | null;
   email: string;
   display_name: string | null;
+  profile_display_name: string | null;
+  google_name: string | null;
   role: 'admin' | 'member';
   status: 'active' | 'invited' | 'removed';
   is_pinned: boolean;
@@ -23,6 +25,7 @@ export interface GroupMemberWithProfile {
   joined_at: string;
   avatar_url: string | null;
   google_avatar_url: string | null;
+  balance: number;
 }
 
 export interface GroupDetail {
@@ -132,7 +135,7 @@ export async function fetchGroupsWithMembership(
 ): Promise<GroupWithMembership[]> {
   const { data, error } = await client
     .from('group_members')
-    .select('id, is_pinned, is_muted, role, groups(*)')
+    .select('id, is_pinned, is_muted, role, balance, groups(*)')
     .eq('user_id', userId)
     .eq('status', 'active');
 
@@ -147,7 +150,7 @@ export async function fetchGroupsWithMembership(
       is_pinned: row.is_pinned,
       is_muted: row.is_muted,
       role: row.role as 'admin' | 'member',
-      balance: 0,
+      balance: row.balance,
     };
   });
 
@@ -229,7 +232,7 @@ export async function fetchGroupMembers(
 ): Promise<GroupMemberWithProfile[]> {
   const { data, error } = await client
     .from('group_members')
-    .select('*, profiles(avatar_url, google_avatar_url)')
+    .select('*, profiles(display_name, google_name, avatar_url, google_avatar_url)')
     .eq('group_id', groupId)
     .in('status', ['active', 'invited'])
     .order('joined_at', { ascending: true });
@@ -237,13 +240,15 @@ export async function fetchGroupMembers(
   if (error) throw error;
 
   return (data ?? []).map((row) => {
-    const profile = row.profiles as { avatar_url: string | null; google_avatar_url: string | null } | null;
+    const profile = row.profiles as { display_name: string | null; google_name: string | null; avatar_url: string | null; google_avatar_url: string | null } | null;
     return {
       id: row.id,
       group_id: row.group_id,
       user_id: row.user_id,
       email: row.email,
       display_name: row.display_name,
+      profile_display_name: profile?.display_name ?? null,
+      google_name: profile?.google_name ?? null,
       role: row.role as 'admin' | 'member',
       status: row.status as 'active' | 'invited' | 'removed',
       is_pinned: row.is_pinned,
@@ -251,6 +256,7 @@ export async function fetchGroupMembers(
       joined_at: row.joined_at,
       avatar_url: profile?.avatar_url ?? null,
       google_avatar_url: profile?.google_avatar_url ?? null,
+      balance: row.balance,
     };
   });
 }
