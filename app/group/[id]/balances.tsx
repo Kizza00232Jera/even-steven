@@ -16,6 +16,8 @@ import { useColorScheme } from 'nativewind';
 import { simplifyDebts, type Settlement } from '../../../lib/debt';
 import { fetchGroupBalances } from '../../../lib/repos/balances';
 import { logActivityEvent } from '../../../lib/repos/activity';
+import { sendGroupNotification } from '../../../lib/notifications';
+import { archiveGroup } from '../../../lib/repos/groups';
 import {
   recordSettlement,
   fetchGroupSettlements,
@@ -27,13 +29,9 @@ import { format, type Currency } from '../../../lib/currency';
 import { useAuthStore } from '../../../store/auth';
 import { hapticOnSettlementRecorded } from '../../../lib/haptics';
 import { useToast } from '../../../hooks/useToast';
+import { MemberProfileSheet, type MemberProfileTarget } from '../../../components/MemberProfileSheet';
 import { SkeletonBalanceRow } from '../../../components/SkeletonBalanceRow';
 import { Colors } from '../../../constants/colors';
-
-interface BalancesTabProps {
-  groupId: string;
-  currentMemberId: string;
-}
 
 interface SettleUpTarget {
   debtorMemberId: string;
@@ -44,7 +42,13 @@ interface SettleUpTarget {
   currency: Currency;
 }
 
-export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
+interface BalancesTabProps {
+  groupId: string;
+  currentMemberId: string;
+  settlementVisibility?: 'public' | 'private';
+}
+
+export function BalancesTab({ groupId, currentMemberId, settlementVisibility }: BalancesTabProps) {
   const { colorScheme } = useColorScheme();
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
   const queryClient = useQueryClient();
@@ -54,6 +58,7 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
   const [settleUpTarget, setSettleUpTarget] = useState<SettleUpTarget | null>(null);
   const [amountText, setAmountText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [profileTarget, setProfileTarget] = useState<MemberProfileTarget | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['group-balances', groupId],
@@ -67,8 +72,13 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
 
   const simplifiedDebts = useMemo(() => {
     if (!data) return [];
-    return simplifyDebts(data.members.map((m) => ({ memberId: m.memberId, balance: m.balance })));
-  }, [data]);
+    const all = simplifyDebts(data.members.map((m) => ({ memberId: m.memberId, balance: m.balance })));
+    // When settlement_visibility is private, non-parties see only debts they're involved in
+    if (settlementVisibility === 'private') {
+      return all.filter((d) => d.from === currentMemberId || d.to === currentMemberId);
+    }
+    return all;
+  }, [data, settlementVisibility, currentMemberId]);
 
   const memberMap = useMemo(() => {
     if (!data) return new Map<string, { name: string; avatarUrl: string | null }>();
@@ -102,6 +112,18 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
     setAmountText('');
   }
 
+  async function checkAndAutoArchive(gid: string) {
+    try {
+      const fresh = await fetchGroupBalances(supabase, gid);
+      const remaining = simplifyDebts(fresh.members.map((m) => ({ memberId: m.memberId, balance: m.balance })));
+      if (remaining.length === 0) {
+        await archiveGroup(supabase, gid);
+        queryClient.invalidateQueries({ queryKey: ['group', gid] });
+        queryClient.invalidateQueries({ queryKey: ['groups'] });
+      }
+    } catch { /* non-critical */ }
+  }
+
   async function handleRecord() {
     if (!settleUpTarget || isSubmitting) return;
     const parsed = parseFloat(amountText);
@@ -124,10 +146,26 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
         eventType: 'settlement_recorded',
         metadata: { amount: parsed, currency: settleUpTarget.currency },
       }).catch(() => {});
+      // Notify the group (payment_in_group) and the payee specifically (payment_received)
+      sendGroupNotification({
+        eventType: 'settlement_recorded',
+        groupId,
+        actorMemberId: currentMemberId,
+        metadata: { amount: parsed, currency: settleUpTarget.currency },
+      });
+      sendGroupNotification({
+        eventType: 'payment_received',
+        groupId,
+        actorMemberId: currentMemberId,
+        payeeMemberId: settleUpTarget.creditorMemberId,
+        metadata: { amount: parsed, currency: settleUpTarget.currency },
+      });
       toast.success('Settlement recorded');
       closeModal();
       queryClient.invalidateQueries({ queryKey: ['group-balances', groupId] });
       queryClient.invalidateQueries({ queryKey: ['group-settlements', groupId] });
+      // Auto-archive when all debts reach zero (spec §22)
+      checkAndAutoArchive(groupId);
     } catch {
       toast.error('Failed to record settlement');
     } finally {
@@ -201,16 +239,31 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
             </Text>
           </View>
         ) : (
-          simplifiedDebts.map((debt, idx) => (
-            <DebtRow
-              key={`${debt.from}-${debt.to}-${idx}`}
-              label={getDebtLabel(debt)}
-              amount={format(debt.amount, data!.currency)}
-              isYouInvolved={debt.from === currentMemberId || debt.to === currentMemberId}
-              onSettleUp={() => openSettleUp(debt)}
-              theme={theme}
-            />
-          ))
+          simplifiedDebts.map((debt, idx) => {
+            const otherMemberId = debt.from === currentMemberId ? debt.to : debt.from;
+            const otherMember = memberMap.get(otherMemberId);
+            return (
+              <DebtRow
+                key={`${debt.from}-${debt.to}-${idx}`}
+                label={getDebtLabel(debt)}
+                amount={format(debt.amount, data!.currency)}
+                isYouInvolved={debt.from === currentMemberId || debt.to === currentMemberId}
+                onSettleUp={() => openSettleUp(debt)}
+                onAvatarPress={() => {
+                  if (!otherMember) return;
+                  const memberData = data!.members.find((m) => m.memberId === otherMemberId);
+                  setProfileTarget({
+                    memberId: otherMemberId,
+                    userId: memberData?.userId ?? null,
+                    name: otherMember.name,
+                    balance: memberData?.balance ?? 0,
+                    currency: data!.currency,
+                  });
+                }}
+                theme={theme}
+              />
+            );
+          })
         )}
 
         {settlements.length > 0 && (
@@ -295,6 +348,23 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <MemberProfileSheet
+        visible={!!profileTarget}
+        target={profileTarget}
+        currentMemberId={currentMemberId}
+        onClose={() => setProfileTarget(null)}
+        onSettleUp={() => {
+          if (!profileTarget) return;
+          const debt = simplifiedDebts.find(
+            (d) =>
+              (d.from === profileTarget.memberId && d.to === currentMemberId) ||
+              (d.to === profileTarget.memberId && d.from === currentMemberId),
+          );
+          if (debt) openSettleUp(debt);
+          setProfileTarget(null);
+        }}
+      />
     </>
   );
 }
@@ -304,21 +374,24 @@ interface DebtRowProps {
   amount: string;
   isYouInvolved: boolean;
   onSettleUp: () => void;
+  onAvatarPress?: () => void;
   theme: typeof Colors.dark | typeof Colors.light;
 }
 
-function DebtRow({ label, amount, isYouInvolved, onSettleUp, theme }: DebtRowProps) {
+function DebtRow({ label, amount, isYouInvolved, onSettleUp, onAvatarPress, theme }: DebtRowProps) {
   return (
     <View
       className="flex-row items-center gap-3 rounded-2xl border border-border p-4"
       style={{ backgroundColor: theme.surface }}
     >
-      <View
+      <TouchableOpacity
+        onPress={onAvatarPress}
+        disabled={!onAvatarPress}
         className="w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: theme.surface2 }}
       >
         <User size={20} color={theme.textSecondary} strokeWidth={1.5} />
-      </View>
+      </TouchableOpacity>
       <View className="flex-1">
         <Text className="text-text-primary font-medium text-sm">{label}</Text>
         <Text

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,15 +12,23 @@ import {
   Platform,
   Linking,
   Alert,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
+import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { useAuthStore } from '../../../store/auth';
 import { signOut } from '../../../lib/auth';
 import { updateProfile, uploadProfilePhoto } from '../../../lib/repos/profiles';
 import { getGroupsWithOutstandingBalances, anonymiseAccount } from '../../../lib/repos/account';
+import {
+  getNotificationPreferences,
+  updateNotificationPreference,
+  upsertPushToken,
+  type PrefKey,
+} from '../../../lib/repos/pushTokens';
 import { supabase } from '../../../lib/supabase';
 import { resolveAvatarUrl } from '../../../lib/displayName';
 import { hapticOnToggle } from '../../../lib/haptics';
@@ -60,6 +68,44 @@ export default function AccountScreen() {
   const [isCheckingBalances, setIsCheckingBalances] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const [notifPermission, setNotifPermission] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
+
+  const userId = session?.user.id ?? '';
+
+  const { data: notifPrefs, refetch: refetchPrefs } = useQuery({
+    queryKey: ['notification-preferences', userId],
+    queryFn: () => getNotificationPreferences(supabase, userId),
+    enabled: !!userId,
+  });
+
+  useEffect(() => {
+    Notifications.getPermissionsAsync().then(({ status }) => {
+      setNotifPermission(status as 'granted' | 'denied' | 'undetermined');
+    });
+  }, []);
+
+  async function handleEnableNotifications() {
+    const { status } = await Notifications.requestPermissionsAsync();
+    setNotifPermission(status as 'granted' | 'denied' | 'undetermined');
+    if (status === 'granted') {
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+      if (projectId) {
+        try {
+          const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
+          await upsertPushToken(supabase, userId, token, Platform.OS);
+        } catch { /* non-critical */ }
+      }
+    } else {
+      Linking.openSettings();
+    }
+  }
+
+  async function handleTogglePref(key: PrefKey, value: boolean) {
+    hapticOnToggle();
+    await updateNotificationPreference(supabase, userId, key, value).catch(() => {});
+    refetchPrefs();
+  }
 
   const gmailName = (session?.user?.user_metadata?.full_name as string | undefined) ?? '';
   const displayName = profile?.display_name || gmailName;
@@ -363,6 +409,54 @@ export default function AccountScreen() {
                 <Text className="text-text-tertiary">›</Text>
               </View>
             </TouchableOpacity>
+          </View>
+
+          {/* Notifications */}
+          <Text className="font-body text-xs text-text-tertiary uppercase tracking-wide px-1 mb-2">
+            Notifications
+          </Text>
+          <View className="bg-surface rounded-2xl border border-border overflow-hidden mb-4">
+            {notifPermission !== 'granted' ? (
+              <TouchableOpacity
+                onPress={handleEnableNotifications}
+                className="flex-row items-center justify-between px-5 py-4"
+              >
+                <Text className="font-body text-base text-text-primary">Enable notifications</Text>
+                <Text className="text-text-tertiary">›</Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                {([
+                  { key: 'new_expense' as PrefKey, label: 'New expense' },
+                  { key: 'expense_edited' as PrefKey, label: 'Expense edited' },
+                  { key: 'expense_deleted' as PrefKey, label: 'Expense deleted' },
+                  { key: 'payment_received' as PrefKey, label: 'Payment received' },
+                  { key: 'payment_in_group' as PrefKey, label: 'Payment in group' },
+                  { key: 'someone_joins_group' as PrefKey, label: 'Member joined' },
+                  { key: 'someone_added' as PrefKey, label: 'Member added' },
+                  { key: 'member_removed' as PrefKey, label: 'Member removed' },
+                  { key: 'trip_end_approaching' as PrefKey, label: 'Trip ending soon' },
+                  { key: 'trip_ends_today' as PrefKey, label: 'Trip ends today' },
+                  { key: 'trip_expired' as PrefKey, label: 'Trip expired' },
+                  { key: 'balance_reaches_zero' as PrefKey, label: 'Balance reaches zero' },
+                ] as { key: PrefKey; label: string }[]).map(({ key, label }, idx, arr) => (
+                  <View
+                    key={key}
+                    className={`flex-row items-center justify-between px-5 py-3.5 ${
+                      idx < arr.length - 1 ? 'border-b border-border' : ''
+                    }`}
+                  >
+                    <Text className="font-body text-base text-text-primary">{label}</Text>
+                    <Switch
+                      value={!!(notifPrefs as Record<string, unknown> | null)?.[key]}
+                      onValueChange={(v) => handleTogglePref(key, v)}
+                      trackColor={{ false: '#3a3a3a', true: Colors.accent }}
+                      thumbColor="#ffffff"
+                    />
+                  </View>
+                ))}
+              </>
+            )}
           </View>
 
           <View className="bg-surface rounded-2xl border border-border overflow-hidden mb-4">

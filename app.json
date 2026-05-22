@@ -34,7 +34,7 @@
       "enabled": true,
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0,
-      "url": "https://u.expo.dev/even-steven"
+      "url": "https://u.expo.dev/eb6da0d8-64a0-48c8-a269-22ad100a26b7"
     },
     "runtimeVersion": {
       "policy": "appVersion"

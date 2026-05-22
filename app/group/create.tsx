@@ -17,12 +17,15 @@ import { useColorScheme } from 'nativewind';
 import { X, ChevronLeft, Plane, Home, Heart, Zap, Users, Grid3X3 } from 'lucide-react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { useQueryClient } from '@tanstack/react-query';
+import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { Colors } from '../../constants/colors';
 import { useAuthStore } from '../../store/auth';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useOfflineGuard } from '../../hooks/useOfflineGuard';
 import { createGroup } from '../../lib/repos/groups';
 import { logActivityEvent } from '../../lib/repos/activity';
+import { upsertPushToken } from '../../lib/repos/pushTokens';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 
@@ -528,6 +531,19 @@ export default function CreateGroupScreen() {
     setInviteEmails((prev) => prev.filter((e) => e !== email));
   }
 
+  async function requestAndRegisterPushToken(userId: string) {
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    const finalStatus =
+      existing === 'granted'
+        ? 'granted'
+        : (await Notifications.requestPermissionsAsync()).status;
+    if (finalStatus !== 'granted') return;
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+    if (!projectId) return;
+    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
+    await upsertPushToken(supabase, userId, token, Platform.OS);
+  }
+
   async function handleCreate() {
     if (!session || !groupType) return;
     setIsSaving(true);
@@ -557,6 +573,8 @@ export default function CreateGroupScreen() {
         eventType: 'group_created',
         metadata: { name: name.trim() },
       }).catch(() => {});
+      // Request push notification permission after first group creation (spec §38)
+      requestAndRegisterPushToken(session.user.id).catch(() => {});
       queryClient.invalidateQueries({ queryKey: ['groups'] });
       router.back();
     } catch {

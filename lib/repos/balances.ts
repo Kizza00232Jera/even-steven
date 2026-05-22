@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../database.types';
 import type { Currency } from '../currency';
+import { resolveDisplayName } from '../displayName';
 
 export interface MemberWithBalance {
   memberId: string;
@@ -19,6 +20,7 @@ export interface GroupBalanceData {
 
 type ProfileJoin = {
   display_name: string | null;
+  google_name: string | null;
   avatar_url: string | null;
   google_avatar_url: string | null;
 };
@@ -31,7 +33,7 @@ export async function fetchGroupBalances(
     client
       .from('group_members')
       .select(
-        'id, user_id, email, display_name, profiles!group_members_user_id_fkey(display_name, avatar_url, google_avatar_url)'
+        'id, user_id, email, display_name, profiles!group_members_user_id_fkey(display_name, google_name, avatar_url, google_avatar_url)'
       )
       .eq('group_id', groupId)
       .eq('status', 'active'),
@@ -94,12 +96,12 @@ export async function fetchGroupBalances(
     return {
       memberId: m.id,
       userId: m.user_id,
-      name: m.display_name ?? profile?.display_name ?? m.email,
+      name: resolveDisplayName(m.display_name, profile?.display_name, profile?.google_name, m.email),
       email: m.email,
       avatarUrl: profile?.avatar_url ?? profile?.google_avatar_url ?? null,
       balance: balanceMap.get(m.id) ?? 0,
     };
   });
 
-  return { groupId, currency, members: membersWithBalances };
+  return { groupId, currency: currency as Currency, members: membersWithBalances };
 }

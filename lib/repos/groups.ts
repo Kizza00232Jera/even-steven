@@ -16,6 +16,8 @@ export interface GroupMemberWithProfile {
   user_id: string | null;
   email: string;
   display_name: string | null;
+  profile_display_name: string | null;
+  google_name: string | null;
   role: 'admin' | 'member';
   status: 'active' | 'invited' | 'removed';
   is_pinned: boolean;
@@ -23,6 +25,7 @@ export interface GroupMemberWithProfile {
   joined_at: string;
   avatar_url: string | null;
   google_avatar_url: string | null;
+  balance: number;
 }
 
 export interface GroupDetail {
@@ -132,7 +135,7 @@ export async function fetchGroupsWithMembership(
 ): Promise<GroupWithMembership[]> {
   const { data, error } = await client
     .from('group_members')
-    .select('id, is_pinned, is_muted, role, groups(*)')
+    .select('id, is_pinned, is_muted, role, balance, groups(*)')
     .eq('user_id', userId)
     .eq('status', 'active');
 
@@ -142,11 +145,12 @@ export async function fetchGroupsWithMembership(
     const g = row.groups as Group;
     return {
       ...g,
+      settlement_visibility: g.settlement_visibility as 'public' | 'private',
       member_id: row.id,
       is_pinned: row.is_pinned,
       is_muted: row.is_muted,
-      role: row.role,
-      balance: 0,
+      role: row.role as 'admin' | 'member',
+      balance: row.balance,
     };
   });
 
@@ -202,10 +206,10 @@ export async function fetchGroupDetail(
     type: group.type,
     base_currency: group.base_currency,
     admin_id: group.admin_id,
-    status: group.status,
+    status: group.status as 'active' | 'expired' | 'archived',
     start_date: group.start_date,
     end_date: group.end_date,
-    settlement_visibility: group.settlement_visibility,
+    settlement_visibility: group.settlement_visibility as 'public' | 'private',
     background_image_url: group.background_image_url,
     isMember,
     isAdmin,
@@ -228,7 +232,7 @@ export async function fetchGroupMembers(
 ): Promise<GroupMemberWithProfile[]> {
   const { data, error } = await client
     .from('group_members')
-    .select('*, profiles(avatar_url, google_avatar_url)')
+    .select('*, profiles(display_name, google_name, avatar_url, google_avatar_url)')
     .eq('group_id', groupId)
     .in('status', ['active', 'invited'])
     .order('joined_at', { ascending: true });
@@ -236,20 +240,23 @@ export async function fetchGroupMembers(
   if (error) throw error;
 
   return (data ?? []).map((row) => {
-    const profile = row.profiles as { avatar_url: string | null; google_avatar_url: string | null } | null;
+    const profile = row.profiles as { display_name: string | null; google_name: string | null; avatar_url: string | null; google_avatar_url: string | null } | null;
     return {
       id: row.id,
       group_id: row.group_id,
       user_id: row.user_id,
       email: row.email,
       display_name: row.display_name,
-      role: row.role,
-      status: row.status,
+      profile_display_name: profile?.display_name ?? null,
+      google_name: profile?.google_name ?? null,
+      role: row.role as 'admin' | 'member',
+      status: row.status as 'active' | 'invited' | 'removed',
       is_pinned: row.is_pinned,
       is_muted: row.is_muted,
       joined_at: row.joined_at,
       avatar_url: profile?.avatar_url ?? null,
       google_avatar_url: profile?.google_avatar_url ?? null,
+      balance: row.balance,
     };
   });
 }
@@ -490,6 +497,72 @@ export async function markGroupArchived(
     .from('groups')
     .update({ status: 'archived' })
     .eq('id', groupId);
+  if (error) throw error;
+}
+
+export interface MemberPreview {
+  memberId: string;
+  name: string;
+  avatarUrl: string | null;
+  isCurrentUser: boolean;
+  isAdmin: boolean;
+}
+
+export async function fetchGroupMemberPreviews(
+  client: SupabaseClient<Database>,
+  groupIds: string[],
+  currentUserId: string,
+): Promise<Record<string, MemberPreview[]>> {
+  if (groupIds.length === 0) return {};
+
+  const { data, error } = await client
+    .from('group_members')
+    .select('id, group_id, display_name, user_id, role, joined_at, profiles(display_name, google_name, avatar_url, google_avatar_url)')
+    .in('group_id', groupIds)
+    .eq('status', 'active')
+    .order('joined_at', { ascending: true });
+
+  if (error) throw error;
+
+  const result: Record<string, MemberPreview[]> = {};
+  for (const row of data ?? []) {
+    if (!result[row.group_id]) result[row.group_id] = [];
+    const p = row.profiles as { display_name: string | null; google_name: string | null; avatar_url: string | null; google_avatar_url: string | null } | null;
+    const name = row.display_name ?? p?.display_name ?? p?.google_name ?? '?';
+    result[row.group_id].push({
+      memberId: row.id,
+      name,
+      avatarUrl: p?.avatar_url ?? p?.google_avatar_url ?? null,
+      isCurrentUser: row.user_id === currentUserId,
+      isAdmin: row.role === 'admin',
+    });
+  }
+
+  // Sort: current user first, then admin, then others; cap at 4
+  for (const groupId in result) {
+    result[groupId].sort((a, b) => {
+      if (a.isCurrentUser) return -1;
+      if (b.isCurrentUser) return 1;
+      if (a.isAdmin && !b.isAdmin) return -1;
+      if (!a.isAdmin && b.isAdmin) return 1;
+      return 0;
+    });
+    if (result[groupId].length > 4) result[groupId] = result[groupId].slice(0, 4);
+  }
+
+  return result;
+}
+
+export async function updateMemberDisplayName(
+  client: SupabaseClient<Database>,
+  memberId: string,
+  displayName: string,
+): Promise<void> {
+  const trimmed = displayName.trim();
+  const { error } = await client
+    .from('group_members')
+    .update({ display_name: trimmed || null })
+    .eq('id', memberId);
   if (error) throw error;
 }
 

@@ -13,4 +13,27 @@ config.resolver.blockList = [
   /.*\.spec\.[jt]sx?$/,
 ];
 
-module.exports = withNativeWind(config, { input: './global.css' });
+// Apply NativeWind first, then layer our resolver on top so withNativeWind
+// cannot overwrite it.
+const finalConfig = withNativeWind(config, { input: './global.css' });
+
+// @supabase/supabase-js v2.106+ added optional OpenTelemetry tracing. Metro
+// resolves the package's "import" export condition and picks dist/index.mjs,
+// which contains `import(variable)` — a dynamic import with a non-literal
+// argument that Hermes cannot compile. Force it to the CJS build instead,
+// which uses require(s) and compiles fine.
+const path = require('path');
+const originalResolveRequest = finalConfig.resolver.resolveRequest;
+finalConfig.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (moduleName === '@supabase/supabase-js') {
+    return {
+      filePath: path.resolve(__dirname, 'node_modules/@supabase/supabase-js/dist/index.cjs'),
+      type: 'sourceFile',
+    };
+  }
+  return originalResolveRequest
+    ? originalResolveRequest(context, moduleName, platform)
+    : context.resolveRequest(context, moduleName, platform);
+};
+
+module.exports = finalConfig;

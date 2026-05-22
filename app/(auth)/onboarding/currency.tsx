@@ -33,10 +33,9 @@ export default function CurrencyScreen() {
     try {
       const updated = await updateProfile(supabase, session!.user.id, {
         preferred_currency: selected,
-        onboarding_done: true,
       });
       setProfile(updated);
-      router.replace('/(tabs)/groups');
+      router.push('/(auth)/onboarding/notifications' as never);
     } catch (e) {
       setError('Something went wrong. Please try again.');
     } finally {

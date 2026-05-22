@@ -7,8 +7,7 @@ export async function getGroupsWithOutstandingBalances(
   client: SupabaseClient<Database>,
   userId: string
 ): Promise<GroupSummary[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (client as any).rpc(
+  const { data, error } = await client.rpc(
     'get_groups_with_outstanding_balances',
     { p_user_id: userId }
   );

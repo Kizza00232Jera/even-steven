@@ -8,16 +8,43 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://mavlkmwwpcogtwbxtmpr.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hdmxrbXd3cGNvZ3R3Ynh0bXByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNzM0MDksImV4cCI6MjA5NDg0OTQwOX0.jIxFYubuTSV5HN8nW7TXNKu9FyCeud-p4ZzdpvHcB2c",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_26Ql2zYbzt9qqG0_cZIsUA_w7q7DExw",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1083529094883-8q6c3h94ooem1r3q95e1o3j0rvu3j1ru.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1083529094883-sumv5pdh22335cub7lt74t82ht3d8b6v.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "1083529094883-6e0bq0vr3rkhs2j7iq2t1sd0pjumicia.apps.googleusercontent.com"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://mavlkmwwpcogtwbxtmpr.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hdmxrbXd3cGNvZ3R3Ynh0bXByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNzM0MDksImV4cCI6MjA5NDg0OTQwOX0.jIxFYubuTSV5HN8nW7TXNKu9FyCeud-p4ZzdpvHcB2c",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_26Ql2zYbzt9qqG0_cZIsUA_w7q7DExw",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1083529094883-8q6c3h94ooem1r3q95e1o3j0rvu3j1ru.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1083529094883-sumv5pdh22335cub7lt74t82ht3d8b6v.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "1083529094883-6e0bq0vr3rkhs2j7iq2t1sd0pjumicia.apps.googleusercontent.com"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://mavlkmwwpcogtwbxtmpr.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hdmxrbXd3cGNvZ3R3Ynh0bXByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNzM0MDksImV4cCI6MjA5NDg0OTQwOX0.jIxFYubuTSV5HN8nW7TXNKu9FyCeud-p4ZzdpvHcB2c",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_26Ql2zYbzt9qqG0_cZIsUA_w7q7DExw",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1083529094883-8q6c3h94ooem1r3q95e1o3j0rvu3j1ru.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1083529094883-sumv5pdh22335cub7lt74t82ht3d8b6v.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "1083529094883-6e0bq0vr3rkhs2j7iq2t1sd0pjumicia.apps.googleusercontent.com"
+      }
     }
   },
   "submit": {

@@ -1,16 +1,34 @@
-import { View, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { useState } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  TextInput,
+  Share,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useColorScheme } from 'nativewind';
-import { ChevronLeft, Shield, UserMinus, Clock } from 'lucide-react-native';
+import { ChevronLeft, Shield, UserMinus, Clock, UserPlus, Share2, X } from 'lucide-react-native';
 import { ErrorState } from '../../../components/ErrorState';
 import { Colors } from '../../../constants/colors';
-import { fetchGroupMembers, removeMember } from '../../../lib/repos/groups';
+import { fetchGroupMembers, removeMember, updateMemberDisplayName } from '../../../lib/repos/groups';
+import { addInvitedMember, getOrCreateInviteToken } from '../../../lib/repos/invites';
+import { resolveDisplayName } from '../../../lib/displayName';
 import { logActivityEvent } from '../../../lib/repos/activity';
+import { sendGroupNotification } from '../../../lib/notifications';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/auth';
 import type { GroupMemberWithProfile } from '../../../lib/repos/groups';
+
+const INVITE_BASE_URL = 'https://even-steven-five.vercel.app/invite';
 
 function AvatarPlaceholder({
   name,
@@ -35,21 +53,161 @@ function AvatarPlaceholder({
   );
 }
 
+interface AddMemberSheetProps {
+  visible: boolean;
+  onClose: () => void;
+  onAdd: (email: string) => void;
+  isLoading: boolean;
+}
+
+function AddMemberSheet({ visible, onClose, onAdd, isLoading }: AddMemberSheetProps) {
+  const [email, setEmail] = useState('');
+  const { colorScheme } = useColorScheme();
+  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
+
+  function handleAdd() {
+    const trimmed = email.trim();
+    if (!trimmed.includes('@')) {
+      Alert.alert('Invalid email', 'Please enter a valid email address.');
+      return;
+    }
+    onAdd(trimmed);
+  }
+
+  function handleClose() {
+    setEmail('');
+    onClose();
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1 justify-end"
+      >
+        <TouchableOpacity className="flex-1" onPress={handleClose} />
+        <View
+          className="rounded-t-3xl p-6 pb-10"
+          style={{ backgroundColor: theme.surface }}
+        >
+          <View className="flex-row items-center justify-between mb-6">
+            <Text className="text-text-primary font-bold text-lg font-display">Add Member</Text>
+            <TouchableOpacity onPress={handleClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <X size={22} color={theme.textSecondary} strokeWidth={1.5} />
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            className="bg-background border border-border rounded-xl px-4 py-3 text-text-primary mb-4 font-body"
+            placeholder="Email address"
+            placeholderTextColor={theme.textTertiary}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoFocus
+            onSubmitEditing={handleAdd}
+          />
+          <TouchableOpacity
+            className="rounded-full py-3.5 items-center"
+            style={{ backgroundColor: Colors.accent }}
+            onPress={handleAdd}
+            disabled={isLoading}
+            activeOpacity={0.8}
+          >
+            <Text className="text-white font-semibold text-base font-body">
+              {isLoading ? 'Adding…' : 'Send Invite'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+interface EditDisplayNameSheetProps {
+  visible: boolean;
+  currentName: string;
+  onClose: () => void;
+  onSave: (name: string) => void;
+  isLoading: boolean;
+}
+
+function EditDisplayNameSheet({ visible, currentName, onClose, onSave, isLoading }: EditDisplayNameSheetProps) {
+  const [name, setName] = useState(currentName);
+  const { colorScheme } = useColorScheme();
+  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
+
+  function handleClose() {
+    setName(currentName);
+    onClose();
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1 justify-end"
+      >
+        <TouchableOpacity className="flex-1" onPress={handleClose} />
+        <View
+          className="rounded-t-3xl p-6 pb-10"
+          style={{ backgroundColor: theme.surface }}
+        >
+          <View className="flex-row items-center justify-between mb-6">
+            <Text className="text-text-primary font-bold text-lg font-display">Your display name</Text>
+            <TouchableOpacity onPress={handleClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <X size={22} color={theme.textSecondary} strokeWidth={1.5} />
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            className="bg-background border border-border rounded-xl px-4 py-3 text-text-primary mb-2 font-body"
+            placeholder="How should members see your name?"
+            placeholderTextColor={theme.textTertiary}
+            value={name}
+            onChangeText={setName}
+            autoFocus
+            maxLength={50}
+          />
+          <Text className="text-text-secondary text-xs mb-4 px-1">
+            Leave blank to use your account name.
+          </Text>
+          <TouchableOpacity
+            className="rounded-full py-3.5 items-center"
+            style={{ backgroundColor: Colors.accent }}
+            onPress={() => onSave(name)}
+            disabled={isLoading}
+            activeOpacity={0.8}
+          >
+            <Text className="text-white font-semibold text-base font-body">
+              {isLoading ? 'Saving…' : 'Save'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
 interface MemberRowProps {
   member: GroupMemberWithProfile;
   isCurrentUser: boolean;
   isCurrentUserAdmin: boolean;
   onRemove: () => void;
+  onEditName?: () => void;
 }
 
-function MemberRow({ member, isCurrentUser, isCurrentUserAdmin, onRemove }: MemberRowProps) {
+function MemberRow({ member, isCurrentUser, isCurrentUserAdmin, onRemove, onEditName }: MemberRowProps) {
   const { colorScheme } = useColorScheme();
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
-  const displayName = member.display_name ?? member.email;
+  const displayName = resolveDisplayName(member.display_name, member.profile_display_name, member.google_name, member.email);
   const isPending = member.status === 'invited';
 
   return (
-    <View className="flex-row items-center py-3 border-b border-border">
+    <TouchableOpacity
+      className="flex-row items-center py-3 border-b border-border"
+      onPress={isCurrentUser ? onEditName : undefined}
+      activeOpacity={isCurrentUser ? 0.7 : 1}
+    >
       <AvatarPlaceholder name={member.display_name} />
       <View className="flex-1 ml-3">
         <View className="flex-row items-center gap-2">
@@ -85,6 +243,11 @@ function MemberRow({ member, isCurrentUser, isCurrentUserAdmin, onRemove }: Memb
             {member.email}
           </Text>
         )}
+        {isCurrentUser && (
+          <Text className="font-body text-xs mt-0.5" style={{ color: Colors.accent }}>
+            Tap to edit your display name
+          </Text>
+        )}
       </View>
       {isCurrentUserAdmin && !isCurrentUser && (
         <TouchableOpacity
@@ -96,7 +259,7 @@ function MemberRow({ member, isCurrentUser, isCurrentUserAdmin, onRemove }: Memb
           <UserMinus size={18} color={Colors.destructive} strokeWidth={1.5} />
         </TouchableOpacity>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -113,8 +276,17 @@ export default function MembersScreen() {
   const { session } = useAuthStore();
   const queryClient = useQueryClient();
   const currentUserId = session?.user.id ?? '';
+  const { colorScheme } = useColorScheme();
+  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
+
+  const [isAddSheetVisible, setIsAddSheetVisible] = useState(false);
+  const [isSharingLink, setIsSharingLink] = useState(false);
+  const [isEditNameVisible, setIsEditNameVisible] = useState(false);
 
   const { data: members, isLoading, isError, refetch } = useGroupMembers(groupId);
+
+  const currentMember = members?.find((m) => m.user_id === currentUserId);
+  const isAdmin = currentMember?.role === 'admin';
 
   const removeMutation = useMutation({
     mutationFn: (memberId: string) => removeMember(supabase, memberId),
@@ -124,19 +296,65 @@ export default function MembersScreen() {
         actorId: currentUserId,
         eventType: 'member_removed',
       }).catch(() => {});
+      if (currentMember?.id) {
+        sendGroupNotification({
+          eventType: 'member_removed',
+          groupId,
+          actorMemberId: currentMember.id,
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
       queryClient.invalidateQueries({ queryKey: ['groups'] });
     },
   });
 
-  const currentMember = members?.find((m) => m.user_id === currentUserId);
-  const isAdmin = currentMember?.role === 'admin';
+  const addMemberMutation = useMutation({
+    mutationFn: (email: string) => addInvitedMember(supabase, groupId, email, currentMember?.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
+      setIsAddSheetVisible(false);
+    },
+    onError: () => {
+      Alert.alert('Error', 'Could not add member. Please try again.');
+    },
+  });
+
+  const updateDisplayNameMutation = useMutation({
+    mutationFn: (name: string) => updateMemberDisplayName(supabase, currentMember!.id, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+      setIsEditNameVisible(false);
+    },
+    onError: () => {
+      Alert.alert('Error', 'Could not save display name. Please try again.');
+    },
+  });
+
+  async function handleShareLink() {
+    const memberId = currentMember?.id;
+    if (!memberId) return;
+    setIsSharingLink(true);
+    try {
+      const token = await getOrCreateInviteToken(supabase, groupId, memberId);
+      const url = `${INVITE_BASE_URL}/${token}`;
+      await Share.share({ message: url, url });
+    } catch {
+      Alert.alert('Error', 'Could not generate invite link. Please try again.');
+    } finally {
+      setIsSharingLink(false);
+    }
+  }
 
   function confirmRemove(member: GroupMemberWithProfile) {
     const name = member.display_name ?? member.email;
+    const hasBalance = member.balance !== 0;
+    const balanceNote = hasBalance
+      ? ` This member has an outstanding balance of ${member.balance > 0 ? '+' : ''}${member.balance.toFixed(2)}.`
+      : '';
     Alert.alert(
       'Remove member',
-      `Remove ${name} from this group? Their expense history will remain intact.`,
+      `Remove ${name} from this group?${balanceNote} Their expense history will remain intact.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -167,6 +385,35 @@ export default function MembersScreen() {
       </View>
 
       <View className="flex-1 px-4">
+        {/* Add member + Invite via link — visible to all members */}
+        <View className="flex-row gap-3 py-4">
+          <TouchableOpacity
+            className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-full border border-border"
+            style={{ backgroundColor: theme.surface2 }}
+            onPress={() => setIsAddSheetVisible(true)}
+            activeOpacity={0.7}
+          >
+            <UserPlus size={16} color={Colors.accent} strokeWidth={2} />
+            <Text className="font-body font-medium text-text-primary text-sm">Add member</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-full border border-border"
+            style={{ backgroundColor: theme.surface2 }}
+            onPress={handleShareLink}
+            disabled={isSharingLink}
+            activeOpacity={0.7}
+          >
+            {isSharingLink ? (
+              <ActivityIndicator size="small" color={Colors.accent} />
+            ) : (
+              <Share2 size={16} color={Colors.accent} strokeWidth={2} />
+            )}
+            <Text className="font-body font-medium text-text-primary text-sm">
+              {isSharingLink ? 'Generating…' : 'Invite via link'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {isLoading && (
           <View className="gap-3 pt-4">
             {[1, 2, 3].map((i) => (
@@ -197,11 +444,27 @@ export default function MembersScreen() {
                 isCurrentUser={item.user_id === currentUserId}
                 isCurrentUserAdmin={isAdmin}
                 onRemove={() => confirmRemove(item)}
+                onEditName={() => setIsEditNameVisible(true)}
               />
             )}
           />
         )}
       </View>
+
+      <AddMemberSheet
+        visible={isAddSheetVisible}
+        onClose={() => setIsAddSheetVisible(false)}
+        onAdd={(email) => addMemberMutation.mutate(email)}
+        isLoading={addMemberMutation.isPending}
+      />
+
+      <EditDisplayNameSheet
+        visible={isEditNameVisible}
+        currentName={currentMember?.display_name ?? ''}
+        onClose={() => setIsEditNameVisible(false)}
+        onSave={(name) => updateDisplayNameMutation.mutate(name)}
+        isLoading={updateDisplayNameMutation.isPending}
+      />
     </SafeAreaView>
   );
 }

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../database.types';
 import type { Currency } from '../currency';
+import { resolveDisplayName } from '../displayName';
 
 export interface MemberContribution {
   memberId: string;
@@ -25,6 +26,7 @@ export interface GroupSummaryData {
 
 type ProfileJoin = {
   display_name: string | null;
+  google_name: string | null;
   avatar_url: string | null;
   google_avatar_url: string | null;
 };
@@ -42,7 +44,7 @@ export async function fetchGroupSummary(
     client
       .from('group_members')
       .select(
-        'id, display_name, profiles!group_members_user_id_fkey(display_name, avatar_url, google_avatar_url)'
+        'id, email, display_name, profiles!group_members_user_id_fkey(display_name, google_name, avatar_url, google_avatar_url)'
       )
       .eq('group_id', groupId)
       .eq('status', 'active'),
@@ -61,7 +63,7 @@ export async function fetchGroupSummary(
     const raw = m.profiles;
     const profile = (Array.isArray(raw) ? raw[0] : raw) as ProfileJoin | null;
     memberMap.set(m.id, {
-      name: m.display_name ?? profile?.display_name ?? 'Unknown',
+      name: resolveDisplayName(m.display_name, profile?.display_name, profile?.google_name, m.email ?? 'Unknown'),
       avatarUrl: profile?.avatar_url ?? profile?.google_avatar_url ?? null,
     });
   }
@@ -93,5 +95,5 @@ export async function fetchGroupSummary(
     }))
     .sort((a, b) => b.amount - a.amount);
 
-  return { groupId, currency, totalSpending, memberContributions, categoryBreakdown };
+  return { groupId, currency: currency as Currency, totalSpending, memberContributions, categoryBreakdown };
 }

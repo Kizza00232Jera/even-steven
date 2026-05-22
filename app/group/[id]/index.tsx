@@ -10,7 +10,9 @@ import {
   ActivityIndicator,
   ScrollView,
   Animated,
+  Dimensions,
 } from 'react-native';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -26,6 +28,7 @@ import { getOrCreateInviteToken } from '../../../lib/repos/invites';
 import { fetchGroupExpenses, type ExpenseListItem } from '../../../lib/repos/expenses';
 import { fetchGroupBalances, type GroupBalanceData } from '../../../lib/repos/balances';
 import { format } from '../../../lib/currency';
+import type { Currency } from '../../../lib/currency';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/auth';
 import { useToast } from '../../../hooks/useToast';
@@ -38,13 +41,13 @@ const INVITE_BASE = 'even-steven.vercel.app/invite';
 
 type Tab = 'expenses' | 'balances' | 'summary';
 
-const GROUP_HEADER_COLORS: Record<string, string> = {
-  Trip: Colors.gradients.trip[0],
-  Home: Colors.gradients.home[0],
-  Couple: Colors.gradients.couple[0],
-  Utilities: Colors.gradients.utilities[0],
-  Family: Colors.gradients.family[0],
-  Other: Colors.gradients.other[0],
+const GROUP_HEADER_GRADIENTS: Record<string, [string, string]> = {
+  Trip: Colors.gradients.trip as [string, string],
+  Home: Colors.gradients.home as [string, string],
+  Couple: Colors.gradients.couple as [string, string],
+  Utilities: Colors.gradients.utilities as [string, string],
+  Family: Colors.gradients.family as [string, string],
+  Other: Colors.gradients.other as [string, string],
 };
 
 function useGroupDetail(id: string, userId: string) {
@@ -295,53 +298,74 @@ export default function GroupDetailScreen() {
     return <RemovedMemberState />;
   }
 
-  const headerColor = GROUP_HEADER_COLORS[group.type] ?? Colors.gradients.other[0];
+  const [gradientStart, gradientEnd] = GROUP_HEADER_GRADIENTS[group.type] ?? Colors.gradients.other;
+  const screenWidth = Dimensions.get('window').width;
+  const HEADER_HEIGHT = 200;
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      {/* Colored header with group name and action buttons */}
-      <View className="px-4 pt-3 pb-4" style={{ backgroundColor: headerColor }}>
-        <View className="flex-row items-center justify-between mb-2">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            className="flex-row items-center"
-          >
-            <ChevronLeft size={22} color="rgba(255,255,255,0.8)" strokeWidth={2} />
-            <Text className="text-sm ml-1" style={{ color: 'rgba(255,255,255,0.8)' }}>
-              Back
+      {/* Full-bleed gradient header — 200px tall per spec §13 */}
+      <View style={{ height: HEADER_HEIGHT, overflow: 'hidden' }}>
+        <Svg
+          style={{ position: 'absolute', top: 0, left: 0 }}
+          width={screenWidth}
+          height={HEADER_HEIGHT}
+        >
+          <Defs>
+            <SvgLinearGradient id="hdrGrad" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor={gradientStart} stopOpacity="1" />
+              <Stop offset="1" stopColor={gradientEnd} stopOpacity="1" />
+            </SvgLinearGradient>
+          </Defs>
+          <Rect width={screenWidth} height={HEADER_HEIGHT} fill="url(#hdrGrad)" />
+          {/* Dark overlay per spec §13 */}
+          <Rect width={screenWidth} height={HEADER_HEIGHT} fill="rgba(0,0,0,0.35)" />
+        </Svg>
+        <View className="px-4 pt-3 pb-4 flex-1 justify-between">
+          <View className="flex-row items-center justify-between">
+            <TouchableOpacity
+              onPress={() => router.back()}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              className="flex-row items-center"
+            >
+              <ChevronLeft size={22} color="rgba(255,255,255,0.8)" strokeWidth={2} />
+              <Text className="text-sm ml-1" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                Back
+              </Text>
+            </TouchableOpacity>
+            <View className="flex-row items-center gap-3">
+              <TouchableOpacity
+                testID="share-invite-button"
+                onPress={handleShareInviteLink}
+                disabled={isSharing}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                {isSharing ? (
+                  <ActivityIndicator size="small" color="rgba(255,255,255,0.8)" />
+                ) : (
+                  <Share2 size={20} color="rgba(255,255,255,0.8)" strokeWidth={1.5} />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="settings-button"
+                onPress={() => setShowSettings(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Settings size={22} color="rgba(255,255,255,0.8)" strokeWidth={1.5} />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View>
+            <Text className="text-white font-bold text-2xl" style={{ fontFamily: 'SpaceGrotesk_700Bold' }}>
+              {group.name}
             </Text>
-          </TouchableOpacity>
-          <View className="flex-row items-center gap-3">
-            <TouchableOpacity
-              testID="share-invite-button"
-              onPress={handleShareInviteLink}
-              disabled={isSharing}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              {isSharing ? (
-                <ActivityIndicator size="small" color="rgba(255,255,255,0.8)" />
-              ) : (
-                <Share2 size={20} color="rgba(255,255,255,0.8)" strokeWidth={1.5} />
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              testID="settings-button"
-              onPress={() => setShowSettings(true)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Settings size={22} color="rgba(255,255,255,0.8)" strokeWidth={1.5} />
-            </TouchableOpacity>
+            {group.status === 'expired' && (
+              <View className="mt-1.5 px-2 py-0.5 bg-black/20 rounded-full self-start">
+                <Text className="text-white/70 text-xs">Trip ended</Text>
+              </View>
+            )}
           </View>
         </View>
-        <Text className="text-white font-bold text-2xl" style={{ fontFamily: 'SpaceGrotesk_700Bold' }}>
-          {group.name}
-        </Text>
-        {group.status === 'expired' && (
-          <View className="mt-1.5 px-2 py-0.5 bg-black/20 rounded-full self-start">
-            <Text className="text-white/70 text-xs">Trip ended</Text>
-          </View>
-        )}
       </View>
 
       {/* Tab bar */}
@@ -383,7 +407,11 @@ export default function GroupDetailScreen() {
           />
         )}
         {activeTab === 'balances' && group.currentMemberId && (
-          <BalancesTab groupId={id} currentMemberId={group.currentMemberId} />
+          <BalancesTab
+            groupId={id}
+            currentMemberId={group.currentMemberId}
+            settlementVisibility={group.settlement_visibility}
+          />
         )}
         {activeTab === 'summary' && <SummaryTab groupId={id} />}
       </View>
@@ -545,7 +573,7 @@ function ExpensesTab({ groupId, currentMemberId }: ExpensesTabProps) {
                   testID={`expense-card-${expense.id}`}
                   onPress={() =>
                     router.push(
-                      `/group/${groupId}/edit-expense?expenseId=${expense.id}` as never
+                      `/group/${groupId}/expense-detail?expenseId=${expense.id}` as never
                     )
                   }
                   className="rounded-2xl p-4"
@@ -579,7 +607,7 @@ function ExpensesTab({ groupId, currentMemberId }: ExpensesTabProps) {
                       </Text>
                     </View>
                     <Text className="font-display font-semibold text-text-primary text-base">
-                      {format(expense.amount, expense.currency)}
+                      {format(expense.amount, expense.currency as Currency)}
                     </Text>
                   </View>
                 </TouchableOpacity>

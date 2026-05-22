@@ -7,13 +7,14 @@ import {
   TouchableOpacity,
   Modal,
   KeyboardAvoidingView,
+  Pressable,
   Platform,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { Plus, X } from 'lucide-react-native';
+import { Plus, X, Filter } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { Skeleton } from '../../../components/Skeleton';
 import { ErrorState } from '../../../components/ErrorState';
@@ -46,6 +47,61 @@ function SectionHeader({ title }: { title: string }) {
     <Text className="text-text-secondary text-xs font-semibold uppercase tracking-widest mt-4 mb-1">
       {title}
     </Text>
+  );
+}
+
+type BalanceFilter = 'all' | 'owes_me' | 'i_owe' | 'settled';
+
+interface BalanceFilterSheetProps {
+  visible: boolean;
+  current: BalanceFilter;
+  onSelect: (f: BalanceFilter) => void;
+  onClose: () => void;
+}
+
+function BalanceFilterSheet({ visible, current, onSelect, onClose }: BalanceFilterSheetProps) {
+  const { colorScheme } = useColorScheme();
+  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
+
+  const options: { key: BalanceFilter; label: string }[] = [
+    { key: 'all', label: 'All friends' },
+    { key: 'owes_me', label: 'Owes you' },
+    { key: 'i_owe', label: 'You owe' },
+    { key: 'settled', label: 'Fully settled' },
+  ];
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
+        onPress={onClose}
+      />
+      <View
+        className="absolute bottom-0 left-0 right-0 rounded-t-2xl p-6 pb-10"
+        style={{ backgroundColor: theme.surface }}
+      >
+        <View className="flex-row items-center justify-between mb-5">
+          <Text className="font-display text-text-primary font-semibold text-lg">Filter friends</Text>
+          <TouchableOpacity onPress={onClose} hitSlop={8}>
+            <X size={20} color={theme.textSecondary} strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
+        {options.map((opt) => (
+          <TouchableOpacity
+            key={opt.key}
+            onPress={() => { onSelect(opt.key); onClose(); }}
+            className="flex-row items-center justify-between py-4 border-b border-border"
+          >
+            <Text className="font-body text-text-primary text-base">{opt.label}</Text>
+            {current === opt.key && (
+              <View className="w-5 h-5 rounded-full items-center justify-center" style={{ backgroundColor: Colors.accent }}>
+                <View className="w-2 h-2 rounded-full bg-white" />
+              </View>
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+    </Modal>
   );
 }
 
@@ -124,6 +180,8 @@ export default function FriendsScreen() {
   const { profile } = useAuthStore();
   const queryClient = useQueryClient();
   const [sheetVisible, setSheetVisible] = useState(false);
+  const [filterSheetVisible, setFilterSheetVisible] = useState(false);
+  const [balanceFilter, setBalanceFilter] = useState<BalanceFilter>('all');
   const [search, setSearch] = useState('');
   const { colorScheme } = useColorScheme();
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
@@ -173,12 +231,17 @@ export default function FriendsScreen() {
   const query = search.trim().toLowerCase();
 
   const filteredActive = useMemo<ActiveFriend[]>(() => {
-    const friends = data?.active ?? [];
-    if (!query) return friends;
-    return friends.filter(
-      (f) => f.name.toLowerCase().includes(query) || f.email.toLowerCase().includes(query)
-    );
-  }, [data?.active, query]);
+    let friends = data?.active ?? [];
+    if (query) {
+      friends = friends.filter(
+        (f) => f.name.toLowerCase().includes(query) || f.email.toLowerCase().includes(query)
+      );
+    }
+    if (balanceFilter === 'owes_me') friends = friends.filter((f) => f.totalBalance > 0);
+    else if (balanceFilter === 'i_owe') friends = friends.filter((f) => f.totalBalance < 0);
+    else if (balanceFilter === 'settled') friends = friends.filter((f) => f.totalBalance === 0);
+    return friends;
+  }, [data?.active, query, balanceFilter]);
 
   const filteredPending = useMemo<PendingFriend[]>(() => {
     const pending = data?.pending ?? [];
@@ -233,7 +296,7 @@ export default function FriendsScreen() {
               <FriendCard
                 key={friend.friendshipId}
                 friend={friend}
-                onPress={() => router.push(`/friends/${friend.friendId}` as any)}
+                onPress={() => router.push(`/friends/${friend.friendId}` as never)}
               />
             ))}
           </>
@@ -261,14 +324,24 @@ export default function FriendsScreen() {
           <Text className="text-text-primary font-bold text-2xl" style={{ fontFamily: 'SpaceGrotesk_700Bold' }}>
             Friends
           </Text>
-          <TouchableOpacity
-            onPress={() => setSheetVisible(true)}
-            className="w-9 h-9 rounded-full items-center justify-center"
-            style={{ backgroundColor: Colors.accentDim }}
-            activeOpacity={0.7}
-          >
-            <Plus size={20} color={Colors.accent} strokeWidth={2} />
-          </TouchableOpacity>
+          <View className="flex-row items-center gap-3">
+            <TouchableOpacity
+              onPress={() => setFilterSheetVisible(true)}
+              className="w-9 h-9 rounded-full items-center justify-center"
+              style={balanceFilter !== 'all' ? { backgroundColor: Colors.accentDim } : undefined}
+              activeOpacity={0.7}
+            >
+              <Filter size={18} color={balanceFilter !== 'all' ? Colors.accent : theme.textSecondary} strokeWidth={1.5} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setSheetVisible(true)}
+              className="w-9 h-9 rounded-full items-center justify-center"
+              style={{ backgroundColor: Colors.accentDim }}
+              activeOpacity={0.7}
+            >
+              <Plus size={20} color={Colors.accent} strokeWidth={2} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <TextInput
@@ -289,6 +362,13 @@ export default function FriendsScreen() {
         onClose={() => setSheetVisible(false)}
         onAdd={(email) => addMutation.mutate(email)}
         isLoading={addMutation.isPending}
+      />
+
+      <BalanceFilterSheet
+        visible={filterSheetVisible}
+        current={balanceFilter}
+        onSelect={setBalanceFilter}
+        onClose={() => setFilterSheetVisible(false)}
       />
     </SafeAreaView>
   );

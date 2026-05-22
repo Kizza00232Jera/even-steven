@@ -1,10 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { UserX } from 'lucide-react-native';
 
 export function RemovedMemberState() {
   const router = useRouter();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.replace('/(tabs)/groups');
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <View className="flex-1 bg-background items-center justify-center px-8">
@@ -16,11 +23,11 @@ export function RemovedMemberState() {
         You have been removed from this group.
       </Text>
       <Pressable
-        onPress={() => router.back()}
+        onPress={() => router.replace('/(tabs)/groups')}
         className="bg-surface-2 border border-border rounded-full px-8 py-3"
         accessibilityRole="button"
       >
-        <Text className="text-text-primary text-sm font-medium">Go back</Text>
+        <Text className="text-text-primary text-sm font-medium">Go to Groups</Text>
       </Pressable>
     </View>
   );

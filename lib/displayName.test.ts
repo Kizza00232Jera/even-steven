@@ -1,52 +1,52 @@
 import { resolveDisplayName, resolveAvatarUrl } from './displayName';
 
 describe('resolveDisplayName', () => {
-  it('returns group display name when all three are provided', () => {
-    expect(resolveDisplayName('Group Nick', 'Account Name', 'Gmail Name')).toBe('Group Nick');
+  it('returns group display name when all sources are provided', () => {
+    expect(resolveDisplayName('Group Nick', 'Account Name', 'Gmail Name', 'a@b.com')).toBe('Group Nick');
   });
 
   it('falls back to account display name when group name is null', () => {
-    expect(resolveDisplayName(null, 'Account Name', 'Gmail Name')).toBe('Account Name');
+    expect(resolveDisplayName(null, 'Account Name', 'Gmail Name', 'a@b.com')).toBe('Account Name');
   });
 
   it('falls back to account display name when group name is undefined', () => {
-    expect(resolveDisplayName(undefined, 'Account Name', 'Gmail Name')).toBe('Account Name');
+    expect(resolveDisplayName(undefined, 'Account Name', 'Gmail Name', 'a@b.com')).toBe('Account Name');
   });
 
   it('falls back to account display name when group name is empty string', () => {
-    expect(resolveDisplayName('', 'Account Name', 'Gmail Name')).toBe('Account Name');
+    expect(resolveDisplayName('', 'Account Name', 'Gmail Name', 'a@b.com')).toBe('Account Name');
   });
 
   it('falls back to account display name when group name is whitespace only', () => {
-    expect(resolveDisplayName('   ', 'Account Name', 'Gmail Name')).toBe('Account Name');
+    expect(resolveDisplayName('   ', 'Account Name', 'Gmail Name', 'a@b.com')).toBe('Account Name');
   });
 
   it('falls back to gmail name when group and account names are null', () => {
-    expect(resolveDisplayName(null, null, 'Gmail Name')).toBe('Gmail Name');
+    expect(resolveDisplayName(null, null, 'Gmail Name', 'a@b.com')).toBe('Gmail Name');
   });
 
   it('falls back to gmail name when group name is null and account name is empty', () => {
-    expect(resolveDisplayName(null, '', 'Gmail Name')).toBe('Gmail Name');
+    expect(resolveDisplayName(null, '', 'Gmail Name', 'a@b.com')).toBe('Gmail Name');
   });
 
-  it('returns empty string when all sources are null', () => {
-    expect(resolveDisplayName(null, null, null)).toBe('');
+  it('falls back to email when all name sources are null', () => {
+    expect(resolveDisplayName(null, null, null, 'a@b.com')).toBe('a@b.com');
   });
 
-  it('returns empty string when all sources are undefined', () => {
-    expect(resolveDisplayName(undefined, undefined, undefined)).toBe('');
+  it('falls back to email when all name sources are undefined', () => {
+    expect(resolveDisplayName(undefined, undefined, undefined, 'a@b.com')).toBe('a@b.com');
   });
 
   it('trims group display name', () => {
-    expect(resolveDisplayName('  Group Nick  ', 'Account Name', 'Gmail Name')).toBe('Group Nick');
+    expect(resolveDisplayName('  Group Nick  ', 'Account Name', 'Gmail Name', 'a@b.com')).toBe('Group Nick');
   });
 
   it('trims account display name in fallback', () => {
-    expect(resolveDisplayName(null, '  Account Name  ', 'Gmail Name')).toBe('Account Name');
+    expect(resolveDisplayName(null, '  Account Name  ', 'Gmail Name', 'a@b.com')).toBe('Account Name');
   });
 
   it('trims gmail name in fallback', () => {
-    expect(resolveDisplayName(null, null, '  Gmail Name  ')).toBe('Gmail Name');
+    expect(resolveDisplayName(null, null, '  Gmail Name  ', 'a@b.com')).toBe('Gmail Name');
   });
 });
 

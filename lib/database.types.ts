@@ -7,264 +7,91 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
+      activity_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          event_type: string
+          group_id: string | null
+          id: string
+          metadata: Json
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          event_type: string
+          group_id?: string | null
+          id?: string
+          metadata?: Json
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          event_type?: string
+          group_id?: string | null
+          id?: string
+          metadata?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_events_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_config: {
         Row: {
           key: string
-          value: string
           updated_at: string
+          value: string
         }
         Insert: {
           key: string
-          value: string
           updated_at?: string
+          value: string
         }
         Update: {
           key?: string
-          value?: string
           updated_at?: string
+          value?: string
         }
         Relationships: []
       }
-      profiles: {
-        Row: {
-          id: string
-          email: string
-          display_name: string | null
-          avatar_url: string | null
-          google_avatar_url: string | null
-          preferred_currency: "USD" | "EUR" | "DKK" | "SEK"
-          onboarding_done: boolean
-          show_balance_nudge: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id: string
-          email: string
-          display_name?: string | null
-          avatar_url?: string | null
-          google_avatar_url?: string | null
-          preferred_currency?: "USD" | "EUR" | "DKK" | "SEK"
-          onboarding_done?: boolean
-          show_balance_nudge?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          email?: string
-          display_name?: string | null
-          avatar_url?: string | null
-          google_avatar_url?: string | null
-          preferred_currency?: "USD" | "EUR" | "DKK" | "SEK"
-          onboarding_done?: boolean
-          show_balance_nudge?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      groups: {
-        Row: {
-          id: string
-          name: string
-          type: "Trip" | "Home" | "Couple" | "Utilities" | "Family" | "Other"
-          base_currency: "USD" | "EUR" | "DKK" | "SEK"
-          admin_id: string
-          status: "active" | "expired" | "archived"
-          start_date: string | null
-          end_date: string | null
-          settlement_visibility: "public" | "private"
-          background_image_url: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          type: "Trip" | "Home" | "Couple" | "Utilities" | "Family" | "Other"
-          base_currency: "USD" | "EUR" | "DKK" | "SEK"
-          admin_id: string
-          status?: "active" | "expired" | "archived"
-          start_date?: string | null
-          end_date?: string | null
-          settlement_visibility?: "public" | "private"
-          background_image_url?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          type?: "Trip" | "Home" | "Couple" | "Utilities" | "Family" | "Other"
-          base_currency?: "USD" | "EUR" | "DKK" | "SEK"
-          admin_id?: string
-          status?: "active" | "expired" | "archived"
-          start_date?: string | null
-          end_date?: string | null
-          settlement_visibility?: "public" | "private"
-          background_image_url?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "groups_admin_id_fkey"
-            columns: ["admin_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      group_members: {
-        Row: {
-          id: string
-          group_id: string
-          user_id: string | null
-          email: string
-          display_name: string | null
-          role: "admin" | "member"
-          status: "active" | "invited" | "removed"
-          is_pinned: boolean
-          is_muted: boolean
-          joined_at: string
-        }
-        Insert: {
-          id?: string
-          group_id: string
-          user_id?: string | null
-          email: string
-          display_name?: string | null
-          role?: "admin" | "member"
-          status?: "active" | "invited" | "removed"
-          is_pinned?: boolean
-          is_muted?: boolean
-          joined_at?: string
-        }
-        Update: {
-          id?: string
-          group_id?: string
-          user_id?: string | null
-          email?: string
-          display_name?: string | null
-          role?: "admin" | "member"
-          status?: "active" | "invited" | "removed"
-          is_pinned?: boolean
-          is_muted?: boolean
-          joined_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "group_members_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "group_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      expenses: {
-        Row: {
-          id: string
-          group_id: string
-          title: string
-          description: string | null
-          amount: number
-          currency: "USD" | "EUR" | "DKK" | "SEK"
-          category: string
-          payer_id: string
-          split_method: "equal" | "unequal" | "percentage"
-          expense_date: string
-          receipt_url: string | null
-          is_edited: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          group_id: string
-          title: string
-          description?: string | null
-          amount: number
-          currency: "USD" | "EUR" | "DKK" | "SEK"
-          category?: string
-          payer_id: string
-          split_method: "equal" | "unequal" | "percentage"
-          expense_date: string
-          receipt_url?: string | null
-          is_edited?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          group_id?: string
-          title?: string
-          description?: string | null
-          amount?: number
-          currency?: "USD" | "EUR" | "DKK" | "SEK"
-          category?: string
-          payer_id?: string
-          split_method?: "equal" | "unequal" | "percentage"
-          expense_date?: string
-          receipt_url?: string | null
-          is_edited?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "expenses_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "expenses_payer_id_fkey"
-            columns: ["payer_id"]
-            isOneToOne: false
-            referencedRelation: "group_members"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       expense_participants: {
         Row: {
-          id: string
           expense_id: string
+          id: string
           member_id: string
           share_amount: number
           share_percentage: number | null
         }
         Insert: {
-          id?: string
           expense_id: string
+          id?: string
           member_id: string
           share_amount: number
           share_percentage?: number | null
         }
         Update: {
-          id?: string
           expense_id?: string
+          id?: string
           member_id?: string
           share_amount?: number
           share_percentage?: number | null
@@ -283,48 +110,457 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "group_members"
             referencedColumns: ["id"]
-          }
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          currency: string
+          description: string | null
+          expense_date: string
+          group_id: string
+          id: string
+          is_edited: boolean
+          last_edited_by: string | null
+          payer_id: string
+          receipt_url: string | null
+          split_method: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category?: string
+          created_at?: string
+          currency: string
+          description?: string | null
+          expense_date: string
+          group_id: string
+          id?: string
+          is_edited?: boolean
+          last_edited_by?: string | null
+          payer_id: string
+          receipt_url?: string | null
+          split_method: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          expense_date?: string
+          group_id?: string
+          id?: string
+          is_edited?: boolean
+          last_edited_by?: string | null
+          payer_id?: string
+          receipt_url?: string | null
+          split_method?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_last_edited_by_fkey"
+            columns: ["last_edited_by"]
+            isOneToOne: false
+            referencedRelation: "group_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "group_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      friendships: {
+        Row: {
+          created_at: string
+          friend_email: string
+          friend_id: string | null
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          friend_email: string
+          friend_id?: string | null
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          friend_email?: string
+          friend_id?: string | null
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friendships_friend_id_fkey"
+            columns: ["friend_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friendships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_members: {
+        Row: {
+          balance: number
+          display_name: string | null
+          email: string
+          group_id: string
+          id: string
+          is_muted: boolean
+          is_pinned: boolean
+          joined_at: string
+          role: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          balance?: number
+          display_name?: string | null
+          email: string
+          group_id: string
+          id?: string
+          is_muted?: boolean
+          is_pinned?: boolean
+          joined_at?: string
+          role?: string
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          balance?: number
+          display_name?: string | null
+          email?: string
+          group_id?: string
+          id?: string
+          is_muted?: boolean
+          is_pinned?: boolean
+          joined_at?: string
+          role?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          admin_id: string
+          background_image_url: string | null
+          base_currency: string
+          created_at: string
+          end_date: string | null
+          id: string
+          name: string
+          settlement_visibility: string
+          start_date: string | null
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          admin_id: string
+          background_image_url?: string | null
+          base_currency: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name: string
+          settlement_visibility?: string
+          start_date?: string | null
+          status?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          admin_id?: string
+          background_image_url?: string | null
+          base_currency?: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name?: string
+          settlement_visibility?: string
+          start_date?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groups_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invite_tokens: {
+        Row: {
+          created_at: string
+          created_by: string
+          group_id: string
+          id: string
+          invalidated_at: string | null
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          group_id: string
+          id?: string
+          invalidated_at?: string | null
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          group_id?: string
+          id?: string
+          invalidated_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invite_tokens_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "group_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invite_tokens_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_preferences: {
+        Row: {
+          balance_reaches_zero: boolean
+          created_at: string
+          expense_deleted: boolean
+          expense_edited: boolean
+          id: string
+          member_removed: boolean
+          new_expense: boolean
+          payment_in_group: boolean
+          payment_received: boolean
+          someone_added: boolean
+          someone_joins_group: boolean
+          trip_end_approaching: boolean
+          trip_ends_today: boolean
+          trip_expired: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance_reaches_zero?: boolean
+          created_at?: string
+          expense_deleted?: boolean
+          expense_edited?: boolean
+          id?: string
+          member_removed?: boolean
+          new_expense?: boolean
+          payment_in_group?: boolean
+          payment_received?: boolean
+          someone_added?: boolean
+          someone_joins_group?: boolean
+          trip_end_approaching?: boolean
+          trip_ends_today?: boolean
+          trip_expired?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance_reaches_zero?: boolean
+          created_at?: string
+          expense_deleted?: boolean
+          expense_edited?: boolean
+          id?: string
+          member_removed?: boolean
+          new_expense?: boolean
+          payment_in_group?: boolean
+          payment_received?: boolean
+          someone_added?: boolean
+          someone_joins_group?: boolean
+          trip_end_approaching?: boolean
+          trip_ends_today?: boolean
+          trip_expired?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          email: string
+          google_avatar_url: string | null
+          google_name: string | null
+          id: string
+          onboarding_done: boolean
+          preferred_currency: string
+          show_balance_nudge: boolean
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email: string
+          google_avatar_url?: string | null
+          google_name?: string | null
+          id: string
+          onboarding_done?: boolean
+          preferred_currency?: string
+          show_balance_nudge?: boolean
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          google_avatar_url?: string | null
+          google_name?: string | null
+          id?: string
+          onboarding_done?: boolean
+          preferred_currency?: string
+          show_balance_nudge?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      push_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          platform: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform?: string | null
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform?: string | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       settlements: {
         Row: {
-          id: string
-          group_id: string
-          payer_member_id: string
-          payee_member_id: string
           amount: number
-          currency: "USD" | "EUR" | "DKK" | "SEK"
-          recorded_by: string
-          is_voided: boolean
-          voided_by: string | null
-          voided_at: string | null
           created_at: string
+          currency: string
+          group_id: string
+          id: string
+          is_voided: boolean
+          payee_member_id: string
+          payer_member_id: string
+          recorded_by: string
+          voided_at: string | null
+          voided_by: string | null
         }
         Insert: {
-          id?: string
-          group_id: string
-          payer_member_id: string
-          payee_member_id: string
           amount: number
-          currency: "USD" | "EUR" | "DKK" | "SEK"
-          recorded_by: string
-          is_voided?: boolean
-          voided_by?: string | null
-          voided_at?: string | null
           created_at?: string
+          currency: string
+          group_id: string
+          id?: string
+          is_voided?: boolean
+          payee_member_id: string
+          payer_member_id: string
+          recorded_by: string
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Update: {
-          id?: string
-          group_id?: string
-          payer_member_id?: string
-          payee_member_id?: string
           amount?: number
-          currency?: "USD" | "EUR" | "DKK" | "SEK"
-          recorded_by?: string
-          is_voided?: boolean
-          voided_by?: string | null
-          voided_at?: string | null
           created_at?: string
+          currency?: string
+          group_id?: string
+          id?: string
+          is_voided?: boolean
+          payee_member_id?: string
+          payer_member_id?: string
+          recorded_by?: string
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Relationships: [
           {
@@ -335,15 +571,15 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "settlements_payer_member_id_fkey"
-            columns: ["payer_member_id"]
+            foreignKeyName: "settlements_payee_member_id_fkey"
+            columns: ["payee_member_id"]
             isOneToOne: false
             referencedRelation: "group_members"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "settlements_payee_member_id_fkey"
-            columns: ["payee_member_id"]
+            foreignKeyName: "settlements_payer_member_id_fkey"
+            columns: ["payer_member_id"]
             isOneToOne: false
             referencedRelation: "group_members"
             referencedColumns: ["id"]
@@ -361,269 +597,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "group_members"
             referencedColumns: ["id"]
-          }
-        ]
-      }
-      invite_tokens: {
-        Row: {
-          id: string
-          group_id: string
-          token: string
-          created_by: string
-          invalidated_at: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          group_id: string
-          token?: string
-          created_by: string
-          invalidated_at?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          group_id?: string
-          token?: string
-          created_by?: string
-          invalidated_at?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invite_tokens_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "groups"
-            referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "invite_tokens_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "group_members"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      friendships: {
-        Row: {
-          id: string
-          user_id: string
-          friend_id: string | null
-          friend_email: string
-          status: "active" | "pending"
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          friend_id?: string | null
-          friend_email: string
-          status?: "active" | "pending"
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          friend_id?: string | null
-          friend_email?: string
-          status?: "active" | "pending"
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "friendships_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "friendships_friend_id_fkey"
-            columns: ["friend_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      activity_events: {
-        Row: {
-          id: string
-          group_id: string | null
-          actor_id: string | null
-          event_type:
-            | "expense_added"
-            | "expense_edited"
-            | "expense_deleted"
-            | "settlement_recorded"
-            | "settlement_voided"
-            | "member_joined"
-            | "member_removed"
-            | "member_left"
-            | "group_created"
-            | "group_archived"
-            | "group_unarchived"
-            | "invite_link_reset"
-            | "trip_expired"
-          metadata: Json
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          group_id?: string | null
-          actor_id?: string | null
-          event_type:
-            | "expense_added"
-            | "expense_edited"
-            | "expense_deleted"
-            | "settlement_recorded"
-            | "settlement_voided"
-            | "member_joined"
-            | "member_removed"
-            | "member_left"
-            | "group_created"
-            | "group_archived"
-            | "group_unarchived"
-            | "invite_link_reset"
-            | "trip_expired"
-          metadata?: Json
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          group_id?: string | null
-          actor_id?: string | null
-          event_type?:
-            | "expense_added"
-            | "expense_edited"
-            | "expense_deleted"
-            | "settlement_recorded"
-            | "settlement_voided"
-            | "member_joined"
-            | "member_removed"
-            | "member_left"
-            | "group_created"
-            | "group_archived"
-            | "group_unarchived"
-            | "invite_link_reset"
-            | "trip_expired"
-          metadata?: Json
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "activity_events_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "activity_events_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      notification_preferences: {
-        Row: {
-          id: string
-          user_id: string
-          trip_expired: boolean
-          someone_joins_group: boolean
-          someone_added: boolean
-          member_removed: boolean
-          trip_end_approaching: boolean
-          trip_ends_today: boolean
-          new_expense: boolean
-          expense_edited: boolean
-          expense_deleted: boolean
-          payment_received: boolean
-          payment_in_group: boolean
-          balance_reaches_zero: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          trip_expired?: boolean
-          someone_joins_group?: boolean
-          someone_added?: boolean
-          member_removed?: boolean
-          trip_end_approaching?: boolean
-          trip_ends_today?: boolean
-          new_expense?: boolean
-          expense_edited?: boolean
-          expense_deleted?: boolean
-          payment_received?: boolean
-          payment_in_group?: boolean
-          balance_reaches_zero?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          trip_expired?: boolean
-          someone_joins_group?: boolean
-          someone_added?: boolean
-          member_removed?: boolean
-          trip_end_approaching?: boolean
-          trip_ends_today?: boolean
-          new_expense?: boolean
-          expense_edited?: boolean
-          expense_deleted?: boolean
-          payment_received?: boolean
-          payment_in_group?: boolean
-          balance_reaches_zero?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notification_preferences_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      push_tokens: {
-        Row: {
-          id: string
-          user_id: string
-          token: string
-          platform: "ios" | "android" | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          token: string
-          platform?: "ios" | "android" | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          token?: string
-          platform?: "ios" | "android" | null
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "push_tokens_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
         ]
       }
     }
@@ -631,9 +605,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      is_group_member: {
-        Args: { p_group_id: string }
-        Returns: boolean
+      current_member_id: { Args: { p_group_id: string }; Returns: string }
+      get_groups_with_outstanding_balances: {
+        Args: { p_user_id: string }
+        Returns: {
+          id: string
+          name: string
+        }[]
       }
       is_expense_participant: {
         Args: { p_expense_id: string }
@@ -643,14 +621,12 @@ export type Database = {
         Args: { p_expense_id: string }
         Returns: boolean
       }
-      current_member_id: {
+      is_group_member: { Args: { p_group_id: string }; Returns: boolean }
+      recompute_group_member_balances: {
         Args: { p_group_id: string }
-        Returns: string | null
+        Returns: undefined
       }
-      resolve_invite_token: {
-        Args: { p_token: string }
-        Returns: Json
-      }
+      resolve_invite_token: { Args: { p_token: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
@@ -661,21 +637,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -693,14 +673,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -716,14 +698,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -739,14 +723,39 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
