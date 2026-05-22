@@ -318,4 +318,14 @@ describe('ExpensesTab — empty state', () => {
     fireEvent.press(getByTestId('tab-expenses'));
     expect(getByTestId('expenses-empty-state')).toBeTruthy();
   });
+
+  it('filter pill row and empty state are both present when expense list is empty', () => {
+    setupGroupQuery(BASE_GROUP, [], BALANCES_DATA);
+    const { getByTestId } = render(<GroupDetailScreen />);
+    fireEvent.press(getByTestId('tab-expenses'));
+    // Both should be findable — if the pill row stretched to fill all space
+    // the empty state would be hidden or the pills inaccessible
+    expect(getByTestId('filter-pill-row')).toBeTruthy();
+    expect(getByTestId('expenses-empty-state')).toBeTruthy();
+  });
 });
