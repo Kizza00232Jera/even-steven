@@ -13,11 +13,15 @@ config.resolver.blockList = [
   /.*\.spec\.[jt]sx?$/,
 ];
 
+// Apply NativeWind first, then layer our resolver on top so withNativeWind
+// cannot overwrite it.
+const finalConfig = withNativeWind(config, { input: './global.css' });
+
 // @supabase/supabase-js v2.106+ optionally imports OpenTelemetry via a dynamic
 // import(variable) expression that Hermes cannot compile. Stub it out so the
 // build succeeds — we don't use tracing in the mobile app.
-const originalResolveRequest = config.resolver.resolveRequest;
-config.resolver.resolveRequest = (context, moduleName, platform) => {
+const originalResolveRequest = finalConfig.resolver.resolveRequest;
+finalConfig.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleName.startsWith('@opentelemetry/')) {
     return { type: 'empty' };
   }
@@ -26,4 +30,4 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     : context.resolveRequest(context, moduleName, platform);
 };
 
-module.exports = withNativeWind(config, { input: './global.css' });
+module.exports = finalConfig;
