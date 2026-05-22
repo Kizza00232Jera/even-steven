@@ -142,10 +142,11 @@ export async function fetchGroupsWithMembership(
     const g = row.groups as Group;
     return {
       ...g,
+      settlement_visibility: g.settlement_visibility as 'public' | 'private',
       member_id: row.id,
       is_pinned: row.is_pinned,
       is_muted: row.is_muted,
-      role: row.role,
+      role: row.role as 'admin' | 'member',
       balance: 0,
     };
   });
@@ -202,10 +203,10 @@ export async function fetchGroupDetail(
     type: group.type,
     base_currency: group.base_currency,
     admin_id: group.admin_id,
-    status: group.status,
+    status: group.status as 'active' | 'expired' | 'archived',
     start_date: group.start_date,
     end_date: group.end_date,
-    settlement_visibility: group.settlement_visibility,
+    settlement_visibility: group.settlement_visibility as 'public' | 'private',
     background_image_url: group.background_image_url,
     isMember,
     isAdmin,
@@ -243,8 +244,8 @@ export async function fetchGroupMembers(
       user_id: row.user_id,
       email: row.email,
       display_name: row.display_name,
-      role: row.role,
-      status: row.status,
+      role: row.role as 'admin' | 'member',
+      status: row.status as 'active' | 'invited' | 'removed',
       is_pinned: row.is_pinned,
       is_muted: row.is_muted,
       joined_at: row.joined_at,

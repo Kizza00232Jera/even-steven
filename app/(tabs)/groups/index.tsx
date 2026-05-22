@@ -40,12 +40,12 @@ import { useAuthStore } from '../../../store/auth';
 import { hapticOnGroupPin, hapticOnToggle } from '../../../lib/haptics';
 import { useTripExpiry } from '../../../hooks/useTripExpiry';
 import { format } from '../../../lib/currency';
+import type { Currency } from '../../../lib/currency';
 import type { GroupWithMembership, GroupFilters } from '../../../lib/groupFilters';
 import type { Database } from '../../../lib/database.types';
 
 type GroupType = Database['public']['Tables']['groups']['Row']['type'];
 type GroupStatus = Database['public']['Tables']['groups']['Row']['status'];
-type Currency = Database['public']['Tables']['groups']['Row']['base_currency'];
 
 const GROUP_TYPES: GroupType[] = ['Trip', 'Home', 'Couple', 'Utilities', 'Family', 'Other'];
 

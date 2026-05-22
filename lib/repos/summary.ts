@@ -93,5 +93,5 @@ export async function fetchGroupSummary(
     }))
     .sort((a, b) => b.amount - a.amount);
 
-  return { groupId, currency, totalSpending, memberContributions, categoryBreakdown };
+  return { groupId, currency: currency as Currency, totalSpending, memberContributions, categoryBreakdown };
 }

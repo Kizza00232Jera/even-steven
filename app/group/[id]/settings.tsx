@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -48,6 +49,9 @@ import {
   toggleMuteGroup,
 } from '../../../lib/repos/groups';
 import { logActivityEvent } from '../../../lib/repos/activity';
+import { getOrCreateInviteToken, resetInviteToken } from '../../../lib/repos/invites';
+
+const INVITE_BASE_URL = 'https://even-steven-five.vercel.app/invite';
 
 const rowClass = 'flex-row items-center justify-between px-4 py-4 border-b border-border';
 const rowLabelClass = 'font-body text-base text-text-primary ml-3 flex-1';
@@ -95,6 +99,45 @@ export default function GroupSettingsScreen() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const [isMuting, setIsMuting] = useState(false);
+  const [isSharingInvite, setIsSharingInvite] = useState(false);
+  const [isResettingInvite, setIsResettingInvite] = useState(false);
+
+  async function handleShareInvite() {
+    setIsSharingInvite(true);
+    try {
+      const token = await getOrCreateInviteToken(supabase, id, currentMemberId);
+      const url = `${INVITE_BASE_URL}/${token}`;
+      await Share.share({ message: url, url });
+    } catch {
+      Alert.alert('Error', 'Could not generate invite link. Please try again.');
+    } finally {
+      setIsSharingInvite(false);
+    }
+  }
+
+  async function handleResetInvite() {
+    Alert.alert(
+      'Reset invite link',
+      'The current link will stop working immediately. A new link will be generated.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            setIsResettingInvite(true);
+            try {
+              await resetInviteToken(supabase, id, currentMemberId);
+            } catch {
+              Alert.alert('Error', 'Could not reset invite link. Please try again.');
+            } finally {
+              setIsResettingInvite(false);
+            }
+          },
+        },
+      ],
+    );
+  }
 
   function invalidateGroupQueries() {
     queryClient.invalidateQueries({ queryKey: ['group', id] });
@@ -413,12 +456,17 @@ export default function GroupSettingsScreen() {
 
           <TouchableOpacity
             testID="settings-share-row"
-            onPress={() => {}} // invite link sharing — deferred until invite system built
+            onPress={handleShareInvite}
             className={`${rowClass} border-b-0`}
             activeOpacity={0.7}
+            disabled={isSharingInvite}
           >
             <View className={rowIconContainer}>
-              <Share2 size={16} color={Colors.dark.textSecondary} />
+              {isSharingInvite ? (
+                <ActivityIndicator size="small" color={Colors.accent} />
+              ) : (
+                <Share2 size={16} color={Colors.dark.textSecondary} />
+              )}
             </View>
             <Text className={rowLabelClass}>Share invite link</Text>
           </TouchableOpacity>
@@ -480,12 +528,17 @@ export default function GroupSettingsScreen() {
 
               <TouchableOpacity
                 testID="settings-reset-invite-row"
-                onPress={() => {}} // deferred until invite system built
+                onPress={handleResetInvite}
                 className={rowClass}
                 activeOpacity={0.7}
+                disabled={isResettingInvite}
               >
                 <View className={rowIconContainer}>
-                  <Link size={16} color={Colors.dark.textSecondary} />
+                  {isResettingInvite ? (
+                    <ActivityIndicator size="small" color={Colors.accent} />
+                  ) : (
+                    <Link size={16} color={Colors.dark.textSecondary} />
+                  )}
                 </View>
                 <Text className={rowLabelClass}>Reset invite link</Text>
               </TouchableOpacity>

@@ -26,6 +26,7 @@ import { getOrCreateInviteToken } from '../../../lib/repos/invites';
 import { fetchGroupExpenses, type ExpenseListItem } from '../../../lib/repos/expenses';
 import { fetchGroupBalances, type GroupBalanceData } from '../../../lib/repos/balances';
 import { format } from '../../../lib/currency';
+import type { Currency } from '../../../lib/currency';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/auth';
 import { useToast } from '../../../hooks/useToast';
@@ -579,7 +580,7 @@ function ExpensesTab({ groupId, currentMemberId }: ExpensesTabProps) {
                       </Text>
                     </View>
                     <Text className="font-display font-semibold text-text-primary text-base">
-                      {format(expense.amount, expense.currency)}
+                      {format(expense.amount, expense.currency as Currency)}
                     </Text>
                   </View>
                 </TouchableOpacity>

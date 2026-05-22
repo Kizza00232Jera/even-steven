@@ -101,5 +101,5 @@ export async function fetchGroupBalances(
     };
   });
 
-  return { groupId, currency, members: membersWithBalances };
+  return { groupId, currency: currency as Currency, members: membersWithBalances };
 }

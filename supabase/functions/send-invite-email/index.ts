@@ -1,8 +1,8 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? '';
-const FROM_ADDRESS   = 'invite@evenSteven.app';
-const INVITE_BASE    = 'even-steven.vercel.app/invite';
+const FROM_ADDRESS   = 'onboarding@resend.dev'; // swap to invite@evensteven.app after domain purchase pre-launch
+const INVITE_BASE    = 'even-steven-five.vercel.app/invite';
 
 interface InviteEmailPayload {
   to: string;
