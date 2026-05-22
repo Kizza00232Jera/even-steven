@@ -15,6 +15,15 @@ jest.mock('expo-router', () => ({
 
 jest.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: jest.fn() }),
+  useQuery: () => ({ data: null, refetch: jest.fn() }),
+}));
+
+const mockSetPreference = jest.fn();
+jest.mock('../../../../store/theme', () => ({
+  useThemeStore: () => ({
+    preference: 'system',
+    setPreference: mockSetPreference,
+  }),
 }));
 
 jest.mock('expo-image-picker', () => ({
@@ -79,6 +88,19 @@ jest.mock('../../../../lib/haptics', () => ({
 
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+jest.mock('expo-notifications', () => ({
+  getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'undetermined' }),
+  requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+  getExpoPushTokenAsync: jest.fn().mockResolvedValue({ data: 'ExponentPushToken[test]' }),
+  setBadgeCountAsync: jest.fn(),
+}));
+
+jest.mock('../../../../lib/repos/pushTokens', () => ({
+  getNotificationPreferences: jest.fn().mockResolvedValue(null),
+  updateNotificationPreference: jest.fn().mockResolvedValue(undefined),
+  upsertPushToken: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.setTimeout(30000);
@@ -169,5 +191,31 @@ describe('AccountScreen — delete account flow', () => {
     await findByText('Permanently delete account?');
     fireEvent.press(getByLabelText('Confirm full account deletion'));
     await findByText('Could not delete account. Please try again.');
+  });
+});
+
+describe('AccountScreen — theme selector', () => {
+  it('renders all three theme options', () => {
+    const { getByLabelText } = render(<AccountScreen />);
+    expect(getByLabelText('Select System theme')).toBeTruthy();
+    expect(getByLabelText('Select Light theme')).toBeTruthy();
+    expect(getByLabelText('Select Dark theme')).toBeTruthy();
+  });
+
+  it('marks the current preference as selected', () => {
+    const { getByLabelText } = render(<AccountScreen />);
+    expect(getByLabelText('Select System theme')).toHaveProp('accessibilityState', { selected: true });
+    expect(getByLabelText('Select Light theme')).toHaveProp('accessibilityState', { selected: false });
+    expect(getByLabelText('Select Dark theme')).toHaveProp('accessibilityState', { selected: false });
+  });
+
+  it('calls setPreference with the tapped option', () => {
+    const { getByLabelText } = render(<AccountScreen />);
+    fireEvent.press(getByLabelText('Select Dark theme'));
+    expect(mockSetPreference).toHaveBeenCalledWith('dark');
+    fireEvent.press(getByLabelText('Select Light theme'));
+    expect(mockSetPreference).toHaveBeenCalledWith('light');
+    fireEvent.press(getByLabelText('Select System theme'));
+    expect(mockSetPreference).toHaveBeenCalledWith('system');
   });
 });

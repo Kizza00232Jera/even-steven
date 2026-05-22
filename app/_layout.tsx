@@ -26,6 +26,7 @@ import { getProfile } from '../lib/repos/profiles';
 import { upsertPushToken } from '../lib/repos/pushTokens';
 import { useAuthStore } from '../store/auth';
 import { useRatesStore } from '../store/rates';
+import { useThemeStore } from '../store/theme';
 import { VersionGateScreen } from '../components/VersionGateScreen';
 import { useVersionGate } from '../hooks/useVersionGate';
 import { useOTAUpdates } from '../hooks/useOTAUpdates';
@@ -99,8 +100,17 @@ function NavigationGuard() {
 }
 
 function RootContent() {
-  const { colorScheme } = useColorScheme();
+  const { colorScheme, setColorScheme } = useColorScheme();
   const { session, setSession, setProfile, setIsLoading } = useAuthStore();
+  const { preference: themePreference, loadPreference } = useThemeStore();
+
+  useEffect(() => {
+    loadPreference().then((pref) => setColorScheme(pref));
+  }, []);
+
+  useEffect(() => {
+    setColorScheme(themePreference);
+  }, [themePreference]);
   const { isOnline } = useNetworkStatus();
 
   const [fontsLoaded, fontError] = useFonts({

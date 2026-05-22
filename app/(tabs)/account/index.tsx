@@ -32,7 +32,9 @@ import {
 import { supabase } from '../../../lib/supabase';
 import { resolveAvatarUrl } from '../../../lib/displayName';
 import { hapticOnToggle } from '../../../lib/haptics';
+import { useColorScheme } from 'nativewind';
 import { Colors } from '../../../constants/colors';
+import { useThemeStore } from '../../../store/theme';
 import type { Database } from '../../../lib/database.types';
 
 type Currency = Database['public']['Tables']['profiles']['Row']['preferred_currency'];
@@ -70,6 +72,10 @@ export default function AccountScreen() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [notifPermission, setNotifPermission] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
+
+  const { preference: themePreference, setPreference: setThemePreference } = useThemeStore();
+  const { colorScheme } = useColorScheme();
+  const placeholderColor = colorScheme === 'dark' ? Colors.dark.textTertiary : Colors.light.textTertiary;
 
   const userId = session?.user.id ?? '';
 
@@ -411,6 +417,41 @@ export default function AccountScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Appearance */}
+          <Text className="font-body text-xs text-text-tertiary uppercase tracking-wide px-1 mb-2">
+            Appearance
+          </Text>
+          <View className="bg-surface rounded-2xl border border-border overflow-hidden mb-4">
+            <View className="flex-row items-center justify-between px-5 py-4">
+              <Text className="font-body text-base text-text-primary">Theme</Text>
+              <View className="flex-row gap-2">
+                {(['system', 'light', 'dark'] as const).map((option) => {
+                  const isSelected = themePreference === option;
+                  const label = option === 'system' ? 'System' : option === 'light' ? 'Light' : 'Dark';
+                  return (
+                    <TouchableOpacity
+                      key={option}
+                      onPress={() => setThemePreference(option)}
+                      accessibilityLabel={`Select ${label} theme`}
+                      accessibilityState={{ selected: isSelected }}
+                      className={`px-3 py-1.5 rounded-full border ${
+                        isSelected ? 'bg-accent/20 border-accent' : 'bg-surface-2 border-border'
+                      }`}
+                    >
+                      <Text
+                        className={`font-body text-sm font-medium ${
+                          isSelected ? 'text-accent' : 'text-text-secondary'
+                        }`}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+
           {/* Notifications */}
           <Text className="font-body text-xs text-text-tertiary uppercase tracking-wide px-1 mb-2">
             Notifications
@@ -535,7 +576,7 @@ export default function AccountScreen() {
                 value={nameInput}
                 onChangeText={setNameInput}
                 placeholder="Your name"
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                placeholderTextColor={placeholderColor}
                 autoFocus
                 autoCorrect={false}
                 returnKeyType="done"

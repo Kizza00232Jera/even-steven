@@ -16,6 +16,7 @@ import {
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { X, ChevronDown, Check, Paperclip } from 'lucide-react-native';
 import { useAuthStore } from '../../../store/auth';
@@ -142,6 +143,8 @@ export default function AddExpenseScreen() {
   const { rates, fetchRates } = useRatesStore();
   const { isOnline } = useNetworkStatus();
   const { writesDisabled } = useOfflineGuard(isOnline);
+  const { colorScheme } = useColorScheme();
+  const placeholderColor = colorScheme === 'dark' ? Colors.dark.textTertiary : Colors.light.textTertiary;
 
   const preferredCurrency = (profile?.preferred_currency ?? 'USD') as Currency;
 
@@ -432,7 +435,7 @@ export default function AddExpenseScreen() {
               value={title}
               onChangeText={handleTitleChange}
               placeholder="e.g. Dinner at Konoba"
-              placeholderTextColor={Colors.dark.textTertiary}
+              placeholderTextColor={placeholderColor}
               maxLength={60}
               autoFocus
               className="bg-surface-2 rounded-xl px-4 py-3 text-text-primary font-body text-base"
@@ -454,7 +457,7 @@ export default function AddExpenseScreen() {
               value={description}
               onChangeText={setDescription}
               placeholder="Add more details about this expense…"
-              placeholderTextColor={Colors.dark.textTertiary}
+              placeholderTextColor={placeholderColor}
               maxLength={500}
               multiline
               numberOfLines={3}
@@ -551,7 +554,7 @@ export default function AddExpenseScreen() {
                 value={amountText}
                 onChangeText={setAmountText}
                 placeholder="0.00"
-                placeholderTextColor={Colors.dark.textTertiary}
+                placeholderTextColor={placeholderColor}
                 keyboardType="decimal-pad"
                 className="flex-1 bg-surface-2 rounded-xl px-4 py-3 text-text-primary font-body text-base"
               />
@@ -708,7 +711,7 @@ export default function AddExpenseScreen() {
                           value={memberAmounts[member.id] ?? ''}
                           onChangeText={(val) => setMemberAmounts((prev) => ({ ...prev, [member.id]: val }))}
                           placeholder="0.00"
-                          placeholderTextColor={Colors.dark.textTertiary}
+                          placeholderTextColor={placeholderColor}
                           keyboardType="decimal-pad"
                           className="bg-surface rounded-lg px-3 py-1.5 text-text-primary font-body text-base w-20 text-right"
                         />
@@ -728,7 +731,7 @@ export default function AddExpenseScreen() {
                           value={memberPercentages[member.id] ?? ''}
                           onChangeText={(val) => setMemberPercentages((prev) => ({ ...prev, [member.id]: val }))}
                           placeholder="0"
-                          placeholderTextColor={Colors.dark.textTertiary}
+                          placeholderTextColor={placeholderColor}
                           keyboardType="decimal-pad"
                           className="bg-surface rounded-lg px-3 py-1.5 text-text-primary font-body text-base w-20 text-right"
                         />
