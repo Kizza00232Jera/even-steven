@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   Pressable,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -28,17 +29,20 @@ import { TripExpiredModal } from '../../../components/TripExpiredModal';
 import { Colors } from '../../../constants/colors';
 import {
   fetchGroupsWithMembership,
+  fetchGroupMemberPreviews,
   pinGroup,
   unpinGroup,
   muteGroup,
   unmuteGroup,
 } from '../../../lib/repos/groups';
+import type { MemberPreview } from '../../../lib/repos/groups';
 import { updateProfile } from '../../../lib/repos/profiles';
 import { filterGroups } from '../../../lib/groupFilters';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/auth';
 import { hapticOnGroupPin, hapticOnToggle } from '../../../lib/haptics';
 import { useTripExpiry } from '../../../hooks/useTripExpiry';
+import { useRealtimeGroups } from '../../../hooks/useRealtime';
 import { format } from '../../../lib/currency';
 import type { Currency } from '../../../lib/currency';
 import type { GroupWithMembership, GroupFilters } from '../../../lib/groupFilters';
@@ -86,11 +90,42 @@ function balanceDisplay(balance: number, currency: Currency): { text: string; co
 
 interface GroupCardProps {
   group: GroupWithMembership;
+  memberPreviews?: MemberPreview[];
   onPress: () => void;
   onMenuPress: () => void;
 }
 
-function GroupCard({ group, onPress, onMenuPress }: GroupCardProps) {
+function MemberAvatarStack({ previews }: { previews: MemberPreview[] }) {
+  const { colorScheme } = useColorScheme();
+  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
+  return (
+    <View className="flex-row items-center mt-3">
+      {previews.map((p, i) => (
+        <View
+          key={p.memberId}
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: 12,
+            backgroundColor: theme.surface2,
+            borderWidth: 1.5,
+            borderColor: theme.surface,
+            marginLeft: i === 0 ? 0 : -8,
+            zIndex: previews.length - i,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={{ fontSize: 10, color: theme.textSecondary, fontFamily: 'Inter_500Medium' }}>
+            {p.name.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function GroupCard({ group, memberPreviews, onPress, onMenuPress }: GroupCardProps) {
   const { colorScheme } = useColorScheme();
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
   const gradientKey = group.type.toLowerCase() as keyof typeof Colors.gradients;
@@ -151,9 +186,14 @@ function GroupCard({ group, onPress, onMenuPress }: GroupCardProps) {
             </TouchableOpacity>
           </View>
         </View>
-        <Text className="font-body text-sm mt-3" style={{ color: balanceColor }}>
-          {balanceText}
-        </Text>
+        <View className="flex-row items-center justify-between mt-3">
+          <Text className="font-body text-sm" style={{ color: balanceColor }}>
+            {balanceText}
+          </Text>
+          {memberPreviews && memberPreviews.length > 0 && (
+            <MemberAvatarStack previews={memberPreviews} />
+          )}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -441,9 +481,19 @@ export default function GroupsScreen() {
   const userId = session?.user.id ?? '';
 
   const { data: groups, isLoading, isError, refetch } = useGroups(userId);
+  useRealtimeGroups(userId);
   const { popupGroup, dismissPopup } = useTripExpiry(groups);
 
+  const groupIds = (groups ?? []).map((g) => g.id);
+  const { data: memberPreviews = {} } = useQuery({
+    queryKey: ['group-member-previews', userId, groupIds.join(',')],
+    queryFn: () => fetchGroupMemberPreviews(supabase, groupIds, userId),
+    enabled: groupIds.length > 0,
+    staleTime: 60_000,
+  });
+
   const [filters, setFilters] = useState<GroupFilters>(EMPTY_FILTERS);
+  const [search, setSearch] = useState('');
   const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [contextGroup, setContextGroup] = useState<GroupWithMembership | null>(null);
   const [showExpensePicker, setShowExpensePicker] = useState(false);
@@ -478,7 +528,12 @@ export default function GroupsScreen() {
     setContextGroup(null);
   }
 
-  const filteredGroups = groups ? filterGroups(groups, filters) : [];
+  const searchQuery = search.trim().toLowerCase();
+  const filteredGroups = groups
+    ? filterGroups(groups, filters).filter((g) =>
+        searchQuery ? g.name.toLowerCase().includes(searchQuery) : true,
+      )
+    : [];
   const activeFilterCount =
     (filters.status ? 1 : 0) +
     filters.types.length +
@@ -552,6 +607,7 @@ export default function GroupsScreen() {
         renderItem={({ item }) => (
           <GroupCard
             group={item}
+            memberPreviews={memberPreviews[item.id]}
             onPress={() => router.push(`/group/${item.id}`)}
             onMenuPress={() => handleMenuPress(item)}
           />
@@ -588,6 +644,17 @@ export default function GroupsScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        <TextInput
+          testID="groups-search-input"
+          className="bg-surface border border-border rounded-xl px-4 py-3 text-text-primary mb-3"
+          placeholder="Search groups"
+          placeholderTextColor={colorScheme === 'dark' ? Colors.dark.textTertiary : Colors.light.textTertiary}
+          value={search}
+          onChangeText={setSearch}
+          autoCapitalize="none"
+          returnKeyType="search"
+        />
 
         {hasActiveFilters(filters) && (
           <ScrollView

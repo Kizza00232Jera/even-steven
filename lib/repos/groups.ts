@@ -500,6 +500,59 @@ export async function markGroupArchived(
   if (error) throw error;
 }
 
+export interface MemberPreview {
+  memberId: string;
+  name: string;
+  avatarUrl: string | null;
+  isCurrentUser: boolean;
+  isAdmin: boolean;
+}
+
+export async function fetchGroupMemberPreviews(
+  client: SupabaseClient<Database>,
+  groupIds: string[],
+  currentUserId: string,
+): Promise<Record<string, MemberPreview[]>> {
+  if (groupIds.length === 0) return {};
+
+  const { data, error } = await client
+    .from('group_members')
+    .select('id, group_id, display_name, user_id, role, joined_at, profiles(display_name, google_name, avatar_url, google_avatar_url)')
+    .in('group_id', groupIds)
+    .eq('status', 'active')
+    .order('joined_at', { ascending: true });
+
+  if (error) throw error;
+
+  const result: Record<string, MemberPreview[]> = {};
+  for (const row of data ?? []) {
+    if (!result[row.group_id]) result[row.group_id] = [];
+    const p = row.profiles as { display_name: string | null; google_name: string | null; avatar_url: string | null; google_avatar_url: string | null } | null;
+    const name = row.display_name ?? p?.display_name ?? p?.google_name ?? '?';
+    result[row.group_id].push({
+      memberId: row.id,
+      name,
+      avatarUrl: p?.avatar_url ?? p?.google_avatar_url ?? null,
+      isCurrentUser: row.user_id === currentUserId,
+      isAdmin: row.role === 'admin',
+    });
+  }
+
+  // Sort: current user first, then admin, then others; cap at 4
+  for (const groupId in result) {
+    result[groupId].sort((a, b) => {
+      if (a.isCurrentUser) return -1;
+      if (b.isCurrentUser) return 1;
+      if (a.isAdmin && !b.isAdmin) return -1;
+      if (!a.isAdmin && b.isAdmin) return 1;
+      return 0;
+    });
+    if (result[groupId].length > 4) result[groupId] = result[groupId].slice(0, 4);
+  }
+
+  return result;
+}
+
 export async function getGroupMemberId(
   client: SupabaseClient<Database>,
   groupId: string,

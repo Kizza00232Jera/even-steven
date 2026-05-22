@@ -13,6 +13,7 @@ import {
   Switch,
   Image,
 } from 'react-native';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -164,6 +165,7 @@ export default function AddExpenseScreen() {
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [payerModalVisible, setPayerModalVisible] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
 
@@ -465,15 +467,67 @@ export default function AddExpenseScreen() {
             <Text className="font-body text-text-secondary text-xs mb-1 uppercase tracking-wider">
               Date
             </Text>
-            <TextInput
+            <TouchableOpacity
               testID="date-input"
-              value={date}
-              onChangeText={setDate}
-              onBlur={handleDateBlur}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={Colors.dark.textTertiary}
-              className="bg-surface-2 rounded-xl px-4 py-3 text-text-primary font-body text-base"
-            />
+              onPress={() => setShowDatePicker(true)}
+              className="bg-surface-2 rounded-xl px-4 py-3"
+            >
+              <Text className="text-text-primary font-body text-base">
+                {new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </Text>
+            </TouchableOpacity>
+            {showDatePicker && Platform.OS === 'android' && (
+              <DateTimePicker
+                testID="date-picker"
+                value={new Date(date + 'T00:00:00')}
+                mode="date"
+                display="calendar"
+                maximumDate={new Date()}
+                onChange={(event: DateTimePickerEvent, selected?: Date) => {
+                  setShowDatePicker(false);
+                  if (selected && event.type !== 'dismissed') {
+                    const y = selected.getFullYear();
+                    const mo = String(selected.getMonth() + 1).padStart(2, '0');
+                    const d = String(selected.getDate()).padStart(2, '0');
+                    setDate(`${y}-${mo}-${d}`);
+                  }
+                }}
+              />
+            )}
+            {showDatePicker && Platform.OS === 'ios' && (
+              <Modal transparent animationType="slide" visible>
+                <TouchableOpacity
+                  style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}
+                  onPress={() => setShowDatePicker(false)}
+                />
+                <View className="bg-surface rounded-t-2xl pb-6">
+                  <View className="flex-row justify-end px-4 pt-3">
+                    <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                      <Text className="text-text-primary font-semibold text-base" style={{ color: Colors.accent }}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    testID="date-picker"
+                    value={new Date(date + 'T00:00:00')}
+                    mode="date"
+                    display="spinner"
+                    maximumDate={new Date()}
+                    onChange={(_event: DateTimePickerEvent, selected?: Date) => {
+                      if (selected) {
+                        const y = selected.getFullYear();
+                        const mo = String(selected.getMonth() + 1).padStart(2, '0');
+                        const d = String(selected.getDate()).padStart(2, '0');
+                        setDate(`${y}-${mo}-${d}`);
+                      }
+                    }}
+                  />
+                </View>
+              </Modal>
+            )}
           </View>
 
           {/* Amount + Currency */}

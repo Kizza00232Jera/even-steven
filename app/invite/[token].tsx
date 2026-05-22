@@ -8,10 +8,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Users, Calendar, AlertCircle } from 'lucide-react-native';
+import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import { lookupInviteToken, acceptInvite, type InviteTokenDetails } from '../../lib/repos/invites';
 import { logActivityEvent } from '../../lib/repos/activity';
 import { getGroupMemberId } from '../../lib/repos/groups';
 import { sendGroupNotification } from '../../lib/notifications';
+import { upsertPushToken } from '../../lib/repos/pushTokens';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/auth';
 import { Colors } from '../../constants/colors';
@@ -55,6 +59,21 @@ export default function InviteScreen() {
       .finally(() => setIsLoading(false));
   }, [token]);
 
+  async function requestAndRegisterPushToken(userId: string) {
+    try {
+      const { status: existing } = await Notifications.getPermissionsAsync();
+      const finalStatus =
+        existing === 'granted'
+          ? 'granted'
+          : (await Notifications.requestPermissionsAsync()).status;
+      if (finalStatus !== 'granted') return;
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+      if (!projectId) return;
+      const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
+      await upsertPushToken(supabase, userId, token, Platform.OS);
+    } catch { /* non-critical */ }
+  }
+
   async function handleAccept() {
     if (!session) {
       router.replace('/(auth)');
@@ -65,6 +84,8 @@ export default function InviteScreen() {
     setIsJoining(true);
     try {
       await acceptInvite(supabase, details.group_id, session.user.id, session.user.email!);
+      // Request push notification permission after joining a group (spec §38)
+      requestAndRegisterPushToken(session.user.id);
       logActivityEvent(supabase, {
         groupId: details.group_id,
         actorId: session.user.id,

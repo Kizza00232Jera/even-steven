@@ -31,11 +31,6 @@ import { useToast } from '../../../hooks/useToast';
 import { SkeletonBalanceRow } from '../../../components/SkeletonBalanceRow';
 import { Colors } from '../../../constants/colors';
 
-interface BalancesTabProps {
-  groupId: string;
-  currentMemberId: string;
-}
-
 interface SettleUpTarget {
   debtorMemberId: string;
   creditorMemberId: string;
@@ -45,7 +40,13 @@ interface SettleUpTarget {
   currency: Currency;
 }
 
-export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
+interface BalancesTabProps {
+  groupId: string;
+  currentMemberId: string;
+  settlementVisibility?: 'public' | 'private';
+}
+
+export function BalancesTab({ groupId, currentMemberId, settlementVisibility }: BalancesTabProps) {
   const { colorScheme } = useColorScheme();
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
   const queryClient = useQueryClient();
@@ -68,8 +69,13 @@ export function BalancesTab({ groupId, currentMemberId }: BalancesTabProps) {
 
   const simplifiedDebts = useMemo(() => {
     if (!data) return [];
-    return simplifyDebts(data.members.map((m) => ({ memberId: m.memberId, balance: m.balance })));
-  }, [data]);
+    const all = simplifyDebts(data.members.map((m) => ({ memberId: m.memberId, balance: m.balance })));
+    // When settlement_visibility is private, non-parties see only debts they're involved in
+    if (settlementVisibility === 'private') {
+      return all.filter((d) => d.from === currentMemberId || d.to === currentMemberId);
+    }
+    return all;
+  }, [data, settlementVisibility, currentMemberId]);
 
   const memberMap = useMemo(() => {
     if (!data) return new Map<string, { name: string; avatarUrl: string | null }>();

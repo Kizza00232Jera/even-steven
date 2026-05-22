@@ -367,6 +367,39 @@ These can only be filled after apps are submitted and approved. They affect the 
 
 ---
 
+---
+
+## 11. UI/UX Gaps — Fixed 2026-05-22 (this session)
+
+These gaps were found by auditing the live codebase against the spec. All are now implemented.
+
+| # | Gap | Spec ref | File(s) changed |
+|---|-----|----------|----------------|
+| 11a | Group detail header was solid colour, not full gradient | §13 | `app/group/[id]/index.tsx` |
+| 11b | Group cards showed no member avatar circles | §14 | `lib/repos/groups.ts`, `app/(tabs)/groups/index.tsx` |
+| 11c | Groups tab had no search bar | §14 | `app/(tabs)/groups/index.tsx` |
+| 11d | Groups list had no realtime updates | §25 | `hooks/useRealtime.ts`, `app/(tabs)/groups/index.tsx` |
+| 11e | Push permission only requestable from Account tab | §38 | `app/group/create.tsx`, `app/invite/[token].tsx` |
+| 11f | Tapping expense opened edit form directly (no read-only view) | §12 | `app/group/[id]/expense-detail.tsx` (new), `app/group/[id]/index.tsx` |
+| 11g | Friends tab had no balance filter | §16 | `app/(tabs)/friends/index.tsx` |
+| 11h | Settlement visibility `private` not enforced in Balances tab | §8 | `app/group/[id]/balances.tsx` |
+| 11i | RemovedMemberState had no auto-navigate (3 sec) | §28 | `components/RemovedMemberState.tsx` |
+| 11j | Date field in expense form was plain text input | §11 | `app/group/[id]/add-expense.tsx` |
+
+### Remaining UI/UX Gaps (not yet implemented)
+
+| # | Gap | Spec ref | Effort |
+|---|-----|----------|--------|
+| 12a | Member Profile Sheet (tap avatar → balance + Settle Up + Add Friend) | §16 | Medium |
+| 12b | Group-level display name (tap own row in Members → set per-group name) | §6 | Easy |
+| 12c | Post-sign-in invite context (store token before auth, re-apply after) | §9 | Medium |
+| 12d | Auto-archive group when all balances reach zero | §22 | Easy (client-side trigger) |
+| 12e | Trip expiry scheduled push notification (pg_cron) | §17 | Complex |
+| 12f | Group settings: Change group photo wired to upload | §7 | Easy |
+| 12g | Date picker in edit-expense form (expense date edit not in edit form — date is immutable post-create per spec, so N/A) | §11 | N/A |
+
+---
+
 ## Priority Order for This Iteration
 
 1. **Apply all pending Supabase migrations** — nothing works correctly without these
