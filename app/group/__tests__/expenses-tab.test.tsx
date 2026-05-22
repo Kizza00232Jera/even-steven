@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import GroupDetailScreen from '../[id]/index';
 
 const mockPush = jest.fn();
@@ -300,13 +300,13 @@ describe('ExpensesTab — Unsettled filter', () => {
   });
 });
 
-describe('ExpensesTab — navigation to edit', () => {
-  it('tapping expense card navigates to edit-expense screen', () => {
+describe('ExpensesTab — navigation to detail', () => {
+  it('tapping expense card navigates to expense-detail screen', () => {
     const { getByTestId } = render(<GroupDetailScreen />);
     fireEvent.press(getByTestId('tab-expenses'));
     fireEvent.press(getByTestId('expense-card-expense-1'));
     expect(mockPush).toHaveBeenCalledWith(
-      expect.stringContaining(`/group/${GROUP_ID}/edit-expense`)
+      expect.stringContaining(`/group/${GROUP_ID}/expense-detail`)
     );
   });
 });
