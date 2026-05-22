@@ -143,7 +143,7 @@ export default function AddExpenseScreen() {
   const { isOnline } = useNetworkStatus();
   const { writesDisabled } = useOfflineGuard(isOnline);
 
-  const preferredCurrency = (profile?.preferred_currency ?? 'USD') as Currency;
+  const preferredCurrency = (profile?.preferred_currency ?? 'EUR') as Currency;
 
   // ── Form state ──────────────────────────────────────────────────────────────
   const [title, setTitle] = useState('');

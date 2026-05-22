@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,11 @@ import {
   ActivityIndicator,
   Switch,
   StyleSheet,
+  Modal,
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
@@ -111,9 +113,7 @@ function ProgressIndicator({ step }: { step: 1 | 2 | 3 }) {
   );
 }
 
-// Pure-JS date field — no native modules required.
-// User types 8 digits; dashes are auto-inserted (YYYY-MM-DD).
-function DateField({
+function NativeDateField({
   label,
   value,
   onChange,
@@ -126,77 +126,89 @@ function DateField({
   minimumDate?: Date;
   testID?: string;
 }) {
-  const isoValue = toISODate(value);
-  const [text, setText] = useState(isoValue);
+  const [show, setShow] = useState(false);
   const { colorScheme } = useColorScheme();
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
 
-  // Sync display if the date was changed from outside (e.g. end clamped to start)
-  useEffect(() => {
-    setText(isoValue);
-  }, [isoValue]);
-
-  function handleChangeText(raw: string) {
-    const digits = raw.replace(/\D/g, '').slice(0, 8);
-    let formatted = digits;
-    if (digits.length > 4) formatted = `${digits.slice(0, 4)}-${digits.slice(4)}`;
-    if (digits.length > 6) formatted = `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
-    setText(formatted);
-
-    if (digits.length === 8) {
-      const year = parseInt(digits.slice(0, 4), 10);
-      const month = parseInt(digits.slice(4, 6), 10) - 1;
-      const day = parseInt(digits.slice(6, 8), 10);
-      const d = new Date(year, month, day);
-      const isValid =
-        !isNaN(d.getTime()) &&
-        d.getFullYear() === year &&
-        d.getMonth() === month &&
-        d.getDate() === day;
-      if (isValid && (!minimumDate || d >= minimumDate)) {
-        onChange(d);
-      }
-    }
+  function handleChange(_event: DateTimePickerEvent, selected?: Date) {
+    if (Platform.OS === 'android') setShow(false);
+    if (selected) onChange(selected);
   }
 
-  function handleBlur() {
-    setText(isoValue);
-  }
+  const picker = (
+    <DateTimePicker
+      testID={testID ? `${testID}-picker` : undefined}
+      value={value}
+      mode="date"
+      display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+      minimumDate={minimumDate}
+      onChange={handleChange}
+    />
+  );
 
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        backgroundColor: theme.surface,
-        borderWidth: 1,
-        borderColor: theme.border,
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-      }}
-    >
-      <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 16, color: theme.textSecondary }}>
-        {label}
-      </Text>
-      <TextInput
+    <View>
+      <TouchableOpacity
         testID={testID}
-        value={text}
-        onChangeText={handleChangeText}
-        onBlur={handleBlur}
-        keyboardType="numeric"
-        maxLength={10}
+        onPress={() => setShow(true)}
         style={{
-          fontFamily: 'Inter_500Medium',
-          fontSize: 16,
-          color: Colors.accent,
-          textAlign: 'right',
-          minWidth: 110,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          backgroundColor: theme.surface,
+          borderWidth: 1,
+          borderColor: theme.border,
+          borderRadius: 16,
+          paddingHorizontal: 16,
+          paddingVertical: 14,
         }}
-        placeholder="YYYY-MM-DD"
-        placeholderTextColor={theme.textTertiary}
-      />
+      >
+        <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 16, color: theme.textSecondary }}>
+          {label}
+        </Text>
+        <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 16, color: Colors.accent }}>
+          {toISODate(value)}
+        </Text>
+      </TouchableOpacity>
+      {show && Platform.OS === 'android' && picker}
+      {show && Platform.OS === 'ios' && (
+        <Modal transparent animationType="slide" visible>
+          <TouchableOpacity
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}
+            onPress={() => setShow(false)}
+          />
+          <View
+            style={{
+              backgroundColor: theme.surface,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              paddingBottom: 32,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'flex-end',
+                paddingHorizontal: 16,
+                paddingTop: 12,
+              }}
+            >
+              <TouchableOpacity onPress={() => setShow(false)}>
+                <Text
+                  style={{
+                    fontFamily: 'Inter_600SemiBold',
+                    fontSize: 16,
+                    color: Colors.accent,
+                  }}
+                >
+                  Done
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {picker}
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -346,15 +358,15 @@ function Step2Details({
       {isTrip && (
         <View style={{ gap: 10 }}>
           <Text className="font-body text-sm font-medium text-text-secondary">
-            Trip dates <Text className="font-body text-xs text-text-tertiary">(YYYY-MM-DD)</Text>
+            Trip dates
           </Text>
-          <DateField
+          <NativeDateField
             label="Start"
             value={startDate}
             onChange={onStartDateChange}
             testID="start-date-input"
           />
-          <DateField
+          <NativeDateField
             label="End"
             value={endDate}
             onChange={onEndDateChange}
@@ -490,7 +502,10 @@ export default function CreateGroupScreen() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [groupType, setGroupType] = useState<GroupType | null>(null);
   const [name, setName] = useState('');
-  const [currency, setCurrency] = useState<Currency>('USD');
+  const [currency, setCurrency] = useState<Currency>(() => {
+    const pref = profile?.preferred_currency as Currency | undefined;
+    return CURRENCIES.some((c) => c.code === pref) ? pref! : 'EUR';
+  });
   const [startDate, setStartDate] = useState<Date>(todayStart);
   const [endDate, setEndDate] = useState<Date>(() => daysFromToday(7));
   const [emailInput, setEmailInput] = useState('');
@@ -608,12 +623,29 @@ export default function CreateGroupScreen() {
             <TouchableOpacity
               onPress={goBack}
               testID="back-button"
-              style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                paddingVertical: 8,
+                paddingRight: 12,
+              }}
             >
               {step === 1 ? (
                 <X size={22} color={theme.textPrimary} strokeWidth={2} />
               ) : (
-                <ChevronLeft size={22} color={theme.textPrimary} strokeWidth={2} />
+                <>
+                  <ChevronLeft size={20} color={theme.textPrimary} strokeWidth={2} />
+                  <Text
+                    style={{
+                      fontFamily: 'Inter_500Medium',
+                      fontSize: 15,
+                      color: theme.textPrimary,
+                    }}
+                  >
+                    Back
+                  </Text>
+                </>
               )}
             </TouchableOpacity>
             <ProgressIndicator step={step} />
