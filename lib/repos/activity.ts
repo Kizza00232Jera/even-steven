@@ -23,6 +23,16 @@ export interface FetchActivityOptions {
 type ActorJoin = { display_name: string | null; email: string; google_name: string | null } | null;
 type GroupJoin = { name: string } | null;
 
+type ActivityEventRow = {
+  id: string;
+  event_type: EventType;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  group_id: string | null;
+  actor: ActorJoin;
+  group: GroupJoin;
+};
+
 export async function fetchActivityFeed(
   client: SupabaseClient<Database>,
   { groupId, limit = 10, offset = 0 }: FetchActivityOptions
@@ -46,15 +56,7 @@ export async function fetchActivityFeed(
   if (error) throw error;
 
   return ((data as unknown[]) ?? []).map((row) => {
-    const r = row as {
-      id: string;
-      event_type: EventType;
-      metadata: Record<string, unknown>;
-      created_at: string;
-      group_id: string | null;
-      actor: ActorJoin;
-      group: GroupJoin;
-    };
+    const r = row as ActivityEventRow;
     const actor = r.actor;
     const actorName = actor
       ? resolveDisplayName(null, actor.display_name, actor.google_name, actor.email)
