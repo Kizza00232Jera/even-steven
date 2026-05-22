@@ -12,7 +12,7 @@ type EventRow = {
   metadata: Record<string, unknown>;
   created_at: string;
   group_id: string | null;
-  actor: { display_name: string | null; email: string } | null;
+  actor: { display_name: string | null; email: string; google_name: string | null } | null;
   group: { name: string } | null;
 };
 
@@ -23,7 +23,7 @@ function makeRow(overrides: Partial<EventRow> = {}): EventRow {
     metadata: {},
     created_at: '2026-05-20T10:00:00Z',
     group_id: 'g-1',
-    actor: { display_name: 'Alice', email: 'alice@example.com' },
+    actor: { display_name: 'Alice', email: 'alice@example.com', google_name: null },
     group: { name: 'Trip to Paris' },
     ...overrides,
   };
@@ -117,10 +117,18 @@ describe('fetchActivityFeed', () => {
 
   it('falls back to actor email when display_name is null', async () => {
     const client = makeFeedClient({
-      rows: [makeRow({ actor: { display_name: null, email: 'bob@example.com' } })],
+      rows: [makeRow({ actor: { display_name: null, email: 'bob@example.com', google_name: null } })],
     });
     const [event] = await fetchActivityFeed(client, {});
     expect(event.actorName).toBe('bob@example.com');
+  });
+
+  it('falls back to google_name when display_name is null', async () => {
+    const client = makeFeedClient({
+      rows: [makeRow({ actor: { display_name: null, email: 'bob@example.com', google_name: 'Bob G' } })],
+    });
+    const [event] = await fetchActivityFeed(client, {});
+    expect(event.actorName).toBe('Bob G');
   });
 
   it('handles null actor gracefully', async () => {
