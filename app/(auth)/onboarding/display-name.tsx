@@ -10,13 +10,17 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useColorScheme } from 'nativewind';
 import { useAuthStore } from '../../../store/auth';
 import { upsertProfile } from '../../../lib/repos/profiles';
 import { supabase } from '../../../lib/supabase';
+import { Colors } from '../../../constants/colors';
 
 export default function DisplayNameScreen() {
   const router = useRouter();
   const { session, setProfile } = useAuthStore();
+  const { colorScheme } = useColorScheme();
+  const placeholderColor = colorScheme === 'dark' ? Colors.dark.textTertiary : Colors.light.textTertiary;
 
   const gmailName = (session?.user?.user_metadata?.full_name as string | undefined) ?? '';
   const [name, setName] = useState(gmailName);
@@ -63,7 +67,7 @@ export default function DisplayNameScreen() {
               value={name}
               onChangeText={setName}
               placeholder="Your name"
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={placeholderColor}
               autoFocus
               autoCorrect={false}
               returnKeyType="done"

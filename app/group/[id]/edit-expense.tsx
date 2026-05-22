@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/auth';
 import { logActivityEvent } from '../../../lib/repos/activity';
@@ -106,6 +107,8 @@ export default function EditExpenseScreen() {
   const toast = useToast();
   const { isOnline } = useNetworkStatus();
   const { writesDisabled } = useOfflineGuard(isOnline);
+  const { colorScheme } = useColorScheme();
+  const placeholderColor = colorScheme === 'dark' ? Colors.dark.textTertiary : Colors.light.textTertiary;
   const { session, profile } = useAuthStore();
   const currentUserId = session?.user.id;
 
@@ -470,7 +473,7 @@ export default function EditExpenseScreen() {
               value={title}
               onChangeText={setTitle}
               placeholder="e.g. Dinner at Konoba"
-              placeholderTextColor={Colors.dark.textTertiary}
+              placeholderTextColor={placeholderColor}
               maxLength={60}
               className="bg-surface-2 rounded-xl px-4 py-3 text-text-primary font-body text-base"
             />
@@ -486,7 +489,7 @@ export default function EditExpenseScreen() {
               value={description}
               onChangeText={setDescription}
               placeholder="Add more details about this expense…"
-              placeholderTextColor={Colors.dark.textTertiary}
+              placeholderTextColor={placeholderColor}
               maxLength={500}
               multiline
               numberOfLines={3}
@@ -563,7 +566,7 @@ export default function EditExpenseScreen() {
                     className="flex-1 bg-surface-2 rounded-xl px-4 py-3 text-text-primary font-body text-base"
                     style={{ opacity: groupHasSettlements ? 0.5 : 1 }}
                     placeholder="0.00"
-                    placeholderTextColor={Colors.dark.textTertiary}
+                    placeholderTextColor={placeholderColor}
                   />
                 </View>
                 {groupHasSettlements && (
@@ -667,7 +670,7 @@ export default function EditExpenseScreen() {
                                 setFinancialDirty(true);
                               }}
                               placeholder="0.00"
-                              placeholderTextColor={Colors.dark.textTertiary}
+                              placeholderTextColor={placeholderColor}
                               keyboardType="decimal-pad"
                               className="bg-surface rounded-lg px-3 py-1.5 text-text-primary font-body text-base w-20 text-right"
                             />
@@ -690,7 +693,7 @@ export default function EditExpenseScreen() {
                                 setFinancialDirty(true);
                               }}
                               placeholder="0"
-                              placeholderTextColor={Colors.dark.textTertiary}
+                              placeholderTextColor={placeholderColor}
                               keyboardType="decimal-pad"
                               className="bg-surface rounded-lg px-3 py-1.5 text-text-primary font-body text-base w-20 text-right"
                             />
