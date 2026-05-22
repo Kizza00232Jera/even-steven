@@ -193,7 +193,7 @@ In `app/_layout.tsx`, add `addNotificationResponseReceivedListener`. Each notifi
 
 These were explicitly left incomplete inside issues that are otherwise closed. They need follow-up.
 
-### 6a. Expense Edit — Financial Structure (issue #23) — TODO
+### ~~6a. Expense Edit — Financial Structure (issue #23)~~ — Done 2026-05-22
 
 The edit expense form (`app/group/[id]/edit-expense.tsx`) only handles metadata edits (title, description, category). The financial structure (amount, split mode, participants) is read-only.
 
@@ -210,7 +210,7 @@ The edit expense form (`app/group/[id]/edit-expense.tsx`) only handles metadata 
 - Existing `updateExpenseMetadata` function handles the metadata fields unchanged — only the financial section is new.
 - Add `updateExpenseFinancial` to `lib/repos/expenses.ts` (already has `updateExpenseMetadata`).
 
-### 6b. Realtime "Edited by [Name]" Toast (issue #25) — TODO
+### ~~6b. Realtime "Edited by [Name]" Toast (issue #25)~~ — Done 2026-05-22 (migration pending apply)
 
 Currently shows *"This expense was just edited."* — spec requires *"This expense was just edited by [name]."*
 
@@ -241,7 +241,7 @@ Issue #15 comment: *"Invite link sharing/reset rows are present in settings but 
 
 Now that the invite system (issue #18) is built, the invite link share and reset buttons in `app/group/[id]/settings.tsx` need to be wired to `lib/repos/invites.ts#getOrCreateInviteToken` and `resetInviteToken`.
 
-### 6d. Members Screen — Add Member by Email Not Wired (issue #16) — TODO
+### ~~6d. Members Screen — Add Member by Email Not Wired (issue #16)~~ — Done 2026-05-22
 
 Issue #16 comment: *"Add member / Invite via link in Members screen deferred (invite system)."*
 

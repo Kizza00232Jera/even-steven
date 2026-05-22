@@ -74,12 +74,14 @@ export interface ExpenseListItem {
   split_method: 'equal' | 'unequal' | 'percentage';
   expense_date: string;
   is_edited: boolean;
+  last_edited_by_name: string | null;
   participant_member_ids: string[];
   receipt_url: string | null;
 }
 
 type ParticipantRow = { member_id: string };
 type PayerJoin = { display_name: string | null; email: string; user_id: string | null };
+type EditorJoin = { display_name: string | null; email: string } | null;
 
 export async function fetchGroupExpenses(
   client: SupabaseClient<Database>,
@@ -91,6 +93,7 @@ export async function fetchGroupExpenses(
       `id, title, description, amount, currency, category, payer_id,
        split_method, expense_date, is_edited, receipt_url,
        payer:payer_id(display_name, email, user_id),
+       editor:last_edited_by(display_name, email),
        expense_participants(member_id)`
     )
     .eq('group_id', groupId)
@@ -101,6 +104,7 @@ export async function fetchGroupExpenses(
 
   return (data ?? []).map((row) => {
     const payer = row.payer as PayerJoin | null;
+    const editor = (row as unknown as { editor: EditorJoin }).editor;
     const participants = (row.expense_participants as ParticipantRow[]) ?? [];
     return {
       id: row.id,
@@ -115,6 +119,7 @@ export async function fetchGroupExpenses(
       split_method: row.split_method as 'equal' | 'unequal' | 'percentage',
       expense_date: row.expense_date,
       is_edited: row.is_edited,
+      last_edited_by_name: editor ? (editor.display_name ?? editor.email) : null,
       participant_member_ids: participants.map((p) => p.member_id),
       receipt_url: row.receipt_url,
     };
@@ -140,6 +145,7 @@ export interface UpdateExpenseMetadataParams {
   description: string | null;
   category: string;
   receipt_url?: string | null;
+  currentMemberId?: string;
 }
 
 export async function updateExpenseMetadata(
@@ -154,6 +160,7 @@ export async function updateExpenseMetadata(
     category: params.category,
     is_edited: true,
     ...(params.receipt_url !== undefined ? { receipt_url: params.receipt_url } : {}),
+    ...(params.currentMemberId ? { last_edited_by: params.currentMemberId } : {}),
   };
   const { error } = await client
     .from('expenses')
@@ -187,4 +194,64 @@ export async function deleteExpense(
 ): Promise<void> {
   const { error } = await client.from('expenses').delete().eq('id', expenseId);
   if (error) throw error;
+}
+
+export interface ExpenseParticipantDetail {
+  memberId: string;
+  shareAmount: number;
+}
+
+export async function fetchExpenseParticipants(
+  client: SupabaseClient<Database>,
+  expenseId: string,
+): Promise<ExpenseParticipantDetail[]> {
+  const { data, error } = await client
+    .from('expense_participants')
+    .select('member_id, share_amount')
+    .eq('expense_id', expenseId);
+  if (error) throw error;
+  return (data ?? []).map((r) => ({ memberId: r.member_id, shareAmount: r.share_amount }));
+}
+
+export interface UpdateExpenseFinancialParams {
+  amount: number;
+  payerId: string;
+  splitMethod: 'equal' | 'unequal' | 'percentage';
+  splits: Split[];
+  currentMemberId?: string;
+}
+
+export async function updateExpenseFinancial(
+  client: SupabaseClient<Database>,
+  expenseId: string,
+  params: UpdateExpenseFinancialParams,
+): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: expError } = await (client.from('expenses') as any)
+    .update({
+      amount: params.amount,
+      payer_id: params.payerId,
+      split_method: params.splitMethod,
+      is_edited: true,
+      ...(params.currentMemberId ? { last_edited_by: params.currentMemberId } : {}),
+    })
+    .eq('id', expenseId);
+  if (expError) throw expError;
+
+  const { error: deleteError } = await client
+    .from('expense_participants')
+    .delete()
+    .eq('expense_id', expenseId);
+  if (deleteError) throw deleteError;
+
+  const { error: insertError } = await client
+    .from('expense_participants')
+    .insert(
+      params.splits.map((s) => ({
+        expense_id: expenseId,
+        member_id: s.memberId,
+        share_amount: s.share,
+      }))
+    );
+  if (insertError) throw insertError;
 }
