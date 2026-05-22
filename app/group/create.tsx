@@ -502,10 +502,9 @@ export default function CreateGroupScreen() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [groupType, setGroupType] = useState<GroupType | null>(null);
   const [name, setName] = useState('');
-  const [currency, setCurrency] = useState<Currency>(() => {
-    const pref = profile?.preferred_currency as Currency | undefined;
-    return CURRENCIES.some((c) => c.code === pref) ? pref! : 'EUR';
-  });
+  const [currency, setCurrency] = useState<Currency>(() =>
+    CURRENCIES.find((c) => c.code === profile?.preferred_currency)?.code ?? 'EUR'
+  );
   const [startDate, setStartDate] = useState<Date>(todayStart);
   const [endDate, setEndDate] = useState<Date>(() => daysFromToday(7));
   const [emailInput, setEmailInput] = useState('');
