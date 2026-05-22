@@ -105,7 +105,7 @@ function RootContent() {
   const { preference: themePreference, loadPreference } = useThemeStore();
 
   useEffect(() => {
-    loadPreference().then((pref) => setColorScheme(pref));
+    loadPreference();
   }, []);
 
   useEffect(() => {

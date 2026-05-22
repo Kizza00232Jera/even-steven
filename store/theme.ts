@@ -7,7 +7,7 @@ const THEME_KEY = 'theme_preference';
 interface ThemeState {
   preference: ThemePreference;
   setPreference: (pref: ThemePreference) => void;
-  loadPreference: () => Promise<ThemePreference>;
+  loadPreference: () => Promise<void>;
 }
 
 export const useThemeStore = create<ThemeState>((set) => ({
@@ -21,9 +21,8 @@ export const useThemeStore = create<ThemeState>((set) => ({
       const stored = await SecureStore.getItemAsync(THEME_KEY);
       const preference = (stored as ThemePreference | null) ?? 'system';
       set({ preference });
-      return preference;
     } catch {
-      return 'system';
+      // keep default 'system'
     }
   },
 }));

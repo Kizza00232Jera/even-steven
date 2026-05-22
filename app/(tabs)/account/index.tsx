@@ -427,7 +427,7 @@ export default function AccountScreen() {
               <View className="flex-row gap-2">
                 {(['system', 'light', 'dark'] as const).map((option) => {
                   const isSelected = themePreference === option;
-                  const label = option === 'system' ? 'System' : option === 'light' ? 'Light' : 'Dark';
+                  const label = option.charAt(0).toUpperCase() + option.slice(1);
                   return (
                     <TouchableOpacity
                       key={option}
