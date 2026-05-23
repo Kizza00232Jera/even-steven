@@ -185,15 +185,17 @@ function RootContent() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        // INITIAL_SESSION loading is managed by getSession() above; bracket every
+        // subsequent auth change with isLoading to prevent onboarding flash.
+        const isAuthTransition = event !== 'INITIAL_SESSION';
+        if (isAuthTransition) setIsLoading(true);
         setSession(session);
         if (session) {
           await fetchAndSetProfile(session.user.id);
         } else {
           setProfile(null);
         }
-        if (event !== 'INITIAL_SESSION') {
-          setIsLoading(false);
-        }
+        if (isAuthTransition) setIsLoading(false);
       }
     );
 
