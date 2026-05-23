@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
+import { useColorScheme } from 'nativewind';
 import {
   ArrowLeft,
   ChevronRight,
@@ -62,6 +63,8 @@ export default function GroupSettingsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { colorScheme } = useColorScheme();
+  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
   const { session } = useAuthStore();
   const userId = session?.user?.id ?? '';
 
@@ -394,7 +397,7 @@ export default function GroupSettingsScreen() {
       {/* Header */}
       <View className="flex-row items-center px-4 py-3 border-b border-border">
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
-          <ArrowLeft size={22} color={Colors.dark.textPrimary} />
+          <ArrowLeft size={22} color={theme.textPrimary} />
         </TouchableOpacity>
         <Text className="font-display text-lg font-semibold text-text-primary flex-1">
           Group Settings
@@ -415,7 +418,7 @@ export default function GroupSettingsScreen() {
               <Users size={16} color={Colors.accent} />
             </View>
             <Text className={rowLabelClass}>Members ({memberCount})</Text>
-            <ChevronRight size={16} color={Colors.dark.textTertiary} />
+            <ChevronRight size={16} color={theme.textTertiary} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -427,9 +430,9 @@ export default function GroupSettingsScreen() {
           >
             <View className={rowIconContainer}>
               {currentMemberIsMuted ? (
-                <BellOff size={16} color={Colors.dark.textSecondary} />
+                <BellOff size={16} color={theme.textSecondary} />
               ) : (
-                <Bell size={16} color={Colors.dark.textSecondary} />
+                <Bell size={16} color={theme.textSecondary} />
               )}
             </View>
             <Text className={rowLabelClass}>
@@ -448,7 +451,7 @@ export default function GroupSettingsScreen() {
               {isUploadingPhoto ? (
                 <ActivityIndicator size="small" color={Colors.accent} />
               ) : (
-                <ImageIcon size={16} color={Colors.dark.textSecondary} />
+                <ImageIcon size={16} color={theme.textSecondary} />
               )}
             </View>
             <Text className={rowLabelClass}>Change background photo</Text>
@@ -465,7 +468,7 @@ export default function GroupSettingsScreen() {
               {isSharingInvite ? (
                 <ActivityIndicator size="small" color={Colors.accent} />
               ) : (
-                <Share2 size={16} color={Colors.dark.textSecondary} />
+                <Share2 size={16} color={theme.textSecondary} />
               )}
             </View>
             <Text className={rowLabelClass}>Share invite link</Text>
@@ -487,7 +490,7 @@ export default function GroupSettingsScreen() {
                   <Pencil size={16} color={Colors.accent} />
                 </View>
                 <Text className={rowLabelClass}>Change group name</Text>
-                <ChevronRight size={16} color={Colors.dark.textTertiary} />
+                <ChevronRight size={16} color={theme.textTertiary} />
               </TouchableOpacity>
 
               {isTrip && (
@@ -504,7 +507,7 @@ export default function GroupSettingsScreen() {
                     Extend end date
                     {group?.end_date ? ` (${group.end_date})` : ''}
                   </Text>
-                  <ChevronRight size={16} color={Colors.dark.textTertiary} />
+                  <ChevronRight size={16} color={theme.textTertiary} />
                 </TouchableOpacity>
               )}
 
@@ -523,7 +526,7 @@ export default function GroupSettingsScreen() {
                 <Text className="font-body text-sm text-text-secondary capitalize mr-1">
                   {group?.settlement_visibility ?? 'public'}
                 </Text>
-                <ChevronRight size={16} color={Colors.dark.textTertiary} />
+                <ChevronRight size={16} color={theme.textTertiary} />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -537,7 +540,7 @@ export default function GroupSettingsScreen() {
                   {isResettingInvite ? (
                     <ActivityIndicator size="small" color={Colors.accent} />
                   ) : (
-                    <Link size={16} color={Colors.dark.textSecondary} />
+                    <Link size={16} color={theme.textSecondary} />
                   )}
                 </View>
                 <Text className={rowLabelClass}>Reset invite link</Text>
@@ -625,7 +628,7 @@ export default function GroupSettingsScreen() {
                 value={nameInput}
                 onChangeText={setNameInput}
                 placeholder="Group name"
-                placeholderTextColor={Colors.dark.textTertiary}
+                placeholderTextColor={theme.textTertiary}
                 maxLength={30}
                 className="bg-surface-2 border border-border rounded-xl px-4 py-3 font-body text-base text-text-primary mb-4"
                 autoFocus
@@ -723,7 +726,7 @@ export default function GroupSettingsScreen() {
                 value={endDateInput}
                 onChangeText={setEndDateInput}
                 placeholder="YYYY-MM-DD"
-                placeholderTextColor={Colors.dark.textTertiary}
+                placeholderTextColor={theme.textTertiary}
                 className="bg-surface-2 border border-border rounded-xl px-4 py-3 font-body text-base text-text-primary mb-4"
                 autoFocus
                 keyboardType="numeric"

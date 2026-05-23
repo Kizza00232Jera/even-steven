@@ -144,7 +144,8 @@ export default function AddExpenseScreen() {
   const { isOnline } = useNetworkStatus();
   const { writesDisabled } = useOfflineGuard(isOnline);
   const { colorScheme } = useColorScheme();
-  const placeholderColor = colorScheme === 'dark' ? Colors.dark.textTertiary : Colors.light.textTertiary;
+  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
+  const placeholderColor = theme.textTertiary;
 
   const preferredCurrency = (profile?.preferred_currency ?? 'EUR') as Currency;
 
@@ -402,7 +403,7 @@ export default function AddExpenseScreen() {
             onPress={handleClose}
             className="w-10 h-10 items-center justify-center"
           >
-            <X size={20} color={Colors.dark.textSecondary} strokeWidth={2} />
+            <X size={20} color={theme.textSecondary} strokeWidth={2} />
           </TouchableOpacity>
           <Text className="font-display text-text-primary font-semibold text-base">
             Add Expense
@@ -547,7 +548,7 @@ export default function AddExpenseScreen() {
                 <Text testID="currency-display" className="text-text-primary font-body text-base font-semibold">
                   {currency}
                 </Text>
-                <ChevronDown size={14} color={Colors.dark.textSecondary} strokeWidth={2} />
+                <ChevronDown size={14} color={theme.textSecondary} strokeWidth={2} />
               </TouchableOpacity>
               <TextInput
                 testID="amount-input"
@@ -586,7 +587,7 @@ export default function AddExpenseScreen() {
                   </View>
                 )}
               </View>
-              <ChevronDown size={14} color={Colors.dark.textSecondary} strokeWidth={2} />
+              <ChevronDown size={14} color={theme.textSecondary} strokeWidth={2} />
             </TouchableOpacity>
           </View>
 
@@ -603,7 +604,7 @@ export default function AddExpenseScreen() {
               <Text testID="payer-display" className="text-text-primary font-body text-base">
                 {payerDisplayName}
               </Text>
-              <ChevronDown size={14} color={Colors.dark.textSecondary} strokeWidth={2} />
+              <ChevronDown size={14} color={theme.textSecondary} strokeWidth={2} />
             </TouchableOpacity>
           </View>
 
@@ -634,7 +635,7 @@ export default function AddExpenseScreen() {
                 onPress={handleAttachReceipt}
                 className="bg-surface-2 rounded-xl px-4 py-3 flex-row items-center gap-3"
               >
-                <Paperclip size={18} color={Colors.dark.textSecondary} strokeWidth={1.5} />
+                <Paperclip size={18} color={theme.textSecondary} strokeWidth={1.5} />
                 <Text className="font-body text-text-secondary text-base">Attach receipt</Text>
               </TouchableOpacity>
             )}
