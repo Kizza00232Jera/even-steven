@@ -24,27 +24,30 @@ export async function createExpense(
   params: CreateExpenseParams,
   splits: Split[]
 ): Promise<Expense> {
-  const { data: expense, error: expenseError } = await client
+  const { data: expenseId, error } = await client.rpc('create_expense', {
+    p_group_id:     params.group_id,
+    p_title:        params.title,
+    p_description:  params.description ?? null,
+    p_amount:       params.amount,
+    p_currency:     params.currency,
+    p_category:     params.category,
+    p_payer_id:     params.payer_id,
+    p_split_method: params.split_method,
+    p_expense_date: params.expense_date,
+    p_receipt_url:  params.receipt_url ?? null,
+    p_splits:       splits.map((s) => ({ memberId: s.memberId, share: s.share })),
+  });
+
+  if (error) throw error;
+
+  const { data: expense, error: fetchError } = await client
     .from('expenses')
-    .insert(params)
-    .select()
+    .select('*')
+    .eq('id', expenseId as string)
     .single();
 
-  if (expenseError) throw expenseError;
-
-  const { error: participantError } = await client
-    .from('expense_participants')
-    .insert(
-      splits.map((s) => ({
-        expense_id: expense.id,
-        member_id: s.memberId,
-        share_amount: s.share,
-      }))
-    );
-
-  if (participantError) throw participantError;
-
-  return expense;
+  if (fetchError) throw fetchError;
+  return expense as Expense;
 }
 
 export async function fetchGroupMembers(
