@@ -520,14 +520,15 @@ function ExpensesTab({ groupId, currentMemberId }: ExpensesTabProps) {
 
   return (
     <View className="flex-1">
-      {/* Filter chips */}
-      <ScrollView
-        testID="filter-pill-row"
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{ flexGrow: 0, flexShrink: 0 }}
-      >
-        <View className="flex-row px-4 py-3 gap-2">
+      {/* Filter chips — fixed height wrapper prevents Android flex expansion */}
+      <View style={{ height: 52 }}>
+        <ScrollView
+          testID="filter-pill-row"
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}
+        >
           {filters.map((f) => {
             const isActive = activeFilter === f.key;
             return (
@@ -551,8 +552,8 @@ function ExpensesTab({ groupId, currentMemberId }: ExpensesTabProps) {
               </TouchableOpacity>
             );
           })}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
 
       {/* Expense list */}
       {filteredExpenses.length === 0 ? (

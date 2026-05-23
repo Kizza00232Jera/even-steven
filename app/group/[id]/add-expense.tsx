@@ -377,8 +377,17 @@ export default function AddExpenseScreen() {
       });
       queryClient.invalidateQueries({ queryKey: ['expenses', groupId] });
       router.back();
-    } catch {
-      Alert.alert('Error', 'Could not save the expense. Please try again.');
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : String(err);
+      const code =
+        err && typeof err === 'object' && 'code' in err
+          ? String((err as { code: unknown }).code)
+          : '';
+      console.error('[add-expense] save failed:', err);
+      Alert.alert('Error', `Could not save the expense.\n\n${code ? `[${code}] ` : ''}${msg}`);
     } finally {
       setIsSaving(false);
     }
