@@ -108,7 +108,8 @@ export default function EditExpenseScreen() {
   const { isOnline } = useNetworkStatus();
   const { writesDisabled } = useOfflineGuard(isOnline);
   const { colorScheme } = useColorScheme();
-  const placeholderColor = colorScheme === 'dark' ? Colors.dark.textTertiary : Colors.light.textTertiary;
+  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
+  const placeholderColor = theme.textTertiary;
   const { session, profile } = useAuthStore();
   const currentUserId = session?.user.id;
 
@@ -443,7 +444,7 @@ export default function EditExpenseScreen() {
             onPress={() => router.back()}
             className="w-10 h-10 items-center justify-center"
           >
-            <X size={20} color={Colors.dark.textSecondary} strokeWidth={2} />
+            <X size={20} color={theme.textSecondary} strokeWidth={2} />
           </TouchableOpacity>
           <Text className="font-display text-text-primary font-semibold text-base">Edit Expense</Text>
           <TouchableOpacity
@@ -524,7 +525,7 @@ export default function EditExpenseScreen() {
                 onPress={handleAttachReceipt}
                 className="bg-surface-2 rounded-xl px-4 py-3 flex-row items-center gap-3"
               >
-                <Paperclip size={18} color={Colors.dark.textSecondary} strokeWidth={1.5} />
+                <Paperclip size={18} color={theme.textSecondary} strokeWidth={1.5} />
                 <Text className="font-body text-text-secondary text-base">Attach receipt</Text>
               </TouchableOpacity>
             )}
@@ -541,7 +542,7 @@ export default function EditExpenseScreen() {
               <Text testID="category-display" className="text-text-primary font-body text-base">
                 {category}
               </Text>
-              <ChevronDown size={14} color={Colors.dark.textSecondary} strokeWidth={2} />
+              <ChevronDown size={14} color={theme.textSecondary} strokeWidth={2} />
             </TouchableOpacity>
           </View>
 
@@ -571,7 +572,7 @@ export default function EditExpenseScreen() {
                 </View>
                 {groupHasSettlements && (
                   <View testID="amount-locked-notice" className="flex-row items-center gap-1.5 mt-2">
-                    <Lock size={12} color={Colors.dark.textTertiary} strokeWidth={1.5} />
+                    <Lock size={12} color={theme.textTertiary} strokeWidth={1.5} />
                     <Text className="font-body text-text-tertiary text-xs">
                       Amount is locked because settlements have been recorded.
                     </Text>
@@ -590,7 +591,7 @@ export default function EditExpenseScreen() {
                   <Text testID="payer-display" className="text-text-primary font-body text-base">
                     {payerDisplayName}
                   </Text>
-                  <ChevronDown size={14} color={Colors.dark.textSecondary} strokeWidth={2} />
+                  <ChevronDown size={14} color={theme.textSecondary} strokeWidth={2} />
                 </TouchableOpacity>
               </View>
 
@@ -708,7 +709,7 @@ export default function EditExpenseScreen() {
           ) : (
             /* Non-editor: show locked financial summary */
             <View testID="financial-locked-notice" className="flex-row items-start gap-2 p-3 rounded-xl bg-surface-2">
-              <Lock size={16} color={Colors.dark.textTertiary} strokeWidth={1.5} />
+              <Lock size={16} color={theme.textTertiary} strokeWidth={1.5} />
               <Text className="flex-1 font-body text-text-secondary text-sm">
                 Financial details can only be changed by the payer or group admin.
               </Text>
@@ -722,7 +723,7 @@ export default function EditExpenseScreen() {
                 testID="delete-blocked-notice"
                 className="flex-row items-start gap-2 mb-3 p-3 rounded-xl bg-surface-2"
               >
-                <AlertCircle size={16} color={Colors.dark.textTertiary} strokeWidth={1.5} />
+                <AlertCircle size={16} color={theme.textTertiary} strokeWidth={1.5} />
                 <Text className="flex-1 font-body text-text-secondary text-sm">
                   This expense cannot be deleted because settlements have been recorded in this group.
                 </Text>
@@ -735,7 +736,7 @@ export default function EditExpenseScreen() {
               accessibilityState={{ disabled: groupHasSettlements || isDeleting }}
               className="flex-row items-center justify-center gap-2 py-3 rounded-xl"
               style={{
-                backgroundColor: groupHasSettlements ? Colors.dark.surface2 : 'rgba(239,68,68,0.1)',
+                backgroundColor: groupHasSettlements ? theme.surface2 : 'rgba(239,68,68,0.1)',
                 opacity: groupHasSettlements ? 0.5 : 1,
               }}
             >
@@ -745,12 +746,12 @@ export default function EditExpenseScreen() {
                 <>
                   <Trash2
                     size={16}
-                    color={groupHasSettlements ? Colors.dark.textTertiary : Colors.destructive}
+                    color={groupHasSettlements ? theme.textTertiary : Colors.destructive}
                     strokeWidth={1.5}
                   />
                   <Text
                     className="font-body font-medium text-sm"
-                    style={{ color: groupHasSettlements ? Colors.dark.textTertiary : Colors.destructive }}
+                    style={{ color: groupHasSettlements ? theme.textTertiary : Colors.destructive }}
                   >
                     Delete expense
                   </Text>

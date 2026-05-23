@@ -133,6 +133,8 @@ function SettingsSheet({ visible, group, onClose, onLeave, onViewMembers }: Sett
 function AddExpenseFab({ group, groupId }: { group: GroupDetail; groupId: string }) {
   const router = useRouter();
   const toast = useToast();
+  const { colorScheme } = useColorScheme();
+  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
   const isExpiredOrArchived = group.status === 'expired' || group.status === 'archived';
 
   function handlePress() {
@@ -154,7 +156,7 @@ function AddExpenseFab({ group, groupId }: { group: GroupDetail; groupId: string
         width: 56,
         height: 56,
         borderRadius: 28,
-        backgroundColor: isExpiredOrArchived ? Colors.dark.textTertiary : Colors.accent,
+        backgroundColor: isExpiredOrArchived ? theme.textTertiary : Colors.accent,
         alignItems: 'center',
         justifyContent: 'center',
         opacity: isExpiredOrArchived ? 0.6 : 1,
