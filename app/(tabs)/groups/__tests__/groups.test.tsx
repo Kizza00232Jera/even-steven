@@ -24,7 +24,15 @@ jest.mock('../../../../lib/repos/groups', () => ({
   unmuteGroup: (...args: unknown[]) => mockUnmuteGroup(...args),
 }));
 
-jest.mock('../../../../lib/supabase', () => ({ supabase: {} }));
+jest.mock('../../../../lib/supabase', () => ({
+  supabase: {
+    channel: jest.fn(() => ({
+      on: jest.fn(function (this: unknown) { return this; }),
+      subscribe: jest.fn(function (this: unknown) { return this; }),
+    })),
+    removeChannel: jest.fn(),
+  },
+}));
 
 jest.mock('../../../../store/auth', () => ({
   useAuthStore: () => ({

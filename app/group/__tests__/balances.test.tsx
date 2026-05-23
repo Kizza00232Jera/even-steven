@@ -45,13 +45,20 @@ jest.mock('../../../lib/repos/activity', () => ({
   logActivityEvent: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('../../../lib/toast', () => ({
-  useToastStore: (selector: (s: { show: typeof mockShowToast }) => unknown) =>
-    selector({ show: mockShowToast }),
+jest.mock('../../../hooks/useToast', () => ({
+  useToast: () => ({ success: mockShowToast, error: mockShowToast, info: jest.fn() }),
 }));
 
 jest.mock('nativewind', () => ({
   useColorScheme: () => ({ colorScheme: 'dark' }),
+}));
+
+jest.mock('../../../lib/notifications', () => ({
+  sendGroupNotification: jest.fn(),
+}));
+
+jest.mock('../../../lib/repos/groups', () => ({
+  archiveGroup: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('lucide-react-native', () => ({
@@ -241,7 +248,7 @@ describe('BalancesTab', () => {
         })
       );
     });
-    expect(mockShowToast).toHaveBeenCalledWith('Settlement recorded', 'success');
+    expect(mockShowToast).toHaveBeenCalledWith('Settlement recorded');
   });
 
   it('shows error toast when settlement recording fails', async () => {
@@ -266,7 +273,7 @@ describe('BalancesTab', () => {
     fireEvent.press(getByText('Record Settlement'));
 
     await waitFor(() =>
-      expect(mockShowToast).toHaveBeenCalledWith(expect.stringMatching(/failed/i), 'error')
+      expect(mockShowToast).toHaveBeenCalledWith(expect.stringMatching(/failed/i))
     );
   });
 
@@ -378,7 +385,7 @@ describe('BalancesTab', () => {
           'm-bob'
         );
       });
-      expect(mockShowToast).toHaveBeenCalledWith('Settlement undone', 'success');
+      expect(mockShowToast).toHaveBeenCalledWith('Settlement undone');
     });
 
     it('shows error toast when void fails', async () => {
@@ -402,7 +409,7 @@ describe('BalancesTab', () => {
       fireEvent.press(getByText('Undo'));
 
       await waitFor(() =>
-        expect(mockShowToast).toHaveBeenCalledWith(expect.stringMatching(/failed.*undo/i), 'error')
+        expect(mockShowToast).toHaveBeenCalledWith(expect.stringMatching(/failed.*undo/i))
       );
     });
   });

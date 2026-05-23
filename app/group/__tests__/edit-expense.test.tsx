@@ -115,6 +115,11 @@ jest.mock('lucide-react-native', () => ({
   AlertCircle: () => null,
   Camera: () => null,
   Paperclip: () => null,
+  Lock: () => null,
+}));
+
+jest.mock('../../../lib/notifications', () => ({
+  sendGroupNotification: jest.fn(),
 }));
 
 jest.mock('nativewind', () => ({

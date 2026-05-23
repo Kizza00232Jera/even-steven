@@ -38,6 +38,9 @@ jest.mock('lucide-react-native', () => ({
   Shield: () => null,
   UserMinus: () => null,
   Clock: () => null,
+  UserPlus: () => null,
+  Share2: () => null,
+  X: () => null,
 }));
 
 jest.mock('nativewind', () => ({

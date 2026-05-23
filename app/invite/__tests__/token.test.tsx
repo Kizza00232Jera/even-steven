@@ -55,6 +55,7 @@ beforeEach(() => {
   mockUseAuthStore.mockReturnValue({
     session: { user: { id: 'user-1', email: 'bob@example.com' } },
     profile: { display_name: 'Bob' },
+    setPendingInviteToken: jest.fn(),
   });
 });
 
@@ -162,7 +163,7 @@ describe('InviteScreen — loading state', () => {
 
 describe('InviteScreen — unauthenticated user', () => {
   it('shows the invite info without crashing when not logged in', async () => {
-    mockUseAuthStore.mockReturnValue({ session: null, profile: null });
+    mockUseAuthStore.mockReturnValue({ session: null, profile: null, setPendingInviteToken: jest.fn() });
     mockLookup.mockResolvedValue(validTokenDetails);
 
     const { getByText } = render(<InviteScreen />);
@@ -172,7 +173,7 @@ describe('InviteScreen — unauthenticated user', () => {
   });
 
   it('navigates to auth on Accept when not logged in', async () => {
-    mockUseAuthStore.mockReturnValue({ session: null, profile: null });
+    mockUseAuthStore.mockReturnValue({ session: null, profile: null, setPendingInviteToken: jest.fn() });
     mockLookup.mockResolvedValue(validTokenDetails);
 
     const { getByTestId } = render(<InviteScreen />);

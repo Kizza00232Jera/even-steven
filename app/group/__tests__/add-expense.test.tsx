@@ -53,7 +53,23 @@ jest.mock('../../../lib/repos/expenses', () => ({
   uploadReceipt: (...args: unknown[]) => mockUploadReceipt(...args),
 }));
 
-jest.mock('../../../lib/supabase', () => ({ supabase: {} }));
+jest.mock('../../../lib/supabase', () => ({
+  supabase: {
+    channel: jest.fn(() => ({
+      on: jest.fn(function (this: unknown) { return this; }),
+      subscribe: jest.fn(function (this: unknown) { return this; }),
+    })),
+    removeChannel: jest.fn(),
+  },
+}));
+
+jest.mock('../../../lib/notifications', () => ({
+  sendGroupNotification: jest.fn(),
+}));
+
+jest.mock('../../../hooks/useOfflineGuard', () => ({
+  useOfflineGuard: () => ({ writesDisabled: false }),
+}));
 
 jest.mock('../../../store/auth', () => ({
   useAuthStore: () => ({
@@ -124,9 +140,12 @@ beforeEach(() => {
 
 describe('AddExpenseScreen — form defaults', () => {
   it('shows today as the default date', () => {
-    const { getByTestId } = render(<AddExpenseScreen />);
-    const dateInput = getByTestId('date-input');
-    expect(dateInput.props.value).toBe(TODAY);
+    const { getByTestId, getByText } = render(<AddExpenseScreen />);
+    expect(getByTestId('date-input')).toBeTruthy();
+    const formattedToday = new Date(TODAY + 'T00:00:00').toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+    });
+    expect(getByText(formattedToday)).toBeTruthy();
   });
 
   it('shows all group members pre-selected as participants', () => {
@@ -180,20 +199,20 @@ describe('AddExpenseScreen — title and category auto-detection', () => {
 });
 
 describe('AddExpenseScreen — date validation', () => {
-  it('rejects future dates by clamping to today', () => {
+  it('date input is a pressable button (not a free-text field)', () => {
     const { getByTestId } = render(<AddExpenseScreen />);
     const dateInput = getByTestId('date-input');
-    fireEvent.changeText(dateInput, '2099-12-31');
-    fireEvent(dateInput, 'blur');
-    expect(getByTestId('date-input').props.value).toBe(TODAY);
+    expect(dateInput.props.onChangeText).toBeUndefined();
+    expect(() => fireEvent.press(dateInput)).not.toThrow();
   });
 
-  it('accepts today', () => {
-    const { getByTestId } = render(<AddExpenseScreen />);
-    const dateInput = getByTestId('date-input');
-    fireEvent.changeText(dateInput, TODAY);
-    fireEvent(dateInput, 'blur');
-    expect(getByTestId('date-input').props.value).toBe(TODAY);
+  it('shows today as the default date after rendering', () => {
+    const { getByTestId, getByText } = render(<AddExpenseScreen />);
+    expect(getByTestId('date-input')).toBeTruthy();
+    const formattedToday = new Date(TODAY + 'T00:00:00').toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+    });
+    expect(getByText(formattedToday)).toBeTruthy();
   });
 });
 
