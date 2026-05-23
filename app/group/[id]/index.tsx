@@ -2,10 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  Modal,
   TouchableOpacity,
-  Pressable,
-  Alert,
   Share,
   ActivityIndicator,
   ScrollView,
@@ -15,15 +12,15 @@ import {
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useColorScheme } from 'nativewind';
-import { Settings, ChevronLeft, LogOut, Users, BellOff, Bell, X, ChevronRight, Plus, Share2 } from 'lucide-react-native';
+import { Settings, ChevronLeft, Plus, Share2 } from 'lucide-react-native';
 import { SkeletonExpenseCard } from '../../../components/SkeletonExpenseCard';
 import { SkeletonBalanceRow } from '../../../components/SkeletonBalanceRow';
 import { ErrorState } from '../../../components/ErrorState';
 import { RemovedMemberState } from '../../../components/RemovedMemberState';
 import { Colors } from '../../../constants/colors';
-import { fetchGroupDetail, leaveGroup } from '../../../lib/repos/groups';
+import { fetchGroupDetail } from '../../../lib/repos/groups';
 import { getOrCreateInviteToken } from '../../../lib/repos/invites';
 import { fetchGroupExpenses, type ExpenseListItem } from '../../../lib/repos/expenses';
 import { fetchGroupBalances, type GroupBalanceData } from '../../../lib/repos/balances';
@@ -57,78 +54,6 @@ function useGroupDetail(id: string, userId: string) {
   });
 }
 
-interface SettingsSheetProps {
-  visible: boolean;
-  group: GroupDetail;
-  onClose: () => void;
-  onLeave: () => void;
-  onViewMembers: () => void;
-}
-
-function SettingsSheet({ visible, group, onClose, onLeave, onViewMembers }: SettingsSheetProps) {
-  const { colorScheme } = useColorScheme();
-  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable
-        className="flex-1"
-        style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-        onPress={onClose}
-      >
-        <Pressable
-          className="absolute bottom-0 left-0 right-0 rounded-t-2xl p-6"
-          style={{ backgroundColor: theme.surface }}
-        >
-          <View className="flex-row items-center justify-between mb-5">
-            <Text className="font-display text-text-primary font-semibold text-lg">
-              {group.name}
-            </Text>
-            <TouchableOpacity testID="close-settings" onPress={onClose}>
-              <X size={20} color={theme.textSecondary} strokeWidth={2} />
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
-            className="flex-row items-center justify-between py-4 border-b border-border"
-            onPress={onViewMembers}
-          >
-            <View className="flex-row items-center gap-3">
-              <Users size={20} color={theme.textSecondary} strokeWidth={1.5} />
-              <Text className="font-body text-text-primary text-base">
-                Members ({group.memberCount})
-              </Text>
-            </View>
-            <ChevronRight size={18} color={theme.textTertiary} strokeWidth={1.5} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="flex-row items-center gap-3 py-4 border-b border-border"
-          >
-            {group.isMuted ? (
-              <Bell size={20} color={theme.textSecondary} strokeWidth={1.5} />
-            ) : (
-              <BellOff size={20} color={theme.textSecondary} strokeWidth={1.5} />
-            )}
-            <Text className="font-body text-text-primary text-base">
-              {group.isMuted ? 'Unmute notifications' : 'Mute notifications'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="flex-row items-center gap-3 py-4"
-            onPress={onLeave}
-          >
-            <LogOut size={20} color={Colors.destructive} strokeWidth={1.5} />
-            <Text className="font-body text-base" style={{ color: Colors.destructive }}>
-              Leave group
-            </Text>
-          </TouchableOpacity>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
 
 function AddExpenseFab({ group, groupId }: { group: GroupDetail; groupId: string }) {
   const router = useRouter();
@@ -174,26 +99,12 @@ export default function GroupDetailScreen() {
   const { colorScheme } = useColorScheme();
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
   const { session } = useAuthStore();
-  const queryClient = useQueryClient();
   const userId = session?.user.id ?? '';
 
   const { data: group, isLoading, isError, refetch } = useGroupDetail(id, userId);
   useRealtime(id);
-  const [showSettings, setShowSettings] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('balances');
-
-  const leaveMutation = useMutation({
-    mutationFn: ({ memberId, isAdmin }: { memberId: string; isAdmin: boolean }) =>
-      leaveGroup(supabase, id, memberId, isAdmin),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['groups'] });
-      router.back();
-    },
-    onError: () => {
-      Alert.alert('Error', 'Could not leave the group. Please try again.');
-    },
-  });
 
   async function handleShareInviteLink() {
     if (!session || !id || !group?.memberId) return;
@@ -209,61 +120,6 @@ export default function GroupDetailScreen() {
       // Share cancelled or error — no action needed
     } finally {
       setIsSharing(false);
-    }
-  }
-
-  function handleLeave() {
-    if (!group) return;
-
-    const isLastMember = group.memberCount <= 1;
-    const memberId = group.currentMemberId;
-    const isAdmin = group.isAdmin;
-
-    if (isLastMember) {
-      Alert.alert(
-        "You're the last member",
-        'Leaving will permanently delete this group and all its history.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete group',
-            style: 'destructive',
-            onPress: () => {
-              setShowSettings(false);
-              leaveMutation.mutate({ memberId, isAdmin });
-            },
-          },
-        ],
-      );
-    } else if (group.balance !== 0) {
-      const balanceStr = Math.abs(group.balance).toFixed(2);
-      Alert.alert(
-        'Outstanding balance',
-        `You have an outstanding balance of ${balanceStr}. You can still leave — expense history will remain intact.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Leave anyway',
-            style: 'destructive',
-            onPress: () => {
-              setShowSettings(false);
-              leaveMutation.mutate({ memberId, isAdmin });
-            },
-          },
-        ],
-      );
-    } else {
-      Alert.alert('Leave group', 'Are you sure you want to leave this group?', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Leave',
-          style: 'destructive',
-          onPress: () => {
-            setShowSettings(false);
-            leaveMutation.mutate({ memberId, isAdmin });
-          },
-        },
-      ]);
     }
   }
 
@@ -350,7 +206,7 @@ export default function GroupDetailScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 testID="settings-button"
-                onPress={() => setShowSettings(true)}
+                onPress={() => router.push(`/group/${id}/settings` as never)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Settings size={22} color="rgba(255,255,255,0.8)" strokeWidth={1.5} />
@@ -413,25 +269,13 @@ export default function GroupDetailScreen() {
             groupId={id}
             currentMemberId={group.currentMemberId}
             settlementVisibility={group.settlement_visibility}
+            groupStatus={group.status}
           />
         )}
         {activeTab === 'summary' && <SummaryTab groupId={id} />}
       </View>
 
       <AddExpenseFab group={group} groupId={id} />
-
-      {showSettings && (
-        <SettingsSheet
-          visible={showSettings}
-          group={group}
-          onClose={() => setShowSettings(false)}
-          onLeave={handleLeave}
-          onViewMembers={() => {
-            setShowSettings(false);
-            router.push(`/group/${id}/members` as never);
-          }}
-        />
-      )}
     </SafeAreaView>
   );
 }

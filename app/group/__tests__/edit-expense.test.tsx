@@ -299,7 +299,7 @@ describe('EditExpenseScreen — delete expense', () => {
       string,
       { text: string; onPress?: () => void }[],
     ];
-    buttons.find((b) => b.text === 'Delete')?.onPress?.();
+    await act(async () => { buttons.find((b) => b.text === 'Delete')?.onPress?.(); });
     await waitFor(() => {
       expect(mockDeleteExpense).toHaveBeenCalledWith(expect.anything(), EXPENSE_ID);
     });
@@ -316,7 +316,7 @@ describe('EditExpenseScreen — delete expense', () => {
       string,
       { text: string; onPress?: () => void }[],
     ];
-    buttons.find((b) => b.text === 'Delete')?.onPress?.();
+    await act(async () => { buttons.find((b) => b.text === 'Delete')?.onPress?.(); });
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
     alertSpy.mockRestore();
   });

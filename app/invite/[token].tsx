@@ -17,6 +17,8 @@ import { logActivityEvent } from '../../lib/repos/activity';
 import { getGroupMemberId } from '../../lib/repos/groups';
 import { sendGroupNotification } from '../../lib/notifications';
 import { upsertPushToken } from '../../lib/repos/pushTokens';
+import { format } from '../../lib/currency';
+import type { Currency } from '../../lib/currency';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/auth';
 import { Colors } from '../../constants/colors';
@@ -98,6 +100,37 @@ export default function InviteScreen() {
           sendGroupNotification({ eventType: 'member_joined', groupId: details.group_id, actorMemberId: memberId });
         }
       }).catch(() => {});
+
+      // Check if new member has an existing balance from placeholder expenses (spec §9)
+      try {
+        const [memberResult, groupResult] = await Promise.all([
+          supabase
+            .from('group_members')
+            .select('balance')
+            .eq('group_id', details.group_id)
+            .eq('user_id', session.user.id)
+            .single(),
+          supabase
+            .from('groups')
+            .select('base_currency')
+            .eq('id', details.group_id)
+            .single(),
+        ]);
+        const balance = memberResult.data?.balance ?? 0;
+        if (balance < 0) {
+          const currency = (groupResult.data?.base_currency ?? 'EUR') as Currency;
+          const amount = format(Math.abs(balance), currency);
+          await new Promise<void>((resolve) => {
+            Alert.alert(
+              'You have an outstanding balance',
+              `While you were away, you were added to some expenses. You currently owe ${amount}.`,
+              [{ text: 'View Balances', onPress: resolve }],
+              { cancelable: false },
+            );
+          });
+        }
+      } catch { /* non-critical */ }
+
       router.replace(`/group/${details.group_id}` as never);
     } catch (err: unknown) {
       const msg = err && typeof err === 'object' && 'message' in err

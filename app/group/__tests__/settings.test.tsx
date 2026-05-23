@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import GroupSettingsScreen from '../[id]/settings';
 
@@ -284,7 +284,7 @@ describe('GroupSettingsScreen — archive', () => {
     const { getByTestId } = render(<GroupSettingsScreen />);
     fireEvent.press(getByTestId('settings-archive-row'));
     const [,, buttons] = alertSpy.mock.calls[0] as [string, string, { text: string; onPress?: () => void }[]];
-    buttons.find((b) => b.text === 'Archive')?.onPress?.();
+    await act(async () => { buttons.find((b) => b.text === 'Archive')?.onPress?.(); });
     await waitFor(() => {
       expect(mockArchiveGroup).toHaveBeenCalledWith({}, 'group-1');
     });
@@ -313,7 +313,7 @@ describe('GroupSettingsScreen — delete (no unsettled balances)', () => {
     const { getByTestId } = render(<GroupSettingsScreen />);
     fireEvent.press(getByTestId('settings-delete-row'));
     const [,, buttons] = alertSpy.mock.calls[0] as [string, string, { text: string; onPress?: () => void }[]];
-    buttons.find((b) => b.text === 'Delete')?.onPress?.();
+    await act(async () => { buttons.find((b) => b.text === 'Delete')?.onPress?.(); });
     await waitFor(() => {
       expect(mockDeleteGroup).toHaveBeenCalledWith({}, 'group-1');
     });
@@ -335,7 +335,7 @@ describe('GroupSettingsScreen — delete (unsettled balances)', () => {
     expect(alertSpy).toHaveBeenCalledTimes(2);
     // Confirm second alert
     const [,, buttons2] = alertSpy.mock.calls[1] as [string, string, { text: string; onPress?: () => void }[]];
-    buttons2.find((b) => b.text === 'Yes, delete')?.onPress?.();
+    await act(async () => { buttons2.find((b) => b.text === 'Yes, delete')?.onPress?.(); });
     await waitFor(() => {
       expect(mockDeleteGroup).toHaveBeenCalledWith({}, 'group-1');
     });
@@ -355,7 +355,7 @@ describe('GroupSettingsScreen — leave group', () => {
     const { getByTestId } = render(<GroupSettingsScreen />);
     fireEvent.press(getByTestId('settings-leave-row'));
     const [,, buttons] = alertSpy.mock.calls[0] as [string, string, { text: string; onPress?: () => void }[]];
-    buttons.find((b) => b.text === 'Leave')?.onPress?.();
+    await act(async () => { buttons.find((b) => b.text === 'Leave')?.onPress?.(); });
     await waitFor(() => {
       expect(mockLeaveGroup).toHaveBeenCalledWith({}, 'group-1', 'member-1', true);
     });

@@ -165,6 +165,15 @@ function RootContent() {
     registerToken();
   }, [session?.user.id]);
 
+  // Increment badge when a notification arrives in the foreground
+  useEffect(() => {
+    const sub = Notifications.addNotificationReceivedListener(async () => {
+      const count = await Notifications.getBadgeCountAsync();
+      await Notifications.setBadgeCountAsync(count + 1);
+    });
+    return () => sub.remove();
+  }, []);
+
   // Clear badge when app comes to foreground
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
