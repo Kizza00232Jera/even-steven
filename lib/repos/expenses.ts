@@ -17,6 +17,7 @@ export interface CreateExpenseParams {
   split_method: 'equal' | 'unequal' | 'percentage';
   expense_date: string;
   receipt_url?: string | null;
+  base_currency_amount?: number;
 }
 
 export async function createExpense(
@@ -25,17 +26,18 @@ export async function createExpense(
   splits: Split[]
 ): Promise<Expense> {
   const { data: expenseId, error } = await client.rpc('create_expense', {
-    p_group_id:     params.group_id,
-    p_title:        params.title,
-    p_description:  params.description ?? null,
-    p_amount:       params.amount,
-    p_currency:     params.currency,
-    p_category:     params.category,
-    p_payer_id:     params.payer_id,
-    p_split_method: params.split_method,
-    p_expense_date: params.expense_date,
-    p_receipt_url:  params.receipt_url ?? null,
-    p_splits:       splits.map((s) => ({ memberId: s.memberId, share: s.share })),
+    p_group_id:             params.group_id,
+    p_title:                params.title,
+    p_description:          params.description ?? null,
+    p_amount:               params.amount,
+    p_currency:             params.currency,
+    p_category:             params.category,
+    p_payer_id:             params.payer_id,
+    p_split_method:         params.split_method,
+    p_expense_date:         params.expense_date,
+    p_receipt_url:          params.receipt_url ?? null,
+    p_splits:               splits.map((s) => ({ memberId: s.memberId, share: s.share, baseShare: s.baseShare ?? s.share })),
+    p_base_currency_amount: params.base_currency_amount ?? params.amount,
   });
 
   if (error) throw error;

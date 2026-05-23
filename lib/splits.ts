@@ -1,6 +1,7 @@
 export interface Split {
   memberId: string;
   share: number;
+  baseShare?: number;
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;

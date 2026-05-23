@@ -186,6 +186,20 @@ export default function AddExpenseScreen() {
     return () => clearTimeout(t);
   }, []);
 
+  // ── Fetch group base currency ───────────────────────────────────────────────
+  const { data: groupBaseCurrency } = useQuery<string>({
+    queryKey: ['group-currency', groupId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('groups')
+        .select('base_currency')
+        .eq('id', groupId)
+        .single();
+      if (error) throw error;
+      return data.base_currency;
+    },
+  });
+
   // ── Fetch group members ─────────────────────────────────────────────────────
   const { data: members = [] } = useQuery<GroupMember[]>({
     queryKey: ['group-members', groupId],
@@ -339,6 +353,17 @@ export default function AddExpenseScreen() {
       );
     }
 
+    // Compute base-currency amount for balance tracking
+    const baseCurrency = (groupBaseCurrency ?? currency) as Currency;
+    let baseCurrencyAmount = amount;
+    if (rates && currency !== baseCurrency) {
+      try { baseCurrencyAmount = convert(amount, currency, baseCurrency, rates); } catch { /* fallback to raw amount */ }
+    }
+    const splitsWithBase = splits.map((s) => ({
+      ...s,
+      baseShare: amount > 0 ? (s.share / amount) * baseCurrencyAmount : s.share,
+    }));
+
     setIsSaving(true);
     try {
       let receipt_url: string | null = null;
@@ -359,8 +384,9 @@ export default function AddExpenseScreen() {
           split_method: splitMode,
           expense_date: date,
           receipt_url,
+          base_currency_amount: baseCurrencyAmount,
         },
-        splits
+        splitsWithBase
       );
       hapticOnExpenseSaved();
       logActivityEvent(supabase, {

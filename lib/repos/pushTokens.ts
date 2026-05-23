@@ -10,8 +10,11 @@ export async function upsertPushToken(
   token: string,
   platform: string | null
 ): Promise<void> {
-  await client.from('push_tokens').delete().eq('user_id', userId);
-  const { error } = await client.from('push_tokens').insert({ user_id: userId, token, platform });
+  const { error } = await client.rpc('upsert_push_token', {
+    p_user_id:  userId,
+    p_token:    token,
+    p_platform: platform,
+  });
   if (error) throw error;
 }
 
