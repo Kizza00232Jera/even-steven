@@ -1,7 +1,8 @@
 import '../global.css';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'nativewind';
+import { useColorScheme, vars } from 'nativewind';
+import { Colors } from '../constants/colors';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   useFonts,
@@ -49,6 +50,27 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 configureGoogleSignIn();
+
+const themeVars = {
+  dark: vars({
+    '--color-background': Colors.dark.background,
+    '--color-surface': Colors.dark.surface,
+    '--color-surface-2': Colors.dark.surface2,
+    '--color-text-primary': Colors.dark.textPrimary,
+    '--color-text-secondary': Colors.dark.textSecondary,
+    '--color-text-tertiary': Colors.dark.textTertiary,
+    '--color-border': Colors.dark.border,
+  }),
+  light: vars({
+    '--color-background': Colors.light.background,
+    '--color-surface': Colors.light.surface,
+    '--color-surface-2': Colors.light.surface2,
+    '--color-text-primary': Colors.light.textPrimary,
+    '--color-text-secondary': Colors.light.textSecondary,
+    '--color-text-tertiary': Colors.light.textTertiary,
+    '--color-border': Colors.light.border,
+  }),
+};
 
 function NavigationGuard() {
   const router = useRouter();
@@ -211,7 +233,7 @@ function RootContent() {
   return (
     <>
       <NavigationGuard />
-      <View style={{ flex: 1 }}>
+      <View style={[{ flex: 1 }, themeVars[colorScheme ?? 'light']]}>
         <OfflineBanner isOnline={isOnline} />
         <Stack screenOptions={{ headerShown: false }} />
       </View>

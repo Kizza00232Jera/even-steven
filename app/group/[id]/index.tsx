@@ -525,7 +525,7 @@ function ExpensesTab({ groupId, currentMemberId }: ExpensesTabProps) {
         testID="filter-pill-row"
         horizontal
         showsHorizontalScrollIndicator={false}
-        className="flex-shrink-0"
+        style={{ flexGrow: 0, flexShrink: 0 }}
       >
         <View className="flex-row px-4 py-3 gap-2">
           {filters.map((f) => {
