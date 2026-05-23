@@ -46,8 +46,11 @@ jest.mock('expo-router', () => ({
 
 jest.mock('../../../lib/repos/expenses', () => ({
   fetchGroupExpenses: (...args: unknown[]) => mockFetchGroupExpenses(...args),
+  fetchGroupMembers: jest.fn(() => Promise.resolve([])),
+  fetchExpenseParticipants: jest.fn(() => Promise.resolve([])),
   hasGroupSettlements: (...args: unknown[]) => mockHasGroupSettlements(...args),
   updateExpenseMetadata: (...args: unknown[]) => mockUpdateExpenseMetadata(...args),
+  updateExpenseFinancial: jest.fn(() => Promise.resolve()),
   deleteExpense: (...args: unknown[]) => mockDeleteExpense(...args),
   uploadReceipt: (...args: unknown[]) => mockUploadReceipt(...args),
 }));
@@ -85,8 +88,19 @@ jest.mock('../../../hooks/useToast', () => ({
   useToast: () => ({ success: jest.fn(), error: jest.fn(), info: jest.fn() }),
 }));
 
+const MOCK_MEMBERS = [
+  { id: PAYER_MEMBER_ID, user_id: CURRENT_USER_ID, group_id: GROUP_ID, display_name: 'Alice', role: 'member', joined_at: '2026-05-01', avatar_url: null, google_name: null },
+  { id: OTHER_MEMBER_ID, user_id: 'user-2', group_id: GROUP_ID, display_name: 'Bob', role: 'member', joined_at: '2026-05-01', avatar_url: null, google_name: null },
+];
+
 jest.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
+  useQuery: ({ queryKey }: { queryKey: string[] }) => {
+    if (queryKey[0] === 'group-members-raw') {
+      return { data: MOCK_MEMBERS };
+    }
+    return { data: undefined };
+  },
 }));
 
 jest.mock('../../../lib/haptics', () => ({

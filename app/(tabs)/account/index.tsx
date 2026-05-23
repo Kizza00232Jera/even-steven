@@ -77,6 +77,7 @@ export default function AccountScreen() {
   const { colorScheme } = useColorScheme();
   const placeholderColor = colorScheme === 'dark' ? Colors.dark.textTertiary : Colors.light.textTertiary;
 
+
   const userId = session?.user.id ?? '';
 
   const { data: notifPrefs, refetch: refetchPrefs } = useQuery({
@@ -451,6 +452,7 @@ export default function AccountScreen() {
               </View>
             </View>
           </View>
+
 
           {/* Notifications */}
           <Text className="font-body text-xs text-text-tertiary uppercase tracking-wide px-1 mb-2">

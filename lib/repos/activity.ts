@@ -33,6 +33,7 @@ type ActivityEventRow = {
   group: GroupJoin;
 };
 
+
 export async function fetchActivityFeed(
   client: SupabaseClient<Database>,
   { groupId, limit = 10, offset = 0 }: FetchActivityOptions
