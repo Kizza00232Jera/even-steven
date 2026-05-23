@@ -7,6 +7,10 @@ const mockPush = jest.fn();
 const mockCreateGroup = jest.fn();
 const mockInvalidateQueries = jest.fn();
 
+let mockProfile: { display_name: string; preferred_currency?: string } = {
+  display_name: 'Test User',
+};
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({ back: mockBack, push: mockPush }),
 }));
@@ -22,7 +26,7 @@ jest.mock('../../../store/auth', () => ({
     session: {
       user: { id: 'user-1', email: 'test@example.com' },
     },
-    profile: { display_name: 'Test User' },
+    profile: mockProfile,
   }),
 }));
 
@@ -59,9 +63,15 @@ jest.mock('nativewind', () => ({
   useColorScheme: () => ({ colorScheme: 'dark' }),
 }));
 
+jest.mock('@react-native-community/datetimepicker', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockCreateGroup.mockResolvedValue({ id: 'group-123', name: 'Test Group' });
+  mockProfile = { display_name: 'Test User' };
 });
 
 describe('CreateGroupScreen — Step 1 (Type selection)', () => {
@@ -133,15 +143,38 @@ describe('CreateGroupScreen — Step 2 (Details)', () => {
     expect(queryByTestId('end-date-input')).toBeNull();
   });
 
-  it('Trip Next remains disabled until both dates are filled', () => {
+  it('Trip Next enables once name is entered (dates are pre-initialized)', () => {
     const { getByTestId, getByPlaceholderText } = advanceToStep2('Trip');
-    fireEvent.changeText(getByPlaceholderText('Group name'), 'Ski Trip');
-    // Only start date filled
-    fireEvent.changeText(getByTestId('start-date-input'), '2026-12-01');
     expect(getByTestId('next-button').props.accessibilityState?.disabled).toBe(true);
-    // End date filled too
-    fireEvent.changeText(getByTestId('end-date-input'), '2026-12-10');
+    fireEvent.changeText(getByPlaceholderText('Group name'), 'Ski Trip');
     expect(getByTestId('next-button').props.accessibilityState?.disabled).not.toBe(true);
+  });
+
+  it('Trip date fields are tappable buttons (not free-text inputs)', () => {
+    const { getByTestId } = advanceToStep2('Trip');
+    // TextInputs have onChangeText; buttons do not
+    expect(getByTestId('start-date-input').props.onChangeText).toBeUndefined();
+    expect(getByTestId('end-date-input').props.onChangeText).toBeUndefined();
+    // They must be pressable (no throw)
+    expect(() => fireEvent.press(getByTestId('start-date-input'))).not.toThrow();
+    expect(() => fireEvent.press(getByTestId('end-date-input'))).not.toThrow();
+  });
+
+  it('defaults currency to EUR when profile has no preferred_currency', () => {
+    mockProfile = { display_name: 'Test User' };
+    const { getByTestId } = advanceToStep2();
+    expect(getByTestId('currency-EUR').props.accessibilityState?.selected).toBe(true);
+  });
+
+  it('pre-selects currency from profile preferred_currency', () => {
+    mockProfile = { display_name: 'Test User', preferred_currency: 'SEK' };
+    const { getByTestId } = advanceToStep2();
+    expect(getByTestId('currency-SEK').props.accessibilityState?.selected).toBe(true);
+  });
+
+  it('shows Back label on step 2', () => {
+    const { getByText } = advanceToStep2();
+    expect(getByText('Back')).toBeTruthy();
   });
 });
 
@@ -211,5 +244,10 @@ describe('CreateGroupScreen — Step 3 (Members & Create)', () => {
         ['friend@example.com'],
       );
     });
+  });
+
+  it('shows Back label on step 3', () => {
+    const { getByText } = advanceToStep3();
+    expect(getByText('Back')).toBeTruthy();
   });
 });
