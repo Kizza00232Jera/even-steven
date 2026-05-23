@@ -82,8 +82,8 @@ function formatDateRange(start: string, end: string): string {
   return `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} – ${endStr}`;
 }
 
-function balanceDisplay(balance: number, currency: Currency): { text: string; color: string } {
-  if (balance === 0) return { text: 'Settled', color: Colors.dark.textSecondary };
+function balanceDisplay(balance: number, currency: Currency, theme: typeof Colors.dark): { text: string; color: string } {
+  if (balance === 0) return { text: 'Settled', color: theme.textSecondary };
   if (balance > 0) return { text: `You're owed ${format(balance, currency)}`, color: Colors.accent };
   return { text: `You owe ${format(Math.abs(balance), currency)}`, color: Colors.destructive };
 }
@@ -133,6 +133,7 @@ function GroupCard({ group, memberPreviews, onPress, onMenuPress }: GroupCardPro
   const { text: balanceText, color: balanceColor } = balanceDisplay(
     group.balance,
     group.base_currency as Currency,
+    theme,
   );
 
   return (
@@ -476,6 +477,7 @@ function useGroups(userId: string) {
 export default function GroupsScreen() {
   const router = useRouter();
   const { colorScheme } = useColorScheme();
+  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
   const { session, profile, setProfile } = useAuthStore();
   const queryClient = useQueryClient();
   const userId = session?.user.id ?? '';
@@ -631,7 +633,7 @@ export default function GroupsScreen() {
             >
               <Filter
                 size={18}
-                color={activeFilterCount > 0 ? Colors.accent : Colors.dark.textSecondary}
+                color={activeFilterCount > 0 ? Colors.accent : theme.textSecondary}
                 strokeWidth={1.5}
               />
             </TouchableOpacity>
