@@ -163,23 +163,18 @@ async function sendInviteEmailAsync(
   });
 }
 
-// Silently succeeds if already a member (unique-constraint duplicate).
 export async function acceptInvite(
   client: SupabaseClient<Database>,
   groupId: string,
   userId: string,
   email: string,
 ): Promise<string> {
-  const { error } = await client
-    .from('group_members')
-    .insert({
-      group_id: groupId,
-      user_id: userId,
-      email,
-      role: 'member',
-      status: 'active',
-    });
+  const { error } = await client.rpc('accept_invite', {
+    p_group_id: groupId,
+    p_user_id:  userId,
+    p_email:    email,
+  });
 
-  if (error && error.code !== '23505') throw error;
+  if (error) throw error;
   return groupId;
 }

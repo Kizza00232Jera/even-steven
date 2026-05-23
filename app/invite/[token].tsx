@@ -4,6 +4,7 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -98,7 +99,11 @@ export default function InviteScreen() {
         }
       }).catch(() => {});
       router.replace(`/group/${details.group_id}` as never);
-    } catch {
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'message' in err
+        ? String((err as { message: unknown }).message)
+        : String(err);
+      Alert.alert('Could not join group', msg);
       setIsJoining(false);
     }
   }
