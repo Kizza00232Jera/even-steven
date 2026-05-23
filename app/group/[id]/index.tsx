@@ -520,33 +520,36 @@ function ExpensesTab({ groupId, currentMemberId }: ExpensesTabProps) {
     <View className="flex-1">
       {/* Filter chips */}
       <ScrollView
+        testID="filter-pill-row"
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}
+        className="flex-shrink-0"
       >
-        {filters.map((f) => {
-          const isActive = activeFilter === f.key;
-          return (
-            <TouchableOpacity
-              key={f.key}
-              testID={f.testID}
-              accessibilityState={{ selected: isActive }}
-              onPress={() => setActiveFilter(f.key)}
-              className="px-4 py-1.5 rounded-full border"
-              style={{
-                backgroundColor: isActive ? Colors.accent : 'transparent',
-                borderColor: isActive ? Colors.accent : theme.border,
-              }}
-            >
-              <Text
-                className="font-body text-sm font-medium"
-                style={{ color: isActive ? '#ffffff' : theme.textSecondary }}
+        <View className="flex-row px-4 py-3 gap-2">
+          {filters.map((f) => {
+            const isActive = activeFilter === f.key;
+            return (
+              <TouchableOpacity
+                key={f.key}
+                testID={f.testID}
+                accessibilityState={{ selected: isActive }}
+                onPress={() => setActiveFilter(f.key)}
+                className="px-4 py-1.5 rounded-full border"
+                style={{
+                  backgroundColor: isActive ? Colors.accent : 'transparent',
+                  borderColor: isActive ? Colors.accent : theme.border,
+                }}
               >
-                {f.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+                <Text
+                  className="font-body text-sm font-medium"
+                  style={{ color: isActive ? '#ffffff' : theme.textSecondary }}
+                >
+                  {f.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </ScrollView>
 
       {/* Expense list */}
