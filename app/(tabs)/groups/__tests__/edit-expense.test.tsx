@@ -9,12 +9,16 @@ const mockBack = jest.fn();
 const mockFetchGroupExpenses = jest.fn();
 const mockHasGroupSettlements = jest.fn();
 const mockUpdateExpenseMetadata = jest.fn();
+const mockUpdateExpenseFinancial = jest.fn();
 const mockDeleteExpense = jest.fn();
 const mockInvalidateQueries = jest.fn();
 const mockUploadReceipt = jest.fn();
 const mockManipulateAsync = jest.fn();
 const mockLaunchCameraAsync = jest.fn();
 const mockLaunchImageLibraryAsync = jest.fn();
+
+let mockGroupCurrency: string | undefined;
+let mockRates: Record<string, number> | null = { USD: 1, EUR: 0.9, DKK: 7, SEK: 10 };
 
 const EXPENSE_ID = 'expense-1';
 const GROUP_ID = 'group-1';
@@ -50,9 +54,16 @@ jest.mock('../../../../lib/repos/expenses', () => ({
   fetchExpenseParticipants: jest.fn(() => Promise.resolve([])),
   hasGroupSettlements: (...args: unknown[]) => mockHasGroupSettlements(...args),
   updateExpenseMetadata: (...args: unknown[]) => mockUpdateExpenseMetadata(...args),
-  updateExpenseFinancial: jest.fn(() => Promise.resolve()),
+  updateExpenseFinancial: (...args: unknown[]) => mockUpdateExpenseFinancial(...args),
   deleteExpense: (...args: unknown[]) => mockDeleteExpense(...args),
   uploadReceipt: (...args: unknown[]) => mockUploadReceipt(...args),
+}));
+
+jest.mock('../../../../store/rates', () => ({
+  useRatesStore: () => ({
+    rates: mockRates,
+    fetchRates: jest.fn(),
+  }),
 }));
 
 jest.mock('../../../../lib/repos/activity', () => ({
@@ -98,6 +109,9 @@ jest.mock('@tanstack/react-query', () => ({
   useQuery: ({ queryKey }: { queryKey: string[] }) => {
     if (queryKey[0] === 'group-members-raw') {
       return { data: MOCK_MEMBERS };
+    }
+    if (queryKey[0] === 'group-currency') {
+      return { data: mockGroupCurrency };
     }
     return { data: undefined };
   },
@@ -145,9 +159,12 @@ async function waitForLoaded(getByTestId: (id: string) => unknown) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockGroupCurrency = undefined;
+  mockRates = { USD: 1, EUR: 0.9, DKK: 7, SEK: 10 };
   mockFetchGroupExpenses.mockResolvedValue([BASE_EXPENSE]);
   mockHasGroupSettlements.mockResolvedValue(false);
   mockUpdateExpenseMetadata.mockResolvedValue(undefined);
+  mockUpdateExpenseFinancial.mockResolvedValue(undefined);
   mockDeleteExpense.mockResolvedValue(undefined);
   mockUploadReceipt.mockResolvedValue('https://example.com/receipt.jpg');
   mockManipulateAsync.mockResolvedValue({ uri: 'compressed://picked.jpg' });
@@ -442,5 +459,94 @@ describe('EditExpenseScreen — receipt attach and remove', () => {
     fireEvent.press(getByTestId('save-button'));
     await waitFor(() => expect(mockUpdateExpenseMetadata).toHaveBeenCalled());
     expect(mockUploadReceipt).not.toHaveBeenCalled();
+  });
+});
+
+describe('EditExpenseScreen — base currency amount on financial edit', () => {
+  it('passes baseCurrencyAmount converted to group base currency when currencies differ', async () => {
+    mockGroupCurrency = 'DKK';
+    const { getByTestId } = render(<EditExpenseScreen />);
+    await waitForLoaded(getByTestId);
+
+    fireEvent.changeText(getByTestId('amount-input'), '100');
+    fireEvent.press(getByTestId('save-button'));
+
+    await waitFor(() => {
+      expect(mockUpdateExpenseFinancial).toHaveBeenCalledWith(
+        expect.anything(),
+        EXPENSE_ID,
+        expect.objectContaining({
+          baseCurrencyAmount: expect.closeTo((100 / 0.9) * 7, 1),
+        })
+      );
+    });
+  });
+
+  it('passes baseCurrencyAmount equal to amount when expense currency matches group base currency', async () => {
+    mockGroupCurrency = 'EUR';
+    const { getByTestId } = render(<EditExpenseScreen />);
+    await waitForLoaded(getByTestId);
+
+    fireEvent.changeText(getByTestId('amount-input'), '75');
+    fireEvent.press(getByTestId('save-button'));
+
+    await waitFor(() => {
+      expect(mockUpdateExpenseFinancial).toHaveBeenCalledWith(
+        expect.anything(),
+        EXPENSE_ID,
+        expect.objectContaining({
+          baseCurrencyAmount: 75,
+        })
+      );
+    });
+  });
+
+  it('falls back to amount when rates are unavailable', async () => {
+    mockGroupCurrency = 'DKK';
+    mockRates = null;
+    const { getByTestId } = render(<EditExpenseScreen />);
+    await waitForLoaded(getByTestId);
+
+    fireEvent.changeText(getByTestId('amount-input'), '60');
+    fireEvent.press(getByTestId('save-button'));
+
+    await waitFor(() => {
+      expect(mockUpdateExpenseFinancial).toHaveBeenCalledWith(
+        expect.anything(),
+        EXPENSE_ID,
+        expect.objectContaining({
+          baseCurrencyAmount: 60,
+        })
+      );
+    });
+  });
+
+  it('splits carry baseShare proportional to baseCurrencyAmount', async () => {
+    mockGroupCurrency = 'DKK';
+    const { getByTestId } = render(<EditExpenseScreen />);
+    await waitForLoaded(getByTestId);
+
+    fireEvent.changeText(getByTestId('amount-input'), '100');
+    fireEvent.press(getByTestId('save-button'));
+
+    await waitFor(() => {
+      const call = mockUpdateExpenseFinancial.mock.calls[0] as [unknown, string, { splits: { baseShare: number }[]; baseCurrencyAmount: number }];
+      const { splits, baseCurrencyAmount } = call[2];
+      // Equal split, 2 participants — each baseShare ≈ baseCurrencyAmount / 2
+      splits.forEach((s) => {
+        expect(s.baseShare).toBeCloseTo(baseCurrencyAmount / 2, 1);
+      });
+    });
+  });
+
+  it('does not call updateExpenseFinancial when only metadata changes', async () => {
+    const { getByTestId } = render(<EditExpenseScreen />);
+    await waitForLoaded(getByTestId);
+
+    fireEvent.changeText(getByTestId('title-input'), 'New Title Only');
+    fireEvent.press(getByTestId('save-button'));
+
+    await waitFor(() => expect(mockUpdateExpenseMetadata).toHaveBeenCalled());
+    expect(mockUpdateExpenseFinancial).not.toHaveBeenCalled();
   });
 });

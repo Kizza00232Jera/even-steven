@@ -228,6 +228,7 @@ export interface UpdateExpenseFinancialParams {
   payerId: string;
   splitMethod: 'equal' | 'unequal' | 'percentage';
   splits: Split[];
+  baseCurrencyAmount?: number;
   currentMemberId?: string;
 }
 
@@ -242,6 +243,7 @@ export async function updateExpenseFinancial(
       payer_id: params.payerId,
       split_method: params.splitMethod,
       is_edited: true,
+      base_currency_amount: params.baseCurrencyAmount ?? params.amount,
       ...(params.currentMemberId ? { last_edited_by: params.currentMemberId } : {}),
     })
     .eq('id', expenseId);
@@ -260,6 +262,7 @@ export async function updateExpenseFinancial(
         expense_id: expenseId,
         member_id: s.memberId,
         share_amount: s.share,
+        base_share_amount: s.baseShare ?? s.share,
       }))
     );
   if (insertError) throw insertError;

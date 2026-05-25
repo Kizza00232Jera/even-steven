@@ -18,6 +18,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../../store/auth';
+import { useRatesStore } from '../../../../store/rates';
 import { logActivityEvent } from '../../../../lib/repos/activity';
 import { sendGroupNotification } from '../../../../lib/notifications';
 import { X, ChevronDown, Check, Trash2, AlertCircle, Paperclip, Lock } from 'lucide-react-native';
@@ -37,6 +38,7 @@ import {
   type ExpenseListItem,
 } from '../../../../lib/repos/expenses';
 import { calculateEqualSplit, calculateUnequalSplit, calculatePercentageSplit } from '../../../../lib/splits';
+import { convert, type Currency } from '../../../../lib/currency';
 import { type Category } from '../../../../lib/categories';
 import { supabase } from '../../../../lib/supabase';
 import { Colors } from '../../../../constants/colors';
@@ -111,6 +113,7 @@ export default function EditExpenseScreen() {
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
   const placeholderColor = theme.textTertiary;
   const { session, profile } = useAuthStore();
+  const { rates, fetchRates } = useRatesStore();
   const currentUserId = session?.user.id;
 
   const [expense, setExpense] = useState<ExpenseListItem | null>(null);
@@ -140,10 +143,25 @@ export default function EditExpenseScreen() {
   const [payerModalVisible, setPayerModalVisible] = useState(false);
   const [financialDirty, setFinancialDirty] = useState(false);
 
+  const { data: groupBaseCurrency } = useQuery<string>({
+    queryKey: ['group-currency', groupId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('groups')
+        .select('base_currency')
+        .eq('id', groupId)
+        .single();
+      if (error) throw error;
+      return data.base_currency;
+    },
+  });
+
   const { data: members = [] } = useQuery<GroupMember[]>({
     queryKey: ['group-members-raw', groupId],
     queryFn: () => fetchGroupMembers(supabase, groupId),
   });
+
+  useEffect(() => { fetchRates(); }, []);
 
   useEffect(() => {
     async function load() {
@@ -338,11 +356,22 @@ export default function EditExpenseScreen() {
             payerId,
           );
         }
+        const expenseCurrency = expense.currency as Currency;
+        const baseCurrency = (groupBaseCurrency ?? expenseCurrency) as Currency;
+        let baseCurrencyAmount = effectiveAmount;
+        if (rates && expenseCurrency !== baseCurrency) {
+          try { baseCurrencyAmount = convert(effectiveAmount, expenseCurrency, baseCurrency, rates); } catch { /* fallback to raw amount */ }
+        }
+        const splitsWithBase = splits.map((s) => ({
+          ...s,
+          baseShare: effectiveAmount > 0 ? (s.share / effectiveAmount) * baseCurrencyAmount : s.share,
+        }));
         await updateExpenseFinancial(supabase, expense.id, {
           amount: effectiveAmount,
           payerId,
           splitMethod: splitMode,
-          splits,
+          splits: splitsWithBase,
+          baseCurrencyAmount,
           currentMemberId: myMember?.id,
         });
       }
