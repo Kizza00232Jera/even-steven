@@ -24,3 +24,6 @@ Thumbs.db
 
 expo-env.d.ts
 # @end expo-cli
+# Firebase
+google-services.json
+GoogleService-Info.plist
