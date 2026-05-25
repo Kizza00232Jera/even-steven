@@ -318,6 +318,21 @@ describe('AddExpenseScreen — save and navigation', () => {
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
   });
 
+  it('passes expense_id in notification metadata after save', async () => {
+    const { sendGroupNotification } = jest.requireMock('../../../../lib/notifications') as { sendGroupNotification: jest.Mock };
+    const { getByTestId } = render(<AddExpenseScreen />);
+    fireEvent.changeText(getByTestId('title-input'), 'Lunch');
+    fireEvent.changeText(getByTestId('amount-input'), '25');
+    fireEvent.press(getByTestId('save-button'));
+    await waitFor(() =>
+      expect(sendGroupNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({ expense_id: 'expense-1' }),
+        })
+      )
+    );
+  });
+
   it('invalidates group expenses query after save', async () => {
     const { getByTestId } = render(<AddExpenseScreen />);
     fireEvent.changeText(getByTestId('title-input'), 'Lunch');

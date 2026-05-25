@@ -358,7 +358,7 @@ export default function EditExpenseScreen() {
           eventType: 'expense_edited',
           groupId,
           actorMemberId: myMember.id,
-          metadata: { title: title.trim() },
+          metadata: { title: title.trim(), expense_id: expense.id },
         });
       }
       queryClient.invalidateQueries({ queryKey: ['expenses', groupId] });
