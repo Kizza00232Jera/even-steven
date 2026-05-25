@@ -23,7 +23,7 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ back: mockBack, push: mockPush, replace: mockReplace }),
 }));
 
-jest.mock('../../../lib/repos/groups', () => ({
+jest.mock('../../../../lib/repos/groups', () => ({
   fetchGroupDetail: jest.fn(),
   renameGroup: (...args: unknown[]) => mockRenameGroup(...args),
   archiveGroup: (...args: unknown[]) => mockArchiveGroup(...args),
@@ -36,15 +36,15 @@ jest.mock('../../../lib/repos/groups', () => ({
   toggleMuteGroup: (...args: unknown[]) => mockToggleMuteGroup(...args),
 }));
 
-jest.mock('../../../lib/supabase', () => ({ supabase: {} }));
+jest.mock('../../../../lib/supabase', () => ({ supabase: {} }));
 
-jest.mock('../../../store/auth', () => ({
+jest.mock('../../../../store/auth', () => ({
   useAuthStore: () => ({
     session: { user: { id: 'user-1' } },
   }),
 }));
 
-jest.mock('../../../hooks/useNetworkStatus', () => ({
+jest.mock('../../../../hooks/useNetworkStatus', () => ({
   useNetworkStatus: () => ({ isOnline: true }),
 }));
 
@@ -403,6 +403,6 @@ describe('GroupSettingsScreen — members navigation', () => {
   it('tapping Members row navigates to members screen', () => {
     const { getByTestId } = render(<GroupSettingsScreen />);
     fireEvent.press(getByTestId('settings-members-row'));
-    expect(mockPush).toHaveBeenCalledWith('/group/group-1/members');
+    expect(mockPush).toHaveBeenCalledWith('/groups/group-1/members');
   });
 });

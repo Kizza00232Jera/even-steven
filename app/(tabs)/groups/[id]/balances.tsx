@@ -13,25 +13,25 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { User, Check, RotateCcw } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import { simplifyDebts, type Settlement } from '../../../lib/debt';
-import { fetchGroupBalances } from '../../../lib/repos/balances';
-import { logActivityEvent } from '../../../lib/repos/activity';
-import { sendGroupNotification } from '../../../lib/notifications';
-import { archiveGroup } from '../../../lib/repos/groups';
+import { simplifyDebts, type Settlement } from '../../../../lib/debt';
+import { fetchGroupBalances } from '../../../../lib/repos/balances';
+import { logActivityEvent } from '../../../../lib/repos/activity';
+import { sendGroupNotification } from '../../../../lib/notifications';
+import { archiveGroup } from '../../../../lib/repos/groups';
 import {
   recordSettlement,
   fetchGroupSettlements,
   voidSettlement,
   type SettlementRecord,
-} from '../../../lib/repos/settlements';
-import { supabase } from '../../../lib/supabase';
-import { format, type Currency } from '../../../lib/currency';
-import { useAuthStore } from '../../../store/auth';
-import { hapticOnSettlementRecorded } from '../../../lib/haptics';
-import { useToast } from '../../../hooks/useToast';
-import { MemberProfileSheet, type MemberProfileTarget } from '../../../components/MemberProfileSheet';
-import { SkeletonBalanceRow } from '../../../components/SkeletonBalanceRow';
-import { Colors } from '../../../constants/colors';
+} from '../../../../lib/repos/settlements';
+import { supabase } from '../../../../lib/supabase';
+import { format, type Currency } from '../../../../lib/currency';
+import { useAuthStore } from '../../../../store/auth';
+import { hapticOnSettlementRecorded } from '../../../../lib/haptics';
+import { useToast } from '../../../../hooks/useToast';
+import { MemberProfileSheet, type MemberProfileTarget } from '../../../../components/MemberProfileSheet';
+import { SkeletonBalanceRow } from '../../../../components/SkeletonBalanceRow';
+import { Colors } from '../../../../constants/colors';
 
 interface SettleUpTarget {
   debtorMemberId: string;

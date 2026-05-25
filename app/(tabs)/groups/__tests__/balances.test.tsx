@@ -10,18 +10,18 @@ const mockVoidSettlement = jest.fn();
 const mockShowToast = jest.fn();
 const mockHaptic = jest.fn();
 
-jest.mock('../../../lib/repos/balances', () => ({
+jest.mock('../../../../lib/repos/balances', () => ({
   fetchGroupBalances: (...args: unknown[]) => mockFetchGroupBalances(...args),
 }));
 
-jest.mock('../../../lib/repos/settlements', () => ({
+jest.mock('../../../../lib/repos/settlements', () => ({
   recordSettlement: (...args: unknown[]) => mockRecordSettlement(...args),
   fetchGroupSettlements: (...args: unknown[]) => mockFetchGroupSettlements(...args),
   voidSettlement: (...args: unknown[]) => mockVoidSettlement(...args),
 }));
 
 // Inline channel mock — no outer variable reference (jest.mock is hoisted)
-jest.mock('../../../lib/supabase', () => ({
+jest.mock('../../../../lib/supabase', () => ({
   supabase: {
     channel: jest.fn(() => ({
       on: jest.fn(function (this: unknown) { return this; }),
@@ -31,21 +31,21 @@ jest.mock('../../../lib/supabase', () => ({
   },
 }));
 
-jest.mock('../../../lib/haptics', () => ({
+jest.mock('../../../../lib/haptics', () => ({
   hapticOnSettlementRecorded: () => mockHaptic(),
 }));
 
-jest.mock('../../../store/auth', () => ({
+jest.mock('../../../../store/auth', () => ({
   useAuthStore: () => ({
     session: { user: { id: 'user-1' } },
   }),
 }));
 
-jest.mock('../../../lib/repos/activity', () => ({
+jest.mock('../../../../lib/repos/activity', () => ({
   logActivityEvent: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('../../../hooks/useToast', () => ({
+jest.mock('../../../../hooks/useToast', () => ({
   useToast: () => ({ success: mockShowToast, error: mockShowToast, info: jest.fn() }),
 }));
 
@@ -53,11 +53,11 @@ jest.mock('nativewind', () => ({
   useColorScheme: () => ({ colorScheme: 'dark' }),
 }));
 
-jest.mock('../../../lib/notifications', () => ({
+jest.mock('../../../../lib/notifications', () => ({
   sendGroupNotification: jest.fn(),
 }));
 
-jest.mock('../../../lib/repos/groups', () => ({
+jest.mock('../../../../lib/repos/groups', () => ({
   archiveGroup: jest.fn().mockResolvedValue(undefined),
 }));
 

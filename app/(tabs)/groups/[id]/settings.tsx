@@ -34,9 +34,9 @@ import {
   ArchiveRestore,
   Trash2,
 } from 'lucide-react-native';
-import { useAuthStore } from '../../../store/auth';
-import { supabase } from '../../../lib/supabase';
-import { Colors } from '../../../constants/colors';
+import { useAuthStore } from '../../../../store/auth';
+import { supabase } from '../../../../lib/supabase';
+import { Colors } from '../../../../constants/colors';
 import {
   fetchGroupDetail,
   renameGroup,
@@ -48,9 +48,9 @@ import {
   updateSettlementVisibility,
   extendTripEndDate,
   toggleMuteGroup,
-} from '../../../lib/repos/groups';
-import { logActivityEvent } from '../../../lib/repos/activity';
-import { getOrCreateInviteToken, resetInviteToken } from '../../../lib/repos/invites';
+} from '../../../../lib/repos/groups';
+import { logActivityEvent } from '../../../../lib/repos/activity';
+import { getOrCreateInviteToken, resetInviteToken } from '../../../../lib/repos/invites';
 
 const INVITE_BASE_URL = 'https://even-steven-five.vercel.app/invite';
 
@@ -410,7 +410,7 @@ export default function GroupSettingsScreen() {
         <View className="bg-surface rounded-2xl mx-4 border border-border overflow-hidden">
           <TouchableOpacity
             testID="settings-members-row"
-            onPress={() => router.push(`/group/${id}/members`)}
+            onPress={() => router.push(`/groups/${id}/members`)}
             className={rowClass}
             activeOpacity={0.7}
           >

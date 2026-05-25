@@ -131,7 +131,7 @@ export default function InviteScreen() {
         }
       } catch { /* non-critical */ }
 
-      router.replace(`/group/${details.group_id}` as never);
+      router.replace(`/groups/${details.group_id}` as never);
     } catch (err: unknown) {
       const msg = err && typeof err === 'object' && 'message' in err
         ? String((err as { message: unknown }).message)

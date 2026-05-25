@@ -9,11 +9,11 @@ import Svg, { Circle, G } from 'react-native-svg';
 import { useQuery } from '@tanstack/react-query';
 import { useColorScheme } from 'nativewind';
 import { User } from 'lucide-react-native';
-import { fetchGroupSummary, type CategoryBreakdown } from '../../../lib/repos/summary';
-import { supabase } from '../../../lib/supabase';
-import { format } from '../../../lib/currency';
-import { Skeleton } from '../../../components/Skeleton';
-import { Colors } from '../../../constants/colors';
+import { fetchGroupSummary, type CategoryBreakdown } from '../../../../lib/repos/summary';
+import { supabase } from '../../../../lib/supabase';
+import { format } from '../../../../lib/currency';
+import { Skeleton } from '../../../../components/Skeleton';
+import { Colors } from '../../../../constants/colors';
 
 interface SummaryTabProps {
   groupId: string;

@@ -7,11 +7,11 @@ const mockFetchGroupSummary = jest.fn();
 const mockChannelOn = jest.fn(function (this: unknown) { return this; });
 const mockChannelSubscribe = jest.fn(function (this: unknown) { return this; });
 
-jest.mock('../../../lib/repos/summary', () => ({
+jest.mock('../../../../lib/repos/summary', () => ({
   fetchGroupSummary: (...args: unknown[]) => mockFetchGroupSummary(...args),
 }));
 
-jest.mock('../../../lib/supabase', () => ({
+jest.mock('../../../../lib/supabase', () => ({
   supabase: {
     channel: jest.fn(() => ({
       on: mockChannelOn,

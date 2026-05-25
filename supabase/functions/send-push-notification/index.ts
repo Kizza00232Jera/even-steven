@@ -51,35 +51,35 @@ function buildContent(payload: Payload, groupName: string, actorName: string): N
       return {
         title: 'New expense',
         body: `${actorName} added "${meta.title ?? 'an expense'}"`,
-        route: `/group/${groupId}`,
+        route: `/groups/${groupId}`,
         prefKey: 'new_expense',
       };
     case 'expense_edited':
       return {
         title: 'Expense edited',
         body: `${actorName} edited "${meta.title ?? 'an expense'}"`,
-        route: `/group/${groupId}`,
+        route: `/groups/${groupId}`,
         prefKey: 'expense_edited',
       };
     case 'expense_deleted':
       return {
         title: 'Expense deleted',
         body: `${actorName} deleted "${meta.title ?? 'an expense'}"`,
-        route: `/group/${groupId}`,
+        route: `/groups/${groupId}`,
         prefKey: 'expense_deleted',
       };
     case 'settlement_recorded':
       return {
         title: 'Payment recorded',
         body: `${actorName} recorded a payment`,
-        route: `/group/${groupId}/balances`,
+        route: `/groups/${groupId}/balances`,
         prefKey: 'payment_in_group',
       };
     case 'payment_received':
       return {
         title: 'Payment received',
         body: `${actorName} recorded a payment to you`,
-        route: `/group/${groupId}/balances`,
+        route: `/groups/${groupId}/balances`,
         prefKey: 'payment_received',
         onlyPayee: true,
       };
@@ -87,49 +87,49 @@ function buildContent(payload: Payload, groupName: string, actorName: string): N
       return {
         title: `${actorName} joined`,
         body: `${actorName} joined ${groupName}`,
-        route: `/group/${groupId}/members`,
+        route: `/groups/${groupId}/members`,
         prefKey: 'someone_joins_group',
       };
     case 'member_added':
       return {
         title: 'New member',
         body: `${actorName} was added to ${groupName}`,
-        route: `/group/${groupId}/members`,
+        route: `/groups/${groupId}/members`,
         prefKey: 'someone_added',
       };
     case 'member_removed':
       return {
         title: 'Member removed',
         body: `${actorName} was removed from ${groupName}`,
-        route: `/group/${groupId}/members`,
+        route: `/groups/${groupId}/members`,
         prefKey: 'member_removed',
       };
     case 'trip_expired':
       return {
         title: 'Trip ended',
         body: `${groupName} has expired`,
-        route: `/group/${groupId}`,
+        route: `/groups/${groupId}`,
         prefKey: 'trip_expired',
       };
     case 'trip_expiry_warning':
       return {
         title: 'Trip ending soon',
         body: `${groupName} ends in 3 days`,
-        route: `/group/${groupId}`,
+        route: `/groups/${groupId}`,
         prefKey: 'trip_end_approaching',
       };
     case 'trip_ends_today':
       return {
         title: 'Trip ends today',
         body: `${groupName} ends today`,
-        route: `/group/${groupId}`,
+        route: `/groups/${groupId}`,
         prefKey: 'trip_ends_today',
       };
     case 'balance_zero':
       return {
         title: 'Balance settled',
         body: `Your balance in ${groupName} is now zero`,
-        route: `/group/${groupId}/balances`,
+        route: `/groups/${groupId}/balances`,
         prefKey: 'balance_reaches_zero',
         onlyPayee: true,
       };
@@ -173,7 +173,7 @@ async function handleScheduled(
     const body = eventType === 'trip_ends_today'
       ? `${group.name} ends today`
       : `${group.name} ends in 3 days`;
-    const route = `/group/${group.id}`;
+    const route = `/groups/${group.id}`;
 
     for (const member of members) {
       if (!member.user_id || member.is_muted) continue;

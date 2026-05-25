@@ -251,7 +251,7 @@ describe('ActivityScreen', () => {
     const { getByTestId } = render(<ActivityScreen />);
     await waitFor(() => expect(getByTestId('activity-row-ev-1')).toBeTruthy());
     fireEvent.press(getByTestId('activity-row-ev-1'));
-    expect(mockRouterPush).toHaveBeenCalledWith('/group/g-1/expense-detail?expenseId=exp-42');
+    expect(mockRouterPush).toHaveBeenCalledWith('/groups/g-1/expense-detail?expenseId=exp-42');
   });
 
   it('navigates to expense detail when tapping an expense_edited row with expense_id', async () => {
@@ -267,7 +267,7 @@ describe('ActivityScreen', () => {
     const { getByTestId } = render(<ActivityScreen />);
     await waitFor(() => expect(getByTestId('activity-row-ev-1')).toBeTruthy());
     fireEvent.press(getByTestId('activity-row-ev-1'));
-    expect(mockRouterPush).toHaveBeenCalledWith('/group/g-1/expense-detail?expenseId=exp-99');
+    expect(mockRouterPush).toHaveBeenCalledWith('/groups/g-1/expense-detail?expenseId=exp-99');
   });
 
   it('does not navigate when tapping an expense_added row without expense_id', async () => {

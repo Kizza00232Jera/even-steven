@@ -11,15 +11,15 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ id: 'group-1' }),
 }));
 
-jest.mock('../../../lib/repos/groups', () => ({
+jest.mock('../../../../lib/repos/groups', () => ({
   fetchGroupDetail: jest.fn(),
 }));
 
-jest.mock('../../../lib/repos/invites', () => ({
+jest.mock('../../../../lib/repos/invites', () => ({
   getOrCreateInviteToken: jest.fn().mockResolvedValue('tok'),
 }));
 
-jest.mock('../../../hooks/useToast', () => ({
+jest.mock('../../../../hooks/useToast', () => ({
   useToast: () => ({ info: jest.fn(), success: jest.fn(), error: jest.fn() }),
 }));
 
@@ -27,7 +27,7 @@ jest.mock('../[id]/balances', () => ({
   BalancesTab: () => null,
 }));
 
-jest.mock('../../../lib/supabase', () => ({
+jest.mock('../../../../lib/supabase', () => ({
   supabase: {
     channel: jest.fn(() => ({
       on: jest.fn(function (this: unknown) { return this; }),
@@ -37,7 +37,7 @@ jest.mock('../../../lib/supabase', () => ({
   },
 }));
 
-jest.mock('../../../store/auth', () => ({
+jest.mock('../../../../store/auth', () => ({
   useAuthStore: () => ({
     session: { user: { id: 'user-1', email: 'admin@example.com' } },
   }),
@@ -59,19 +59,19 @@ jest.mock('nativewind', () => ({
   useColorScheme: () => ({ colorScheme: 'dark' }),
 }));
 
-jest.mock('../../../components/ErrorState', () => ({
+jest.mock('../../../../components/ErrorState', () => ({
   ErrorState: () => null,
 }));
 
-jest.mock('../../../components/RemovedMemberState', () => ({
+jest.mock('../../../../components/RemovedMemberState', () => ({
   RemovedMemberState: () => null,
 }));
 
-jest.mock('../../../components/SkeletonExpenseCard', () => ({
+jest.mock('../../../../components/SkeletonExpenseCard', () => ({
   SkeletonExpenseCard: () => null,
 }));
 
-jest.mock('../../../components/SkeletonBalanceRow', () => ({
+jest.mock('../../../../components/SkeletonBalanceRow', () => ({
   SkeletonBalanceRow: () => null,
 }));
 
@@ -106,6 +106,6 @@ describe('GroupDetailScreen — settings navigation', () => {
   it('navigates to settings screen on gear icon press', () => {
     const { getByTestId } = render(<GroupDetailScreen />);
     fireEvent.press(getByTestId('settings-button'));
-    expect(mockPush).toHaveBeenCalledWith('/group/group-1/settings');
+    expect(mockPush).toHaveBeenCalledWith('/groups/group-1/settings');
   });
 });

@@ -15,24 +15,24 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useColorScheme } from 'nativewind';
 import { Settings, ChevronLeft, Plus, Share2 } from 'lucide-react-native';
-import { SkeletonExpenseCard } from '../../../components/SkeletonExpenseCard';
-import { SkeletonBalanceRow } from '../../../components/SkeletonBalanceRow';
-import { ErrorState } from '../../../components/ErrorState';
-import { RemovedMemberState } from '../../../components/RemovedMemberState';
-import { Colors } from '../../../constants/colors';
-import { fetchGroupDetail } from '../../../lib/repos/groups';
-import { getOrCreateInviteToken } from '../../../lib/repos/invites';
-import { fetchGroupExpenses, type ExpenseListItem } from '../../../lib/repos/expenses';
-import { fetchGroupBalances, type GroupBalanceData } from '../../../lib/repos/balances';
-import { format } from '../../../lib/currency';
-import type { Currency } from '../../../lib/currency';
-import { supabase } from '../../../lib/supabase';
-import { useAuthStore } from '../../../store/auth';
-import { useToast } from '../../../hooks/useToast';
-import { useRealtime } from '../../../hooks/useRealtime';
+import { SkeletonExpenseCard } from '../../../../components/SkeletonExpenseCard';
+import { SkeletonBalanceRow } from '../../../../components/SkeletonBalanceRow';
+import { ErrorState } from '../../../../components/ErrorState';
+import { RemovedMemberState } from '../../../../components/RemovedMemberState';
+import { Colors } from '../../../../constants/colors';
+import { fetchGroupDetail } from '../../../../lib/repos/groups';
+import { getOrCreateInviteToken } from '../../../../lib/repos/invites';
+import { fetchGroupExpenses, type ExpenseListItem } from '../../../../lib/repos/expenses';
+import { fetchGroupBalances, type GroupBalanceData } from '../../../../lib/repos/balances';
+import { format } from '../../../../lib/currency';
+import type { Currency } from '../../../../lib/currency';
+import { supabase } from '../../../../lib/supabase';
+import { useAuthStore } from '../../../../store/auth';
+import { useToast } from '../../../../hooks/useToast';
+import { useRealtime } from '../../../../hooks/useRealtime';
 import { BalancesTab } from './balances';
 import { SummaryTab } from './summary';
-import type { GroupDetail } from '../../../lib/repos/groups';
+import type { GroupDetail } from '../../../../lib/repos/groups';
 
 const INVITE_BASE = 'even-steven.vercel.app/invite';
 
@@ -67,7 +67,7 @@ function AddExpenseFab({ group, groupId }: { group: GroupDetail; groupId: string
       toast.info('This trip has ended. Extend the trip in settings to add new expenses.');
       return;
     }
-    router.push(`/group/${groupId}/add-expense` as never);
+    router.push(`/groups/${groupId}/add-expense` as never);
   }
 
   return (
@@ -206,7 +206,7 @@ export default function GroupDetailScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 testID="settings-button"
-                onPress={() => router.push(`/group/${id}/settings` as never)}
+                onPress={() => router.push(`/groups/${id}/settings` as never)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Settings size={22} color="rgba(255,255,255,0.8)" strokeWidth={1.5} />
@@ -423,7 +423,7 @@ function ExpensesTab({ groupId, currentMemberId }: ExpensesTabProps) {
                   testID={`expense-card-${expense.id}`}
                   onPress={() =>
                     router.push(
-                      `/group/${groupId}/expense-detail?expenseId=${expense.id}` as never
+                      `/groups/${groupId}/expense-detail?expenseId=${expense.id}` as never
                     )
                   }
                   className="rounded-2xl p-4"

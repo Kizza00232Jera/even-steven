@@ -610,7 +610,7 @@ export default function GroupsScreen() {
           <GroupCard
             group={item}
             memberPreviews={memberPreviews[item.id]}
-            onPress={() => router.push(`/group/${item.id}`)}
+            onPress={() => router.push(`/groups/${item.id}`)}
             onMenuPress={() => handleMenuPress(item)}
           />
         )}
@@ -826,7 +826,7 @@ export default function GroupsScreen() {
                   <TouchableOpacity
                     onPress={() => {
                       setShowExpensePicker(false);
-                      router.push(`/group/${g.id}/add-expense` as never);
+                      router.push(`/groups/${g.id}/add-expense` as never);
                     }}
                     className="flex-row items-center px-6 py-4 border-b border-border"
                     activeOpacity={0.7}

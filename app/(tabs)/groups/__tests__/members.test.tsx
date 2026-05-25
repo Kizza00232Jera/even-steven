@@ -14,14 +14,14 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ id: 'group-1' }),
 }));
 
-jest.mock('../../../lib/repos/groups', () => ({
+jest.mock('../../../../lib/repos/groups', () => ({
   fetchGroupMembers: (...args: unknown[]) => mockFetchGroupMembers(...args),
   removeMember: (...args: unknown[]) => mockRemoveMember(...args),
 }));
 
-jest.mock('../../../lib/supabase', () => ({ supabase: {} }));
+jest.mock('../../../../lib/supabase', () => ({ supabase: {} }));
 
-jest.mock('../../../store/auth', () => ({
+jest.mock('../../../../store/auth', () => ({
   useAuthStore: () => ({
     session: { user: { id: 'user-1', email: 'admin@example.com' } },
   }),
@@ -47,7 +47,7 @@ jest.mock('nativewind', () => ({
   useColorScheme: () => ({ colorScheme: 'dark' }),
 }));
 
-jest.mock('../../../components/ErrorState', () => ({
+jest.mock('../../../../components/ErrorState', () => ({
   ErrorState: () => null,
 }));
 

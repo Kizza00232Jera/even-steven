@@ -4,13 +4,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useColorScheme } from 'nativewind';
 import { ChevronLeft, Pencil, Receipt, CheckCircle } from 'lucide-react-native';
-import { supabase } from '../../../lib/supabase';
-import { fetchGroupExpenses, fetchExpenseParticipants } from '../../../lib/repos/expenses';
-import { fetchGroupMembers } from '../../../lib/repos/groups';
-import { fetchGroupBalances } from '../../../lib/repos/balances';
-import { format, type Currency } from '../../../lib/currency';
-import { useAuthStore } from '../../../store/auth';
-import { Colors } from '../../../constants/colors';
+import { supabase } from '../../../../lib/supabase';
+import { fetchGroupExpenses, fetchExpenseParticipants } from '../../../../lib/repos/expenses';
+import { fetchGroupMembers } from '../../../../lib/repos/groups';
+import { fetchGroupBalances } from '../../../../lib/repos/balances';
+import { format, type Currency } from '../../../../lib/currency';
+import { useAuthStore } from '../../../../store/auth';
+import { Colors } from '../../../../constants/colors';
 
 export default function ExpenseDetailScreen() {
   const { id: groupId, expenseId } = useLocalSearchParams<{ id: string; expenseId: string }>();
@@ -97,7 +97,7 @@ export default function ExpenseDetailScreen() {
         <TouchableOpacity
           testID="edit-expense-button"
           onPress={() =>
-            router.push(`/group/${groupId}/edit-expense?expenseId=${expenseId}` as never)
+            router.push(`/groups/${groupId}/edit-expense?expenseId=${expenseId}` as never)
           }
           hitSlop={8}
         >
@@ -244,7 +244,7 @@ export default function ExpenseDetailScreen() {
               ) : (
                 <TouchableOpacity
                   testID="settle-up-button"
-                  onPress={() => router.replace(`/group/${groupId}` as never)}
+                  onPress={() => router.replace(`/groups/${groupId}` as never)}
                   className="px-4 py-2 rounded-full"
                   style={{ backgroundColor: Colors.accent }}
                 >

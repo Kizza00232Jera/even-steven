@@ -162,7 +162,7 @@ function ActivityRow({ event }: ActivityRowProps) {
         className={ROW_CLASS}
         activeOpacity={0.7}
         onPress={() =>
-          router.push(`/group/${event.groupId}/expense-detail?expenseId=${expenseId}` as never)
+          router.push(`/groups/${event.groupId}/expense-detail?expenseId=${expenseId}` as never)
         }
       >
         {rowContent}

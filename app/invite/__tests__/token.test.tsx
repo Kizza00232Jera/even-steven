@@ -111,7 +111,7 @@ describe('InviteScreen — valid token', () => {
         'user-1',
         'bob@example.com',
       );
-      expect(mockReplace).toHaveBeenCalledWith('/group/group-abc');
+      expect(mockReplace).toHaveBeenCalledWith('/groups/group-abc');
     });
   });
 

@@ -127,7 +127,7 @@ describe('GroupsScreen — group cards', () => {
   it('navigates to group detail on tap', () => {
     const { getByTestId } = render(<GroupsScreen />);
     fireEvent.press(getByTestId('group-card-g1'));
-    expect(mockPush).toHaveBeenCalledWith('/group/g1');
+    expect(mockPush).toHaveBeenCalledWith('/groups/g1');
   });
 
   it('shows date range for Trip groups', () => {

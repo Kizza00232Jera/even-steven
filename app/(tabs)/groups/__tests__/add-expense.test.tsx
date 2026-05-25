@@ -47,7 +47,7 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ id: 'group-1' }),
 }));
 
-jest.mock('../../../lib/repos/expenses', () => ({
+jest.mock('../../../../lib/repos/expenses', () => ({
   createExpense: (...args: unknown[]) => mockCreateExpense(...args),
   fetchGroupMembers: (...args: unknown[]) => mockFetchGroupMembers(...args),
   uploadReceipt: (...args: unknown[]) => mockUploadReceipt(...args),
@@ -59,7 +59,7 @@ const mockChain = {
   single: jest.fn().mockResolvedValue({ data: { base_currency: 'EUR' }, error: null }),
 };
 
-jest.mock('../../../lib/supabase', () => ({
+jest.mock('../../../../lib/supabase', () => ({
   supabase: {
     channel: jest.fn(() => ({
       on: jest.fn(function (this: unknown) { return this; }),
@@ -70,29 +70,29 @@ jest.mock('../../../lib/supabase', () => ({
   },
 }));
 
-jest.mock('../../../lib/notifications', () => ({
+jest.mock('../../../../lib/notifications', () => ({
   sendGroupNotification: jest.fn(),
 }));
 
-jest.mock('../../../hooks/useOfflineGuard', () => ({
+jest.mock('../../../../hooks/useOfflineGuard', () => ({
   useOfflineGuard: () => ({ writesDisabled: false }),
 }));
 
-jest.mock('../../../store/auth', () => ({
+jest.mock('../../../../store/auth', () => ({
   useAuthStore: () => ({
     session: { user: { id: 'user-1', email: 'alice@example.com' } },
     profile: { preferred_currency: 'EUR', display_name: 'Alice' },
   }),
 }));
 
-jest.mock('../../../store/rates', () => ({
+jest.mock('../../../../store/rates', () => ({
   useRatesStore: () => ({
     rates: { USD: 1, EUR: 0.92, DKK: 6.87, SEK: 10.45 },
     fetchRates: mockFetchRates,
   }),
 }));
 
-jest.mock('../../../hooks/useNetworkStatus', () => ({
+jest.mock('../../../../hooks/useNetworkStatus', () => ({
   useNetworkStatus: () => ({ isOnline: true }),
 }));
 
@@ -104,7 +104,7 @@ jest.mock('@tanstack/react-query', () => ({
   }),
 }));
 
-jest.mock('../../../lib/haptics', () => ({
+jest.mock('../../../../lib/haptics', () => ({
   hapticOnExpenseSaved: jest.fn(),
 }));
 

@@ -17,14 +17,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuthStore } from '../../../store/auth';
-import { logActivityEvent } from '../../../lib/repos/activity';
-import { sendGroupNotification } from '../../../lib/notifications';
+import { useAuthStore } from '../../../../store/auth';
+import { logActivityEvent } from '../../../../lib/repos/activity';
+import { sendGroupNotification } from '../../../../lib/notifications';
 import { X, ChevronDown, Check, Trash2, AlertCircle, Paperclip, Lock } from 'lucide-react-native';
-import { useNetworkStatus } from '../../../hooks/useNetworkStatus';
-import { useOfflineGuard } from '../../../hooks/useOfflineGuard';
-import { useToast } from '../../../hooks/useToast';
-import { useReceiptPicker } from '../../../hooks/useReceiptPicker';
+import { useNetworkStatus } from '../../../../hooks/useNetworkStatus';
+import { useOfflineGuard } from '../../../../hooks/useOfflineGuard';
+import { useToast } from '../../../../hooks/useToast';
+import { useReceiptPicker } from '../../../../hooks/useReceiptPicker';
 import {
   fetchGroupExpenses,
   fetchGroupMembers,
@@ -35,12 +35,12 @@ import {
   uploadReceipt,
   deleteExpense,
   type ExpenseListItem,
-} from '../../../lib/repos/expenses';
-import { calculateEqualSplit, calculateUnequalSplit, calculatePercentageSplit } from '../../../lib/splits';
-import { type Category } from '../../../lib/categories';
-import { supabase } from '../../../lib/supabase';
-import { Colors } from '../../../constants/colors';
-import type { Database } from '../../../lib/database.types';
+} from '../../../../lib/repos/expenses';
+import { calculateEqualSplit, calculateUnequalSplit, calculatePercentageSplit } from '../../../../lib/splits';
+import { type Category } from '../../../../lib/categories';
+import { supabase } from '../../../../lib/supabase';
+import { Colors } from '../../../../constants/colors';
+import type { Database } from '../../../../lib/database.types';
 
 type GroupMember = Database['public']['Tables']['group_members']['Row'];
 

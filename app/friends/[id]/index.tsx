@@ -173,7 +173,7 @@ export default function FriendDetailScreen() {
               onPress={() => {
                 const groupsWithBalance = friend.sharedGroups.filter(g => g.balance !== 0);
                 if (groupsWithBalance.length === 1) {
-                  router.push(`/group/${groupsWithBalance[0].groupId}` as never);
+                  router.push(`/groups/${groupsWithBalance[0].groupId}` as never);
                 } else if (groupsWithBalance.length > 1) {
                   Alert.alert(
                     'Settle up in which group?',
@@ -181,7 +181,7 @@ export default function FriendDetailScreen() {
                     [
                       ...groupsWithBalance.map(g => ({
                         text: g.groupName,
-                        onPress: () => router.push(`/group/${g.groupId}` as never),
+                        onPress: () => router.push(`/groups/${g.groupId}` as never),
                       })),
                       { text: 'Cancel', style: 'cancel' as const },
                     ]
@@ -200,7 +200,7 @@ export default function FriendDetailScreen() {
             onPress={() => {
               const uid = friend.friendId;
               if (friend.sharedGroups.length === 1) {
-                router.push(`/group/${friend.sharedGroups[0].groupId}/add-expense?prefillUserId=${uid}` as never);
+                router.push(`/groups/${friend.sharedGroups[0].groupId}/add-expense?prefillUserId=${uid}` as never);
               } else if (friend.sharedGroups.length > 1) {
                 Alert.alert(
                   'Add expense in which group?',
@@ -208,7 +208,7 @@ export default function FriendDetailScreen() {
                   [
                     ...friend.sharedGroups.map(g => ({
                       text: g.groupName,
-                      onPress: () => router.push(`/group/${g.groupId}/add-expense?prefillUserId=${uid}` as never),
+                      onPress: () => router.push(`/groups/${g.groupId}/add-expense?prefillUserId=${uid}` as never),
                     })),
                     { text: 'Cancel', style: 'cancel' as const },
                   ]
@@ -229,7 +229,7 @@ export default function FriendDetailScreen() {
               {friend.sharedGroups.map((group) => (
                 <TouchableOpacity
                   key={group.groupId}
-                  onPress={() => router.push(`/group/${group.groupId}`)}
+                  onPress={() => router.push(`/groups/${group.groupId}`)}
                   className="flex-row items-center justify-between py-3.5 px-4 bg-surface rounded-2xl border border-border mb-2"
                   activeOpacity={0.7}
                 >

@@ -103,25 +103,25 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ id: GROUP_ID }),
 }));
 
-jest.mock('../../../lib/repos/groups', () => ({
+jest.mock('../../../../lib/repos/groups', () => ({
   fetchGroupDetail: (...args: unknown[]) => mockFetchGroupDetail(...args),
   leaveGroup: jest.fn(),
   getOrCreateInviteToken: jest.fn(),
 }));
 
-jest.mock('../../../lib/repos/invites', () => ({
+jest.mock('../../../../lib/repos/invites', () => ({
   getOrCreateInviteToken: jest.fn(),
 }));
 
-jest.mock('../../../lib/repos/expenses', () => ({
+jest.mock('../../../../lib/repos/expenses', () => ({
   fetchGroupExpenses: (...args: unknown[]) => mockFetchGroupExpenses(...args),
 }));
 
-jest.mock('../../../lib/repos/balances', () => ({
+jest.mock('../../../../lib/repos/balances', () => ({
   fetchGroupBalances: (...args: unknown[]) => mockFetchGroupBalances(...args),
 }));
 
-jest.mock('../../../lib/supabase', () => ({
+jest.mock('../../../../lib/supabase', () => ({
   supabase: {
     channel: () => ({
       on: jest.fn().mockReturnThis(),
@@ -131,18 +131,18 @@ jest.mock('../../../lib/supabase', () => ({
   },
 }));
 
-jest.mock('../../../store/auth', () => ({
+jest.mock('../../../../store/auth', () => ({
   useAuthStore: () => ({
     session: { user: { id: CURRENT_USER_ID } },
     profile: { preferred_currency: 'EUR', display_name: 'Alice' },
   }),
 }));
 
-jest.mock('../../../hooks/useToast', () => ({
+jest.mock('../../../../hooks/useToast', () => ({
   useToast: () => ({ success: jest.fn(), error: jest.fn(), info: jest.fn() }),
 }));
 
-jest.mock('../../../hooks/useNetworkStatus', () => ({
+jest.mock('../../../../hooks/useNetworkStatus', () => ({
   useNetworkStatus: () => ({ isOnline: true }),
 }));
 
@@ -306,7 +306,7 @@ describe('ExpensesTab — navigation to detail', () => {
     fireEvent.press(getByTestId('tab-expenses'));
     fireEvent.press(getByTestId('expense-card-expense-1'));
     expect(mockPush).toHaveBeenCalledWith(
-      expect.stringContaining(`/group/${GROUP_ID}/expense-detail`)
+      expect.stringContaining(`/groups/${GROUP_ID}/expense-detail`)
     );
   });
 });

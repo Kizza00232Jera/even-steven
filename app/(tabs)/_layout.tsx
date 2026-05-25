@@ -59,7 +59,7 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="groups/index"
+        name="groups"
         options={{
           title: 'Groups',
           tabBarIcon: ({ color, size }) => <Users size={size} color={color} strokeWidth={1.5} />,

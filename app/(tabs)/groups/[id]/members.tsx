@@ -17,16 +17,16 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useColorScheme } from 'nativewind';
 import { ChevronLeft, Shield, UserMinus, Clock, UserPlus, Share2, X } from 'lucide-react-native';
-import { ErrorState } from '../../../components/ErrorState';
-import { Colors } from '../../../constants/colors';
-import { fetchGroupMembers, removeMember, updateMemberDisplayName } from '../../../lib/repos/groups';
-import { addInvitedMember, getOrCreateInviteToken } from '../../../lib/repos/invites';
-import { resolveDisplayName } from '../../../lib/displayName';
-import { logActivityEvent } from '../../../lib/repos/activity';
-import { sendGroupNotification } from '../../../lib/notifications';
-import { supabase } from '../../../lib/supabase';
-import { useAuthStore } from '../../../store/auth';
-import type { GroupMemberWithProfile } from '../../../lib/repos/groups';
+import { ErrorState } from '../../../../components/ErrorState';
+import { Colors } from '../../../../constants/colors';
+import { fetchGroupMembers, removeMember, updateMemberDisplayName } from '../../../../lib/repos/groups';
+import { addInvitedMember, getOrCreateInviteToken } from '../../../../lib/repos/invites';
+import { resolveDisplayName } from '../../../../lib/displayName';
+import { logActivityEvent } from '../../../../lib/repos/activity';
+import { sendGroupNotification } from '../../../../lib/notifications';
+import { supabase } from '../../../../lib/supabase';
+import { useAuthStore } from '../../../../store/auth';
+import type { GroupMemberWithProfile } from '../../../../lib/repos/groups';
 
 const INVITE_BASE_URL = 'https://even-steven-five.vercel.app/invite';
 
