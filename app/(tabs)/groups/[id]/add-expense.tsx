@@ -407,7 +407,7 @@ export default function AddExpenseScreen() {
         eventType: 'new_expense',
         groupId,
         actorMemberId: payerId!,
-        metadata: { title: title.trim(), amount, currency },
+        metadata: { title: title.trim(), amount, currency, expense_id: newExpense.id },
       });
       queryClient.invalidateQueries({ queryKey: ['expenses', groupId] });
       router.back();

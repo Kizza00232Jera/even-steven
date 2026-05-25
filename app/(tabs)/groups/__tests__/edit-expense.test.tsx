@@ -229,6 +229,20 @@ describe('EditExpenseScreen — save metadata', () => {
     });
   });
 
+  it('passes expense_id in notification metadata after save', async () => {
+    const { sendGroupNotification } = jest.requireMock('../../../../lib/notifications') as { sendGroupNotification: jest.Mock };
+    const { getByTestId } = render(<EditExpenseScreen />);
+    await waitForLoaded(getByTestId);
+    fireEvent.press(getByTestId('save-button'));
+    await waitFor(() =>
+      expect(sendGroupNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({ expense_id: EXPENSE_ID }),
+        })
+      )
+    );
+  });
+
   it('navigates back after successful save', async () => {
     const { getByTestId } = render(<EditExpenseScreen />);
     await waitForLoaded(getByTestId);

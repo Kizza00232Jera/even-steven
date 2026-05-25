@@ -45,20 +45,24 @@ function buildContent(payload: Payload, groupName: string, actorName: string): N
   const meta = payload.meta ?? payload.metadata ?? {};
   const groupId = payload.groupId ?? '';
 
+  const expenseRoute = meta.expense_id
+    ? `/groups/${groupId}/expense-detail?expenseId=${meta.expense_id}`
+    : `/groups/${groupId}`;
+
   switch (payload.eventType) {
     case 'expense_added':
     case 'new_expense':
       return {
         title: 'New expense',
         body: `${actorName} added "${meta.title ?? 'an expense'}"`,
-        route: `/groups/${groupId}`,
+        route: expenseRoute,
         prefKey: 'new_expense',
       };
     case 'expense_edited':
       return {
         title: 'Expense edited',
         body: `${actorName} edited "${meta.title ?? 'an expense'}"`,
-        route: `/groups/${groupId}`,
+        route: expenseRoute,
         prefKey: 'expense_edited',
       };
     case 'expense_deleted':
@@ -72,14 +76,14 @@ function buildContent(payload: Payload, groupName: string, actorName: string): N
       return {
         title: 'Payment recorded',
         body: `${actorName} recorded a payment`,
-        route: `/groups/${groupId}/balances`,
+        route: `/groups/${groupId}`,
         prefKey: 'payment_in_group',
       };
     case 'payment_received':
       return {
         title: 'Payment received',
         body: `${actorName} recorded a payment to you`,
-        route: `/groups/${groupId}/balances`,
+        route: `/groups/${groupId}`,
         prefKey: 'payment_received',
         onlyPayee: true,
       };
@@ -87,21 +91,21 @@ function buildContent(payload: Payload, groupName: string, actorName: string): N
       return {
         title: `${actorName} joined`,
         body: `${actorName} joined ${groupName}`,
-        route: `/groups/${groupId}/members`,
+        route: `/groups/${groupId}`,
         prefKey: 'someone_joins_group',
       };
     case 'member_added':
       return {
         title: 'New member',
         body: `${actorName} was added to ${groupName}`,
-        route: `/groups/${groupId}/members`,
+        route: `/groups/${groupId}`,
         prefKey: 'someone_added',
       };
     case 'member_removed':
       return {
         title: 'Member removed',
         body: `${actorName} was removed from ${groupName}`,
-        route: `/groups/${groupId}/members`,
+        route: `/groups/${groupId}`,
         prefKey: 'member_removed',
       };
     case 'trip_expired':
@@ -129,7 +133,7 @@ function buildContent(payload: Payload, groupName: string, actorName: string): N
       return {
         title: 'Balance settled',
         body: `Your balance in ${groupName} is now zero`,
-        route: `/groups/${groupId}/balances`,
+        route: `/groups/${groupId}`,
         prefKey: 'balance_reaches_zero',
         onlyPayee: true,
       };
