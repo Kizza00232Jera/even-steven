@@ -530,8 +530,7 @@ describe('EditExpenseScreen — base currency amount on financial edit', () => {
     fireEvent.press(getByTestId('save-button'));
 
     await waitFor(() => {
-      const call = mockUpdateExpenseFinancial.mock.calls[0] as [unknown, string, { splits: { baseShare: number }[]; baseCurrencyAmount: number }];
-      const { splits, baseCurrencyAmount } = call[2];
+      const { splits, baseCurrencyAmount } = mockUpdateExpenseFinancial.mock.calls[0][2] as { splits: { baseShare: number }[]; baseCurrencyAmount: number };
       // Equal split, 2 participants — each baseShare ≈ baseCurrencyAmount / 2
       splits.forEach((s) => {
         expect(s.baseShare).toBeCloseTo(baseCurrencyAmount / 2, 1);
