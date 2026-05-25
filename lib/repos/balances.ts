@@ -25,6 +25,12 @@ type ProfileJoin = {
   google_avatar_url: string | null;
 };
 
+type ExpenseParticipantRow = {
+  member_id: string;
+  share_amount: number;
+  base_share_amount?: number | null;
+};
+
 export async function fetchGroupBalances(
   client: SupabaseClient<Database>,
   groupId: string
@@ -40,7 +46,7 @@ export async function fetchGroupBalances(
 
     client
       .from('expenses')
-      .select('id, payer_id, amount, expense_participants(member_id, share_amount)')
+      .select('id, payer_id, amount, base_currency_amount, expense_participants(member_id, share_amount, base_share_amount)')
       .eq('group_id', groupId),
 
     // RLS enforces private settlement visibility automatically
@@ -69,15 +75,15 @@ export async function fetchGroupBalances(
   }
 
   for (const expense of expenses) {
-    // Payer gets credit for the full expense amount
+    const payerCredit = expense.base_currency_amount ?? expense.amount;
     const payerBal = balanceMap.get(expense.payer_id) ?? 0;
-    balanceMap.set(expense.payer_id, payerBal + expense.amount);
+    balanceMap.set(expense.payer_id, payerBal + payerCredit);
 
-    // Each participant owes their share
-    const participants = (expense.expense_participants as { member_id: string; share_amount: number }[]) ?? [];
+    const participants = (expense.expense_participants as ExpenseParticipantRow[]) ?? [];
     for (const p of participants) {
+      const participantDebit = p.base_share_amount ?? p.share_amount;
       const partBal = balanceMap.get(p.member_id) ?? 0;
-      balanceMap.set(p.member_id, partBal - p.share_amount);
+      balanceMap.set(p.member_id, partBal - participantDebit);
     }
   }
 

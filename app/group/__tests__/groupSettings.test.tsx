@@ -1,13 +1,10 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import GroupDetailScreen from '../[id]/index';
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
-const mockLeaveGroup = jest.fn();
 const mockUseQuery = jest.fn();
-const mockUseMutation = jest.fn();
-const mockInvalidateQueries = jest.fn();
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ back: mockBack, push: mockPush }),
@@ -16,7 +13,6 @@ jest.mock('expo-router', () => ({
 
 jest.mock('../../../lib/repos/groups', () => ({
   fetchGroupDetail: jest.fn(),
-  leaveGroup: (...args: unknown[]) => mockLeaveGroup(...args),
 }));
 
 jest.mock('../../../lib/repos/invites', () => ({
@@ -49,19 +45,12 @@ jest.mock('../../../store/auth', () => ({
 
 jest.mock('@tanstack/react-query', () => ({
   useQuery: (...args: unknown[]) => mockUseQuery(...args),
-  useMutation: (...args: unknown[]) => mockUseMutation(...args),
-  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
+  useQueryClient: () => ({ invalidateQueries: jest.fn() }),
 }));
 
 jest.mock('lucide-react-native', () => ({
   Settings: () => null,
   ChevronLeft: () => null,
-  LogOut: () => null,
-  Users: () => null,
-  BellOff: () => null,
-  Bell: () => null,
-  X: () => null,
-  ChevronRight: () => null,
   Plus: () => null,
   Share2: () => null,
 }));
@@ -102,11 +91,9 @@ const group = {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockUseMutation.mockReturnValue({ mutate: jest.fn(), isPending: false });
-  mockLeaveGroup.mockResolvedValue({ groupDeleted: false });
 });
 
-describe('GroupDetailScreen — settings sheet', () => {
+describe('GroupDetailScreen — settings navigation', () => {
   beforeEach(() => {
     mockUseQuery.mockReturnValue({
       data: group,
@@ -116,25 +103,9 @@ describe('GroupDetailScreen — settings sheet', () => {
     });
   });
 
-  it('opens settings sheet on gear icon press', () => {
-    const { getByTestId, getByText } = render(<GroupDetailScreen />);
+  it('navigates to settings screen on gear icon press', () => {
+    const { getByTestId } = render(<GroupDetailScreen />);
     fireEvent.press(getByTestId('settings-button'));
-    expect(getByText('Leave group')).toBeTruthy();
-  });
-
-  it('closes settings sheet on X press', () => {
-    const { getByTestId, queryByText } = render(<GroupDetailScreen />);
-    fireEvent.press(getByTestId('settings-button'));
-    fireEvent.press(getByTestId('close-settings'));
-    expect(queryByText('Leave group')).toBeNull();
-  });
-
-  it('calls leaveGroup when confirming leave', async () => {
-    const mockMutate = jest.fn();
-    mockUseMutation.mockReturnValue({ mutate: mockMutate, isPending: false });
-    const { getByTestId, getByText } = render(<GroupDetailScreen />);
-    fireEvent.press(getByTestId('settings-button'));
-    fireEvent.press(getByText('Leave group'));
-    await waitFor(() => expect(getByText('Leave group')).toBeTruthy());
+    expect(mockPush).toHaveBeenCalledWith('/group/group-1/settings');
   });
 });

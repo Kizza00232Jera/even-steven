@@ -153,17 +153,39 @@ function RootContent() {
   useEffect(() => {
     if (!session) return;
     async function registerToken() {
-      const { status } = await Notifications.getPermissionsAsync();
+      // Request permission if not already granted (required on Android 13+)
+      let { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        const { status: requested } = await Notifications.requestPermissionsAsync();
+        status = requested;
+      }
       if (status !== 'granted') return;
-      const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
-      if (!projectId) return;
+
+      // Try both locations the project ID can live depending on SDK/build type
+      const projectId = (Constants.easConfig?.projectId as string | undefined)
+        ?? (Constants.expoConfig?.extra?.eas?.projectId as string | undefined);
+      if (!projectId) {
+        console.error('[PushToken] No EAS projectId found');
+        return;
+      }
       try {
         const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
         await upsertPushToken(supabase, session!.user.id, token, Platform.OS);
-      } catch { /* non-critical */ }
+      } catch (err) {
+        console.error('[PushToken] Registration failed:', err);
+      }
     }
     registerToken();
   }, [session?.user.id]);
+
+  // Increment badge when a notification arrives in the foreground
+  useEffect(() => {
+    const sub = Notifications.addNotificationReceivedListener(async () => {
+      const count = await Notifications.getBadgeCountAsync();
+      await Notifications.setBadgeCountAsync(count + 1);
+    });
+    return () => sub.remove();
+  }, []);
 
   // Clear badge when app comes to foreground
   useEffect(() => {

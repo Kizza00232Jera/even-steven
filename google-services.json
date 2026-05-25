@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "635245775520",
+    "project_id": "even-steven-4d6fa",
+    "storage_bucket": "even-steven-4d6fa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:635245775520:android:79bfb1ade8163ec87c97c5",
+        "android_client_info": {
+          "package_name": "com.evensteven.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBw5J-WbJoielrNej-3_oTLUqATZf0UhVw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

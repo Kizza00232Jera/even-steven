@@ -46,9 +46,10 @@ interface BalancesTabProps {
   groupId: string;
   currentMemberId: string;
   settlementVisibility?: 'public' | 'private';
+  groupStatus?: 'active' | 'expired' | 'archived';
 }
 
-export function BalancesTab({ groupId, currentMemberId, settlementVisibility }: BalancesTabProps) {
+export function BalancesTab({ groupId, currentMemberId, settlementVisibility, groupStatus }: BalancesTabProps) {
   const { colorScheme } = useColorScheme();
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
   const queryClient = useQueryClient();
@@ -113,6 +114,7 @@ export function BalancesTab({ groupId, currentMemberId, settlementVisibility }: 
   }
 
   async function checkAndAutoArchive(gid: string) {
+    if (groupStatus !== 'expired') return;
     try {
       const fresh = await fetchGroupBalances(supabase, gid);
       const remaining = simplifyDebts(fresh.members.map((m) => ({ memberId: m.memberId, balance: m.balance })));

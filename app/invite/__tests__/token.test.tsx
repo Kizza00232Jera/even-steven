@@ -32,6 +32,17 @@ jest.mock('lucide-react-native', () => ({
   AlertCircle: () => null,
 }));
 
+jest.mock('expo-notifications', () => ({
+  addNotificationReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  getBadgeCountAsync: jest.fn().mockResolvedValue(0),
+  setBadgeCountAsync: jest.fn().mockResolvedValue(undefined),
+  getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+  requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+  getExpoPushTokenAsync: jest.fn().mockResolvedValue({ data: 'ExponentPushToken[test]' }),
+  setNotificationHandler: jest.fn(),
+}));
+
 import { lookupInviteToken, acceptInvite } from '../../../lib/repos/invites';
 import { useAuthStore } from '../../../store/auth';
 

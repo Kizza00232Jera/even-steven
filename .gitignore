@@ -24,3 +24,5 @@ Thumbs.db
 
 expo-env.d.ts
 # @end expo-cli
+# Firebase — GoogleService-Info.plist is iOS only, keep gitignored
+GoogleService-Info.plist

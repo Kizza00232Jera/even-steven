@@ -53,6 +53,12 @@ jest.mock('../../../lib/repos/expenses', () => ({
   uploadReceipt: (...args: unknown[]) => mockUploadReceipt(...args),
 }));
 
+const mockChain = {
+  select: jest.fn(function (this: unknown) { return this; }),
+  eq: jest.fn(function (this: unknown) { return this; }),
+  single: jest.fn().mockResolvedValue({ data: { base_currency: 'EUR' }, error: null }),
+};
+
 jest.mock('../../../lib/supabase', () => ({
   supabase: {
     channel: jest.fn(() => ({
@@ -60,6 +66,7 @@ jest.mock('../../../lib/supabase', () => ({
       subscribe: jest.fn(function (this: unknown) { return this; }),
     })),
     removeChannel: jest.fn(),
+    from: jest.fn(() => mockChain),
   },
 }));
 

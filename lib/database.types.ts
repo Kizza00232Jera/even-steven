@@ -76,6 +76,7 @@ export type Database = {
       }
       expense_participants: {
         Row: {
+          base_share_amount: number | null
           expense_id: string
           id: string
           member_id: string
@@ -83,6 +84,7 @@ export type Database = {
           share_percentage: number | null
         }
         Insert: {
+          base_share_amount?: number | null
           expense_id: string
           id?: string
           member_id: string
@@ -90,6 +92,7 @@ export type Database = {
           share_percentage?: number | null
         }
         Update: {
+          base_share_amount?: number | null
           expense_id?: string
           id?: string
           member_id?: string
@@ -116,6 +119,7 @@ export type Database = {
       expenses: {
         Row: {
           amount: number
+          base_currency_amount: number | null
           category: string
           created_at: string
           currency: string
@@ -133,6 +137,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          base_currency_amount?: number | null
           category?: string
           created_at?: string
           currency: string
@@ -150,6 +155,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          base_currency_amount?: number | null
           category?: string
           created_at?: string
           currency?: string
@@ -605,7 +611,32 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invite: {
+        Args: { p_email: string; p_group_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      create_expense: {
+        Args: {
+          p_amount: number
+          p_base_currency_amount?: number
+          p_category: string
+          p_currency: string
+          p_description: string
+          p_expense_date: string
+          p_group_id: string
+          p_payer_id: string
+          p_receipt_url: string
+          p_split_method: string
+          p_splits: Json
+          p_title: string
+        }
+        Returns: string
+      }
       current_member_id: { Args: { p_group_id: string }; Returns: string }
+      current_user_is_group_member: {
+        Args: { p_group_id: string }
+        Returns: boolean
+      }
       get_groups_with_outstanding_balances: {
         Args: { p_user_id: string }
         Returns: {
@@ -627,6 +658,10 @@ export type Database = {
         Returns: undefined
       }
       resolve_invite_token: { Args: { p_token: string }; Returns: Json }
+      upsert_push_token: {
+        Args: { p_platform: string; p_token: string; p_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

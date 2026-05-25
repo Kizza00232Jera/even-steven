@@ -204,6 +204,7 @@ export async function deleteExpense(
 export interface ExpenseParticipantDetail {
   memberId: string;
   shareAmount: number;
+  baseShareAmount: number | null;
 }
 
 export async function fetchExpenseParticipants(
@@ -212,10 +213,14 @@ export async function fetchExpenseParticipants(
 ): Promise<ExpenseParticipantDetail[]> {
   const { data, error } = await client
     .from('expense_participants')
-    .select('member_id, share_amount')
+    .select('member_id, share_amount, base_share_amount')
     .eq('expense_id', expenseId);
   if (error) throw error;
-  return (data ?? []).map((r) => ({ memberId: r.member_id, shareAmount: r.share_amount }));
+  return (data ?? []).map((r) => ({
+    memberId: r.member_id,
+    shareAmount: r.share_amount,
+    baseShareAmount: r.base_share_amount,
+  }));
 }
 
 export interface UpdateExpenseFinancialParams {

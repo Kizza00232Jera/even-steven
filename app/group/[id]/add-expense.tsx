@@ -137,7 +137,7 @@ function getMemberDisplayName(
 
 export default function AddExpenseScreen() {
   const router = useRouter();
-  const { id: groupId } = useLocalSearchParams<{ id: string }>();
+  const { id: groupId, prefillUserId } = useLocalSearchParams<{ id: string; prefillUserId?: string }>();
   const queryClient = useQueryClient();
   const { session, profile } = useAuthStore();
   const { rates, fetchRates } = useRatesStore();
@@ -214,7 +214,15 @@ export default function AddExpenseScreen() {
       setPayerId(myMember.id);
     }
     if (participantIds.size === 0) {
-      setParticipantIds(new Set(members.map((m) => m.id)));
+      if (prefillUserId) {
+        const friendMember = members.find((m) => m.user_id === prefillUserId);
+        const ids = new Set<string>();
+        if (myMember) ids.add(myMember.id);
+        if (friendMember) ids.add(friendMember.id);
+        setParticipantIds(ids.size > 0 ? ids : new Set(members.map((m) => m.id)));
+      } else {
+        setParticipantIds(new Set(members.map((m) => m.id)));
+      }
     }
   }, [members]);
 
@@ -371,7 +379,7 @@ export default function AddExpenseScreen() {
         const path = `${session?.user.id ?? 'unknown'}-${Date.now()}.jpg`;
         receipt_url = await uploadReceipt(supabase, path, receiptUri);
       }
-      await createExpense(
+      const newExpense = await createExpense(
         supabase,
         {
           group_id: groupId,
@@ -393,7 +401,7 @@ export default function AddExpenseScreen() {
         groupId,
         actorId: session!.user.id,
         eventType: 'expense_added',
-        metadata: { title: title.trim(), amount, currency },
+        metadata: { title: title.trim(), amount, currency, expense_id: newExpense.id },
       }).catch(() => {});
       sendGroupNotification({
         eventType: 'new_expense',

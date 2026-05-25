@@ -198,8 +198,9 @@ export default function FriendDetailScreen() {
             style={{ backgroundColor: Colors.accent }}
             activeOpacity={0.8}
             onPress={() => {
+              const uid = friend.friendId;
               if (friend.sharedGroups.length === 1) {
-                router.push(`/group/${friend.sharedGroups[0].groupId}/add-expense` as never);
+                router.push(`/group/${friend.sharedGroups[0].groupId}/add-expense?prefillUserId=${uid}` as never);
               } else if (friend.sharedGroups.length > 1) {
                 Alert.alert(
                   'Add expense in which group?',
@@ -207,7 +208,7 @@ export default function FriendDetailScreen() {
                   [
                     ...friend.sharedGroups.map(g => ({
                       text: g.groupName,
-                      onPress: () => router.push(`/group/${g.groupId}/add-expense` as never),
+                      onPress: () => router.push(`/group/${g.groupId}/add-expense?prefillUserId=${uid}` as never),
                     })),
                     { text: 'Cancel', style: 'cancel' as const },
                   ]

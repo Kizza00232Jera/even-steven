@@ -193,40 +193,32 @@ describe('resetInviteToken', () => {
 // ---------------------------------------------------------------------------
 
 describe('acceptInvite', () => {
-  it('inserts an active group_members row and returns the group_id', async () => {
-    const insert = jest.fn().mockResolvedValue({ data: null, error: null });
-    const from   = jest.fn().mockReturnValue({ insert });
+  it('calls accept_invite RPC and returns the group_id', async () => {
+    const rpc = jest.fn().mockResolvedValue({ error: null });
 
-    const client = { from } as unknown as Parameters<typeof acceptInvite>[0];
+    const client = { rpc } as unknown as Parameters<typeof acceptInvite>[0];
     const groupId = await acceptInvite(client, 'group-1', 'user-1', 'alice@example.com');
 
     expect(groupId).toBe('group-1');
-    expect(insert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        group_id: 'group-1',
-        user_id: 'user-1',
-        email: 'alice@example.com',
-        status: 'active',
-        role: 'member',
-      })
-    );
+    expect(rpc).toHaveBeenCalledWith('accept_invite', {
+      p_group_id: 'group-1',
+      p_user_id: 'user-1',
+      p_email: 'alice@example.com',
+    });
   });
 
-  it('handles duplicate (upsert) without throwing when user is already a member', async () => {
-    // 23505 = unique_violation in Postgres — treated as "already a member"
-    const insert = jest.fn().mockResolvedValue({ data: null, error: { code: '23505', message: 'duplicate key' } });
-    const from   = jest.fn().mockReturnValue({ insert });
+  it('returns the group_id when RPC succeeds with no error', async () => {
+    const rpc = jest.fn().mockResolvedValue({ error: null });
 
-    const client = { from } as unknown as Parameters<typeof acceptInvite>[0];
+    const client = { rpc } as unknown as Parameters<typeof acceptInvite>[0];
     const groupId = await acceptInvite(client, 'group-1', 'user-1', 'alice@example.com');
     expect(groupId).toBe('group-1');
   });
 
-  it('throws on unexpected insert errors', async () => {
-    const insert = jest.fn().mockResolvedValue({ data: null, error: { code: '42501', message: 'permission denied' } });
-    const from   = jest.fn().mockReturnValue({ insert });
+  it('throws on unexpected RPC errors', async () => {
+    const rpc = jest.fn().mockResolvedValue({ error: { code: '42501', message: 'permission denied' } });
 
-    const client = { from } as unknown as Parameters<typeof acceptInvite>[0];
+    const client = { rpc } as unknown as Parameters<typeof acceptInvite>[0];
     await expect(acceptInvite(client, 'group-1', 'user-1', 'alice@example.com')).rejects.toMatchObject({ message: 'permission denied' });
   });
 });
