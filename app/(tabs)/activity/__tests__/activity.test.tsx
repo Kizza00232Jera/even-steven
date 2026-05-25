@@ -11,6 +11,7 @@ const mockFetchActivityFeed = jest.fn();
 const mockFetchGroupsWithMembership = jest.fn();
 const mockUseInfiniteQuery = jest.fn();
 const mockUseQuery = jest.fn();
+const mockRouterPush = jest.fn();
 
 jest.mock('expo-router', () => ({
   useFocusEffect: (cb: () => void) => {
@@ -18,6 +19,7 @@ jest.mock('expo-router', () => ({
     const React = require('react');
     React.useEffect(cb, []);
   },
+  useRouter: () => ({ push: mockRouterPush }),
 }));
 
 jest.mock('@tanstack/react-query', () => ({
@@ -131,6 +133,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockUseQuery.mockReturnValue({ data: [] });
   mockUseInfiniteQuery.mockReturnValue(makeInfiniteQueryResult());
+  mockRouterPush.mockReset();
 });
 
 // ---------------------------------------------------------------------------
@@ -233,5 +236,68 @@ describe('ActivityScreen', () => {
     );
     const { getByText } = render(<ActivityScreen />);
     await waitFor(() => expect(getByText(/45\.50/)).toBeTruthy());
+  });
+
+  it('navigates to expense detail when tapping an expense_added row with expense_id', async () => {
+    const tappableEvent = {
+      ...baseEvent,
+      eventType: 'expense_added' as const,
+      groupId: 'g-1',
+      metadata: { expense_id: 'exp-42', amount: 20, currency: 'EUR' },
+    };
+    mockUseInfiniteQuery.mockReturnValue(
+      makeInfiniteQueryResult({ data: { pages: [[tappableEvent]], pageParams: [0] } })
+    );
+    const { getByTestId } = render(<ActivityScreen />);
+    await waitFor(() => expect(getByTestId('activity-row-ev-1')).toBeTruthy());
+    fireEvent.press(getByTestId('activity-row-ev-1'));
+    expect(mockRouterPush).toHaveBeenCalledWith('/group/g-1/expense-detail?expenseId=exp-42');
+  });
+
+  it('navigates to expense detail when tapping an expense_edited row with expense_id', async () => {
+    const tappableEvent = {
+      ...baseEvent,
+      eventType: 'expense_edited' as const,
+      groupId: 'g-1',
+      metadata: { expense_id: 'exp-99' },
+    };
+    mockUseInfiniteQuery.mockReturnValue(
+      makeInfiniteQueryResult({ data: { pages: [[tappableEvent]], pageParams: [0] } })
+    );
+    const { getByTestId } = render(<ActivityScreen />);
+    await waitFor(() => expect(getByTestId('activity-row-ev-1')).toBeTruthy());
+    fireEvent.press(getByTestId('activity-row-ev-1'));
+    expect(mockRouterPush).toHaveBeenCalledWith('/group/g-1/expense-detail?expenseId=exp-99');
+  });
+
+  it('does not navigate when tapping an expense_added row without expense_id', async () => {
+    const nonTappableEvent = {
+      ...baseEvent,
+      eventType: 'expense_added' as const,
+      groupId: 'g-1',
+      metadata: {},
+    };
+    mockUseInfiniteQuery.mockReturnValue(
+      makeInfiniteQueryResult({ data: { pages: [[nonTappableEvent]], pageParams: [0] } })
+    );
+    const { getByTestId } = render(<ActivityScreen />);
+    await waitFor(() => expect(getByTestId('activity-row-ev-1')).toBeTruthy());
+    fireEvent.press(getByTestId('activity-row-ev-1'));
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it('does not navigate when tapping a non-expense event row', async () => {
+    const nonTappableEvent = {
+      ...baseEvent,
+      eventType: 'settlement_recorded' as const,
+      metadata: { expense_id: 'exp-1' },
+    };
+    mockUseInfiniteQuery.mockReturnValue(
+      makeInfiniteQueryResult({ data: { pages: [[nonTappableEvent]], pageParams: [0] } })
+    );
+    const { getByTestId } = render(<ActivityScreen />);
+    await waitFor(() => expect(getByTestId('activity-row-ev-1')).toBeTruthy());
+    fireEvent.press(getByTestId('activity-row-ev-1'));
+    expect(mockRouterPush).not.toHaveBeenCalled();
   });
 });

@@ -379,7 +379,7 @@ export default function AddExpenseScreen() {
         const path = `${session?.user.id ?? 'unknown'}-${Date.now()}.jpg`;
         receipt_url = await uploadReceipt(supabase, path, receiptUri);
       }
-      await createExpense(
+      const newExpense = await createExpense(
         supabase,
         {
           group_id: groupId,
@@ -401,7 +401,7 @@ export default function AddExpenseScreen() {
         groupId,
         actorId: session!.user.id,
         eventType: 'expense_added',
-        metadata: { title: title.trim(), amount, currency },
+        metadata: { title: title.trim(), amount, currency, expense_id: newExpense.id },
       }).catch(() => {});
       sendGroupNotification({
         eventType: 'new_expense',

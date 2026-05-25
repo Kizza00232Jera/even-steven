@@ -351,7 +351,7 @@ export default function EditExpenseScreen() {
         groupId,
         actorId: session!.user.id,
         eventType: 'expense_edited',
-        metadata: { title: title.trim() },
+        metadata: { title: title.trim(), expense_id: expense.id },
       }).catch(() => {});
       if (myMember?.id) {
         sendGroupNotification({

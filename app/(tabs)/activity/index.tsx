@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import {
   Filter,
@@ -41,6 +41,7 @@ import type { Database } from '../../../lib/database.types';
 type EventType = Database['public']['Tables']['activity_events']['Row']['event_type'];
 
 const PAGE_SIZE = 10;
+const ROW_CLASS = 'flex-row items-start gap-3 py-3 border-b border-border';
 
 // ---------------------------------------------------------------------------
 // Event helpers
@@ -100,7 +101,7 @@ function formatTimestamp(iso: string): string {
 
 function SkeletonActivityRow() {
   return (
-    <View className="flex-row items-start gap-3 py-3 border-b border-border">
+    <View className={ROW_CLASS}>
       <Skeleton width={36} height={36} borderRadius={18} />
       <View className="flex-1 gap-2 pt-1">
         <Skeleton width={'80%'} height={13} borderRadius={6} />
@@ -117,6 +118,7 @@ interface ActivityRowProps {
 function ActivityRow({ event }: ActivityRowProps) {
   const { colorScheme } = useColorScheme();
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
+  const router = useRouter();
 
   const icon = getEventIcons(theme.textSecondary)[event.eventType];
   const description = EVENT_DESCRIPTIONS[event.eventType]?.(event.actorName) ?? event.actorName;
@@ -125,11 +127,15 @@ function ActivityRow({ event }: ActivityRowProps) {
       ? ` · ${event.metadata.currency as string} ${event.metadata.amount.toFixed(2)}`
       : '';
 
-  return (
-    <View
-      testID={`activity-row-${event.id}`}
-      className="flex-row items-start gap-3 py-3 border-b border-border"
-    >
+  const isExpenseEvent =
+    event.eventType === 'expense_added' || event.eventType === 'expense_edited';
+  const expenseId =
+    isExpenseEvent && typeof event.metadata.expense_id === 'string'
+      ? event.metadata.expense_id
+      : null;
+
+  const rowContent = (
+    <>
       <View
         className="w-9 h-9 rounded-full items-center justify-center"
         style={{ backgroundColor: theme.surface2 }}
@@ -146,6 +152,30 @@ function ActivityRow({ event }: ActivityRowProps) {
         )}
         <Text className="text-text-tertiary text-xs mt-0.5">{formatTimestamp(event.createdAt)}</Text>
       </View>
+    </>
+  );
+
+  if (expenseId && event.groupId) {
+    return (
+      <TouchableOpacity
+        testID={`activity-row-${event.id}`}
+        className={ROW_CLASS}
+        activeOpacity={0.7}
+        onPress={() =>
+          router.push(`/group/${event.groupId}/expense-detail?expenseId=${expenseId}` as never)
+        }
+      >
+        {rowContent}
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <View
+      testID={`activity-row-${event.id}`}
+      className={ROW_CLASS}
+    >
+      {rowContent}
     </View>
   );
 }
