@@ -621,11 +621,11 @@ export type Database = {
           p_base_currency_amount?: number
           p_category: string
           p_currency: string
-          p_description: string
+          p_description?: string | null
           p_expense_date: string
           p_group_id: string
           p_payer_id: string
-          p_receipt_url: string
+          p_receipt_url?: string | null
           p_split_method: string
           p_splits: Json
           p_title: string
@@ -659,7 +659,7 @@ export type Database = {
       }
       resolve_invite_token: { Args: { p_token: string }; Returns: Json }
       upsert_push_token: {
-        Args: { p_platform: string; p_token: string; p_user_id: string }
+        Args: { p_platform: string | null; p_token: string; p_user_id: string }
         Returns: undefined
       }
     }

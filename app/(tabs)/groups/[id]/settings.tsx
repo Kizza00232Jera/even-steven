@@ -410,7 +410,7 @@ export default function GroupSettingsScreen() {
         <View className="bg-surface rounded-2xl mx-4 border border-border overflow-hidden">
           <TouchableOpacity
             testID="settings-members-row"
-            onPress={() => router.push(`/groups/${id}/members`)}
+            onPress={() => router.push(`/groups/${id}/members` as never)}
             className={rowClass}
             activeOpacity={0.7}
           >

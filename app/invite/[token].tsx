@@ -124,7 +124,7 @@ export default function InviteScreen() {
             Alert.alert(
               'You have an outstanding balance',
               `While you were away, you were added to some expenses. You currently owe ${amount}.`,
-              [{ text: 'View Balances', onPress: resolve }],
+              [{ text: 'View Balances', onPress: () => resolve() }],
               { cancelable: false },
             );
           });

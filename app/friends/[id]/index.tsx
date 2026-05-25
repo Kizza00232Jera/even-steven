@@ -229,7 +229,7 @@ export default function FriendDetailScreen() {
               {friend.sharedGroups.map((group) => (
                 <TouchableOpacity
                   key={group.groupId}
-                  onPress={() => router.push(`/groups/${group.groupId}`)}
+                  onPress={() => router.push(`/groups/${group.groupId}` as never)}
                   className="flex-row items-center justify-between py-3.5 px-4 bg-surface rounded-2xl border border-border mb-2"
                   activeOpacity={0.7}
                 >

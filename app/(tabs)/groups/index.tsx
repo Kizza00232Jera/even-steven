@@ -82,7 +82,7 @@ function formatDateRange(start: string, end: string): string {
   return `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} – ${endStr}`;
 }
 
-function balanceDisplay(balance: number, currency: Currency, theme: typeof Colors.dark): { text: string; color: string } {
+function balanceDisplay(balance: number, currency: Currency, theme: typeof Colors.dark | typeof Colors.light): { text: string; color: string } {
   if (balance === 0) return { text: 'Settled', color: theme.textSecondary };
   if (balance > 0) return { text: `You're owed ${format(balance, currency)}`, color: Colors.accent };
   return { text: `You owe ${format(Math.abs(balance), currency)}`, color: Colors.destructive };
@@ -610,7 +610,7 @@ export default function GroupsScreen() {
           <GroupCard
             group={item}
             memberPreviews={memberPreviews[item.id]}
-            onPress={() => router.push(`/groups/${item.id}`)}
+            onPress={() => router.push(`/groups/${item.id}` as never)}
             onMenuPress={() => handleMenuPress(item)}
           />
         )}

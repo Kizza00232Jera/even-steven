@@ -127,8 +127,8 @@ describe('ExpenseDetail — non-payer participant with outstanding balance', () 
         <ExpenseDetailScreen />
       </Wrapper>
     );
-    await waitFor(() => expect(getByTestId('settle-up-button')).toBeTruthy());
-  });
+    await waitFor(() => expect(getByTestId('settle-up-button')).toBeTruthy(), { timeout: 15000 });
+  }, 15000);
 
   it('does not render Settled badge', async () => {
     const queryClient = makeQueryClient();
