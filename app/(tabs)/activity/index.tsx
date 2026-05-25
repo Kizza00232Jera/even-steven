@@ -41,6 +41,7 @@ import type { Database } from '../../../lib/database.types';
 type EventType = Database['public']['Tables']['activity_events']['Row']['event_type'];
 
 const PAGE_SIZE = 10;
+const ROW_CLASS = 'flex-row items-start gap-3 py-3 border-b border-border';
 
 // ---------------------------------------------------------------------------
 // Event helpers
@@ -100,7 +101,7 @@ function formatTimestamp(iso: string): string {
 
 function SkeletonActivityRow() {
   return (
-    <View className="flex-row items-start gap-3 py-3 border-b border-border">
+    <View className={ROW_CLASS}>
       <Skeleton width={36} height={36} borderRadius={18} />
       <View className="flex-1 gap-2 pt-1">
         <Skeleton width={'80%'} height={13} borderRadius={6} />
@@ -158,7 +159,7 @@ function ActivityRow({ event }: ActivityRowProps) {
     return (
       <TouchableOpacity
         testID={`activity-row-${event.id}`}
-        className="flex-row items-start gap-3 py-3 border-b border-border"
+        className={ROW_CLASS}
         activeOpacity={0.7}
         onPress={() =>
           router.push(`/group/${event.groupId}/expense-detail?expenseId=${expenseId}` as never)
@@ -172,7 +173,7 @@ function ActivityRow({ event }: ActivityRowProps) {
   return (
     <View
       testID={`activity-row-${event.id}`}
-      className="flex-row items-start gap-3 py-3 border-b border-border"
+      className={ROW_CLASS}
     >
       {rowContent}
     </View>
