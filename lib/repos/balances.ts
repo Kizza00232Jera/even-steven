@@ -25,6 +25,12 @@ type ProfileJoin = {
   google_avatar_url: string | null;
 };
 
+type ExpenseParticipantRow = {
+  member_id: string;
+  share_amount: number;
+  base_share_amount?: number | null;
+};
+
 export async function fetchGroupBalances(
   client: SupabaseClient<Database>,
   groupId: string
@@ -73,7 +79,7 @@ export async function fetchGroupBalances(
     const payerBal = balanceMap.get(expense.payer_id) ?? 0;
     balanceMap.set(expense.payer_id, payerBal + payerCredit);
 
-    const participants = (expense.expense_participants as { member_id: string; share_amount: number; base_share_amount?: number | null }[]) ?? [];
+    const participants = (expense.expense_participants as ExpenseParticipantRow[]) ?? [];
     for (const p of participants) {
       const participantDebit = p.base_share_amount ?? p.share_amount;
       const partBal = balanceMap.get(p.member_id) ?? 0;

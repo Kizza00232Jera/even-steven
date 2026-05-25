@@ -145,29 +145,6 @@ describe('fetchGroupBalances', () => {
     expect(result.members.find((m) => m.memberId === 'm-bob')?.balance).toBe(-195);
   });
 
-  it('does not use raw EUR amount (52) when base_currency_amount (390) is available', async () => {
-    const client = makeClient({
-      members: [alice, bob],
-      group: { base_currency: 'DKK' },
-      expenses: [
-        {
-          id: 'e-1',
-          payer_id: 'm-alice',
-          amount: 52,
-          base_currency_amount: 390,
-          expense_participants: [
-            { member_id: 'm-alice', share_amount: 26, base_share_amount: 195 },
-            { member_id: 'm-bob', share_amount: 26, base_share_amount: 195 },
-          ],
-        },
-      ],
-    });
-    const result = await fetchGroupBalances(client, 'g-1');
-    const aliceBal = result.members.find((m) => m.memberId === 'm-alice')?.balance;
-    // Must not be 26 (half of raw 52 EUR)
-    expect(aliceBal).not.toBe(26);
-  });
-
   it('applies settlement adjustments in addition to expense balances', async () => {
     const client = makeClient({
       members: [alice, bob],
