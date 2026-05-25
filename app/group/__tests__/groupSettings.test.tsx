@@ -5,8 +5,6 @@ import GroupDetailScreen from '../[id]/index';
 const mockBack = jest.fn();
 const mockPush = jest.fn();
 const mockUseQuery = jest.fn();
-const mockUseMutation = jest.fn();
-const mockInvalidateQueries = jest.fn();
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ back: mockBack, push: mockPush }),
@@ -47,8 +45,7 @@ jest.mock('../../../store/auth', () => ({
 
 jest.mock('@tanstack/react-query', () => ({
   useQuery: (...args: unknown[]) => mockUseQuery(...args),
-  useMutation: (...args: unknown[]) => mockUseMutation(...args),
-  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
+  useQueryClient: () => ({ invalidateQueries: jest.fn() }),
 }));
 
 jest.mock('lucide-react-native', () => ({
@@ -94,7 +91,6 @@ const group = {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockUseMutation.mockReturnValue({ mutate: jest.fn(), isPending: false });
 });
 
 describe('GroupDetailScreen — settings navigation', () => {
