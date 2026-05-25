@@ -20,19 +20,17 @@ import { SkeletonBalanceRow } from '../../../../components/SkeletonBalanceRow';
 import { ErrorState } from '../../../../components/ErrorState';
 import { RemovedMemberState } from '../../../../components/RemovedMemberState';
 import { Colors } from '../../../../constants/colors';
-import { fetchGroupDetail } from '../../../../lib/repos/groups';
+import { fetchGroupDetail, type GroupDetail } from '../../../../lib/repos/groups';
 import { getOrCreateInviteToken } from '../../../../lib/repos/invites';
 import { fetchGroupExpenses, type ExpenseListItem } from '../../../../lib/repos/expenses';
 import { fetchGroupBalances, type GroupBalanceData } from '../../../../lib/repos/balances';
-import { format } from '../../../../lib/currency';
-import type { Currency } from '../../../../lib/currency';
+import { format, type Currency } from '../../../../lib/currency';
 import { supabase } from '../../../../lib/supabase';
 import { useAuthStore } from '../../../../store/auth';
 import { useToast } from '../../../../hooks/useToast';
 import { useRealtime } from '../../../../hooks/useRealtime';
 import { BalancesTab } from './balances';
 import { SummaryTab } from './summary';
-import type { GroupDetail } from '../../../../lib/repos/groups';
 
 const INVITE_BASE = 'even-steven.vercel.app/invite';
 
@@ -53,7 +51,6 @@ function useGroupDetail(id: string, userId: string) {
     queryFn: () => fetchGroupDetail(supabase, id, userId),
   });
 }
-
 
 function AddExpenseFab({ group, groupId }: { group: GroupDetail; groupId: string }) {
   const router = useRouter();
