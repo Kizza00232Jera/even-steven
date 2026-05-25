@@ -76,6 +76,7 @@ export type Database = {
       }
       expense_participants: {
         Row: {
+          base_share_amount: number | null
           expense_id: string
           id: string
           member_id: string
@@ -83,6 +84,7 @@ export type Database = {
           share_percentage: number | null
         }
         Insert: {
+          base_share_amount?: number | null
           expense_id: string
           id?: string
           member_id: string
@@ -90,6 +92,7 @@ export type Database = {
           share_percentage?: number | null
         }
         Update: {
+          base_share_amount?: number | null
           expense_id?: string
           id?: string
           member_id?: string

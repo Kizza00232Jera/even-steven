@@ -3,10 +3,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useColorScheme } from 'nativewind';
-import { ChevronLeft, Pencil, Receipt } from 'lucide-react-native';
+import { ChevronLeft, Pencil, Receipt, CheckCircle } from 'lucide-react-native';
 import { supabase } from '../../../lib/supabase';
 import { fetchGroupExpenses, fetchExpenseParticipants } from '../../../lib/repos/expenses';
 import { fetchGroupMembers } from '../../../lib/repos/groups';
+import { fetchGroupBalances } from '../../../lib/repos/balances';
 import { format, type Currency } from '../../../lib/currency';
 import { useAuthStore } from '../../../store/auth';
 import { Colors } from '../../../constants/colors';
@@ -36,8 +37,28 @@ export default function ExpenseDetailScreen() {
     queryFn: () => fetchGroupMembers(supabase, groupId),
   });
 
+  const { data: groupBalances } = useQuery({
+    queryKey: ['group-balances', groupId],
+    queryFn: () => fetchGroupBalances(supabase, groupId),
+    enabled: !!groupId,
+  });
+
   const memberMap = new Map(members.map((m) => [m.id, m]));
   const currentMemberId = members.find((m) => m.user_id === session?.user.id)?.id;
+
+  const isNonPayerParticipant =
+    !!currentMemberId &&
+    !!expense &&
+    expense.payer_id !== currentMemberId &&
+    participants.some((p) => p.memberId === currentMemberId);
+
+  const myParticipant = isNonPayerParticipant
+    ? participants.find((p) => p.memberId === currentMemberId)
+    : undefined;
+
+  const myBalance = groupBalances?.members.find((m) => m.memberId === currentMemberId)?.balance ?? null;
+  const isSettled = isNonPayerParticipant && myBalance !== null && myBalance >= 0;
+  const baseCurrency = groupBalances?.currency;
 
   if (expensesLoading) {
     return (
@@ -188,6 +209,53 @@ export default function ExpenseDetailScreen() {
             />
           </View>
         ) : null}
+
+        {/* Settle Up / Settled — non-payer participants only */}
+        {isNonPayerParticipant && myParticipant && (
+          <View
+            className="rounded-2xl p-4 border border-border"
+            style={{ backgroundColor: theme.surface }}
+          >
+            <Text className="font-body text-text-tertiary text-xs uppercase tracking-wider mb-3">
+              Your share
+            </Text>
+            <View className="flex-row items-center justify-between">
+              <Text
+                testID="my-share-amount"
+                className="font-display font-bold text-xl"
+                style={{ color: isSettled ? theme.textSecondary : Colors.destructive }}
+              >
+                {format(
+                  myParticipant.baseShareAmount ?? myParticipant.shareAmount,
+                  (baseCurrency ?? expense.currency) as Currency
+                )}
+              </Text>
+              {isSettled ? (
+                <View
+                  testID="settled-badge"
+                  className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full"
+                  style={{ backgroundColor: Colors.accentDim }}
+                >
+                  <CheckCircle size={14} color={Colors.accent} strokeWidth={2} />
+                  <Text className="font-body text-xs font-medium" style={{ color: Colors.accent }}>
+                    Settled
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  testID="settle-up-button"
+                  onPress={() => router.replace(`/group/${groupId}` as never)}
+                  className="px-4 py-2 rounded-full"
+                  style={{ backgroundColor: Colors.accent }}
+                >
+                  <Text className="font-body text-sm font-semibold" style={{ color: '#0b0b0b' }}>
+                    Settle Up
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Edited badge */}
         {expense.is_edited && (
