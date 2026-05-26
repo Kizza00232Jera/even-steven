@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
 import type { Database } from '../database.types';
 import type { GroupWithMembership } from '../groupFilters';
@@ -401,11 +400,12 @@ export async function uploadGroupPhoto(
   client: SupabaseClient<Database>,
   groupId: string,
   imageUri: string,
+  base64Data: string,
+  mimeType?: string,
 ): Promise<string> {
-  const base64 = await FileSystem.readAsStringAsync(imageUri, { encoding: 'base64' });
-  const arrayBuffer = decode(base64);
+  const arrayBuffer = decode(base64Data);
   const ext = imageUri.split('.').pop()?.toLowerCase() ?? 'jpg';
-  const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
+  const contentType = mimeType ?? (ext === 'png' ? 'image/png' : 'image/jpeg');
   const filePath = `groups/${groupId}.${ext}`;
 
   const { error: uploadError } = await client.storage

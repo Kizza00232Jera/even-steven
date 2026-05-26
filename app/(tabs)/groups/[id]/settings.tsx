@@ -177,6 +177,7 @@ export default function GroupSettingsScreen() {
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
+      base64: true,
     });
 
     if (result.canceled || !result.assets[0]) return;
@@ -186,10 +187,14 @@ export default function GroupSettingsScreen() {
       Alert.alert('Photo too large', 'Please select a photo smaller than 2 MB.');
       return;
     }
+    if (!asset.base64) {
+      Alert.alert('Error', 'Could not read image data. Please try again.');
+      return;
+    }
 
     setIsUploadingPhoto(true);
     try {
-      await uploadGroupPhoto(supabase, id, asset.uri);
+      await uploadGroupPhoto(supabase, id, asset.uri, asset.base64, asset.mimeType ?? undefined);
       invalidateGroupQueries();
     } catch {
       Alert.alert('Error', 'Failed to upload photo. Please try again.');

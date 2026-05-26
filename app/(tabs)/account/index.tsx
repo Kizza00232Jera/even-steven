@@ -151,6 +151,7 @@ export default function AccountScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      base64: true,
     });
 
     if (result.canceled || !result.assets[0]) return;
@@ -160,10 +161,14 @@ export default function AccountScreen() {
       Alert.alert('File too large', 'Please choose a photo under 1 MB.');
       return;
     }
+    if (!asset.base64) {
+      Alert.alert('Upload failed', 'Could not read image data. Please try again.');
+      return;
+    }
 
     setIsUploadingPhoto(true);
     try {
-      const publicUrl = await uploadProfilePhoto(supabase, session!.user.id, asset.uri);
+      const publicUrl = await uploadProfilePhoto(supabase, session!.user.id, asset.uri, asset.base64, asset.mimeType ?? undefined);
       const updated = await updateProfile(supabase, session!.user.id, { avatar_url: publicUrl });
       setProfile(updated);
       hapticOnToggle();

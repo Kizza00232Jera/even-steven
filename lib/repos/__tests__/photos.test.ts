@@ -9,6 +9,7 @@ import type { Database } from '../../database.types';
 
 const PUBLIC_URL = 'https://storage.example.com/profile-photos/avatars/user-1.jpg';
 const GROUP_PUBLIC_URL = 'https://storage.example.com/group-photos/groups/group-1.jpg';
+const FAKE_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
 function makeStorageBucket(publicUrl: string) {
   return {
@@ -41,19 +42,6 @@ function makeGroupClient(
   } as unknown as SupabaseClient<Database> & { _updateFn: jest.Mock };
 }
 
-// Mock fetch + blob globally
-const mockBlob = { type: 'image/jpeg' } as Blob;
-beforeAll(() => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (globalThis as any).fetch = jest.fn().mockResolvedValue({
-    blob: () => Promise.resolve(mockBlob),
-  } as Response);
-});
-
-afterAll(() => {
-  jest.restoreAllMocks();
-});
-
 // ---------------------------------------------------------------------------
 // uploadProfilePhoto
 // ---------------------------------------------------------------------------
@@ -62,19 +50,30 @@ describe('uploadProfilePhoto', () => {
   it('uploads to the profile-photos bucket', async () => {
     const bucket = makeStorageBucket(PUBLIC_URL);
     const client = makeProfileClient(bucket);
-    await uploadProfilePhoto(client, 'user-1', 'https://example.com/photo.jpg');
+    await uploadProfilePhoto(client, 'user-1', 'https://example.com/photo.jpg', FAKE_BASE64);
     expect(client.storage.from).toHaveBeenCalledWith('profile-photos');
     expect(bucket.upload).toHaveBeenCalledWith(
       'avatars/user-1.jpg',
-      mockBlob,
+      expect.any(ArrayBuffer),
       expect.objectContaining({ upsert: true }),
     );
   });
 
   it('returns a public URL string', async () => {
     const client = makeProfileClient();
-    const result = await uploadProfilePhoto(client, 'user-1', 'https://example.com/photo.jpg');
+    const result = await uploadProfilePhoto(client, 'user-1', 'https://example.com/photo.jpg', FAKE_BASE64);
     expect(result).toMatch(/^https:\/\/storage\.example\.com\/profile-photos\/avatars\/user-1\.jpg/);
+  });
+
+  it('uses mimeType when provided', async () => {
+    const bucket = makeStorageBucket(PUBLIC_URL);
+    const client = makeProfileClient(bucket);
+    await uploadProfilePhoto(client, 'user-1', 'https://example.com/photo.jpg', FAKE_BASE64, 'image/png');
+    expect(bucket.upload).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(ArrayBuffer),
+      expect.objectContaining({ contentType: 'image/png' }),
+    );
   });
 
   it('throws when the bucket upload fails', async () => {
@@ -82,7 +81,7 @@ describe('uploadProfilePhoto', () => {
     bucket.upload = jest.fn().mockResolvedValue({ error: new Error('bucket not found') });
     const client = makeProfileClient(bucket);
     await expect(
-      uploadProfilePhoto(client, 'user-1', 'https://example.com/photo.jpg'),
+      uploadProfilePhoto(client, 'user-1', 'https://example.com/photo.jpg', FAKE_BASE64),
     ).rejects.toThrow('bucket not found');
   });
 });
@@ -95,24 +94,24 @@ describe('uploadGroupPhoto', () => {
   it('uploads to the group-photos bucket', async () => {
     const bucket = makeStorageBucket(GROUP_PUBLIC_URL);
     const client = makeGroupClient(bucket);
-    await uploadGroupPhoto(client, 'group-1', 'https://example.com/photo.jpg');
+    await uploadGroupPhoto(client, 'group-1', 'https://example.com/photo.jpg', FAKE_BASE64);
     expect(client.storage.from).toHaveBeenCalledWith('group-photos');
     expect(bucket.upload).toHaveBeenCalledWith(
       'groups/group-1.jpg',
-      mockBlob,
+      expect.any(ArrayBuffer),
       expect.objectContaining({ upsert: true }),
     );
   });
 
   it('returns a public URL string', async () => {
     const client = makeGroupClient();
-    const result = await uploadGroupPhoto(client, 'group-1', 'https://example.com/photo.jpg');
+    const result = await uploadGroupPhoto(client, 'group-1', 'https://example.com/photo.jpg', FAKE_BASE64);
     expect(result).toMatch(/^https:\/\/storage\.example\.com\/group-photos\/groups\/group-1\.jpg/);
   });
 
   it('saves the photo URL to the groups table', async () => {
     const client = makeGroupClient();
-    const result = await uploadGroupPhoto(client, 'group-1', 'https://example.com/photo.jpg');
+    const result = await uploadGroupPhoto(client, 'group-1', 'https://example.com/photo.jpg', FAKE_BASE64);
     expect((client as unknown as { _updateFn: jest.Mock })._updateFn).toHaveBeenCalledWith(
       expect.objectContaining({ background_image_url: result }),
     );
@@ -123,7 +122,7 @@ describe('uploadGroupPhoto', () => {
     bucket.upload = jest.fn().mockResolvedValue({ error: new Error('bucket not found') });
     const client = makeGroupClient(bucket);
     await expect(
-      uploadGroupPhoto(client, 'group-1', 'https://example.com/photo.jpg'),
+      uploadGroupPhoto(client, 'group-1', 'https://example.com/photo.jpg', FAKE_BASE64),
     ).rejects.toThrow('bucket not found');
   });
 
@@ -132,7 +131,7 @@ describe('uploadGroupPhoto', () => {
       error: new Error('update failed') as unknown as null,
     });
     await expect(
-      uploadGroupPhoto(client, 'group-1', 'https://example.com/photo.jpg'),
+      uploadGroupPhoto(client, 'group-1', 'https://example.com/photo.jpg', FAKE_BASE64),
     ).rejects.toThrow('update failed');
   });
 });
