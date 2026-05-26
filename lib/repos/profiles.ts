@@ -1,4 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 import type { Database } from '../database.types';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
@@ -52,14 +54,15 @@ export async function uploadProfilePhoto(
   userId: string,
   imageUri: string
 ): Promise<string> {
-  const response = await fetch(imageUri);
-  const blob = await response.blob();
+  const base64 = await FileSystem.readAsStringAsync(imageUri, { encoding: 'base64' });
+  const arrayBuffer = decode(base64);
   const ext = imageUri.split('.').pop()?.toLowerCase() ?? 'jpg';
+  const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
   const filePath = `avatars/${userId}.${ext}`;
 
   const { error: uploadError } = await client.storage
     .from('profile-photos')
-    .upload(filePath, blob, { contentType: blob.type || 'image/jpeg', upsert: true });
+    .upload(filePath, arrayBuffer, { contentType, upsert: true });
 
   if (uploadError) throw uploadError;
 
