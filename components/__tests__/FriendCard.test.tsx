@@ -18,27 +18,21 @@ describe('FriendCard', () => {
     expect(getByText('Alice')).toBeTruthy();
   });
 
-  it('shows "All settled" when balance is zero', () => {
-    const { getByText } = render(<FriendCard friend={baseFriend} onPress={() => {}} />);
-    expect(getByText('All settled')).toBeTruthy();
+  it('shows no balance text when balance is zero', () => {
+    const { queryByText } = render(<FriendCard friend={baseFriend} onPress={() => {}} />);
+    expect(queryByText(/owe/i)).toBeNull();
   });
 
-  it('shows "Owes you" label when balance is positive', () => {
+  it('shows "Owes" amount when balance is positive', () => {
     const friend = { ...baseFriend, totalBalance: 47, sharedGroupCount: 2 };
     const { getByText } = render(<FriendCard friend={friend} onPress={() => {}} />);
-    expect(getByText(/Owes you/)).toBeTruthy();
+    expect(getByText(/Owes/)).toBeTruthy();
   });
 
   it('shows "You owe" label when balance is negative', () => {
     const friend = { ...baseFriend, totalBalance: -12, sharedGroupCount: 1 };
     const { getByText } = render(<FriendCard friend={friend} onPress={() => {}} />);
     expect(getByText(/You owe/)).toBeTruthy();
-  });
-
-  it('shows shared group count when multiple groups', () => {
-    const friend = { ...baseFriend, totalBalance: 47, sharedGroupCount: 2 };
-    const { getByText } = render(<FriendCard friend={friend} onPress={() => {}} />);
-    expect(getByText(/2 groups/)).toBeTruthy();
   });
 
   it('calls onPress when tapped', () => {

@@ -95,11 +95,11 @@ beforeEach(() => {
 
 describe('GroupDetailScreen — settings navigation', () => {
   beforeEach(() => {
-    mockUseQuery.mockReturnValue({
-      data: group,
-      isLoading: false,
-      isError: false,
-      refetch: jest.fn(),
+    mockUseQuery.mockImplementation(({ queryKey }: { queryKey: unknown[] }) => {
+      if (queryKey[0] === 'group') {
+        return { data: group, isLoading: false, isError: false, refetch: jest.fn() };
+      }
+      return { data: undefined, isLoading: false, isError: false, refetch: jest.fn() };
     });
   });
 

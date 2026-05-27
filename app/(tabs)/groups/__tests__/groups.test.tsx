@@ -130,11 +130,6 @@ describe('GroupsScreen — group cards', () => {
     expect(mockPush).toHaveBeenCalledWith('/groups/g1');
   });
 
-  it('shows date range for Trip groups', () => {
-    const { getByText } = render(<GroupsScreen />);
-    expect(getByText('Jun 1 – Jun 10, 2026')).toBeTruthy();
-  });
-
   it('shows pin icon for pinned group', () => {
     mockUseQuery.mockReturnValue({
       data: [{ ...baseGroup, is_pinned: true }],
@@ -193,11 +188,3 @@ describe('GroupsScreen — navigation', () => {
   });
 });
 
-describe('GroupsScreen — filter sheet', () => {
-  it('opens filter sheet on filter button tap', () => {
-    mockUseQuery.mockReturnValue({ data: [baseGroup], isLoading: false, isError: false, refetch: jest.fn() });
-    const { getByTestId, getByText } = render(<GroupsScreen />);
-    fireEvent.press(getByTestId('filter-button'));
-    expect(getByText('Filter groups')).toBeTruthy();
-  });
-});

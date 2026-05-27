@@ -66,6 +66,7 @@ jest.mock('lucide-react-native', () => ({
   Check: () => null,
   X: () => null,
   RotateCcw: () => null,
+  CheckCircle2: () => null,
 }));
 
 function makeQueryClient() {
@@ -124,7 +125,7 @@ describe('BalancesTab', () => {
         <BalancesTab groupId="g-1" currentMemberId="m-alice" />
       </Wrapper>
     );
-    await waitFor(() => expect(getByText('All settled')).toBeTruthy());
+    await waitFor(() => expect(getByText("You're all even!")).toBeTruthy());
   });
 
   it('shows "You owe" when current user is the debtor', async () => {
@@ -179,12 +180,12 @@ describe('BalancesTab', () => {
       currency: 'EUR',
       members: baseMembers,
     });
-    const { getByText } = render(
+    const { getAllByText } = render(
       <Wrapper queryClient={queryClient}>
         <BalancesTab groupId="g-1" currentMemberId="m-alice" />
       </Wrapper>
     );
-    await waitFor(() => expect(getByText(/€10\.00/)).toBeTruthy());
+    await waitFor(() => expect(getAllByText(/€10\.00/).length).toBeGreaterThan(0));
   });
 
   it('renders a Settle Up button on each debt row', async () => {

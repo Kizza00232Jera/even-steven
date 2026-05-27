@@ -247,7 +247,7 @@ export default function ExpenseDetailScreen() {
               ) : (
                 <TouchableOpacity
                   testID="settle-up-button"
-                  onPress={() => router.replace(`/groups/${groupId}` as never)}
+                  onPress={() => router.back()}
                   className="px-4 py-2 rounded-full"
                   style={{ backgroundColor: Colors.accent }}
                 >

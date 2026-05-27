@@ -63,18 +63,16 @@ jest.mock('lucide-react-native', () => {
   return {
     Filter: mockIcon,
     X: mockIcon,
-    DollarSign: mockIcon,
+    Receipt: mockIcon,
     Pencil: mockIcon,
     Trash2: mockIcon,
     ArrowLeftRight: mockIcon,
     RotateCcw: mockIcon,
     UserPlus: mockIcon,
     UserMinus: mockIcon,
-    LogOut: mockIcon,
     Users: mockIcon,
     Archive: mockIcon,
-    Link: mockIcon,
-    Clock: mockIcon,
+    CircleDot: mockIcon,
   };
 });
 

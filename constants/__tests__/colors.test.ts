@@ -10,15 +10,15 @@ describe('Colors', () => {
   });
 
   it('has correct dark background', () => {
-    expect(Colors.dark.background).toBe('#0b0b0b');
+    expect(Colors.dark.background).toBe('#0f0e0d');
   });
 
   it('has correct light background', () => {
-    expect(Colors.light.background).toBe('#f8f8f8');
+    expect(Colors.light.background).toBe('#f5f3f0');
   });
 
   it('has correct dark surface', () => {
-    expect(Colors.dark.surface).toBe('#1a1a1a');
+    expect(Colors.dark.surface).toBe('#1c1a18');
   });
 
   it('has gradient entries for all group types', () => {

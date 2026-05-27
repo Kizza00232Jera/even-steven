@@ -56,6 +56,8 @@ jest.mock('../../../../lib/repos/expenses', () => ({
 const mockChain = {
   select: jest.fn(function (this: unknown) { return this; }),
   eq: jest.fn(function (this: unknown) { return this; }),
+  in: jest.fn(function (this: unknown) { return this; }),
+  order: jest.fn().mockResolvedValue({ data: MEMBERS, error: null }),
   single: jest.fn().mockResolvedValue({ data: { base_currency: 'EUR' }, error: null }),
 };
 

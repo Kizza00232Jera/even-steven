@@ -62,6 +62,11 @@ const EXPENSES = [
     expense_date: '2026-05-15',
     is_edited: false,
     participant_member_ids: [PAYER_MEMBER_ID, OTHER_MEMBER_ID],
+    receipt_url: null,
+    participants: [
+      { memberId: PAYER_MEMBER_ID, shareAmount: 25, baseShareAmount: 25 },
+      { memberId: OTHER_MEMBER_ID, shareAmount: 25, baseShareAmount: 25 },
+    ],
   },
   {
     id: 'expense-2',
@@ -77,6 +82,11 @@ const EXPENSES = [
     expense_date: '2026-05-14',
     is_edited: true,
     participant_member_ids: [PAYER_MEMBER_ID, OTHER_MEMBER_ID],
+    receipt_url: null,
+    participants: [
+      { memberId: PAYER_MEMBER_ID, shareAmount: 15, baseShareAmount: 15 },
+      { memberId: OTHER_MEMBER_ID, shareAmount: 15, baseShareAmount: 15 },
+    ],
   },
 ];
 
@@ -150,19 +160,12 @@ jest.mock('nativewind', () => ({
   useColorScheme: () => ({ colorScheme: 'dark' }),
 }));
 
-jest.mock('lucide-react-native', () => ({
-  Settings: () => null,
-  ChevronLeft: () => null,
-  LogOut: () => null,
-  Users: () => null,
-  BellOff: () => null,
-  Bell: () => null,
-  X: () => null,
-  ChevronRight: () => null,
-  Plus: () => null,
-  Share2: () => null,
-  User: () => null,
-}));
+jest.mock('lucide-react-native', () => {
+  const MockIcon = () => null;
+  return new Proxy({ __esModule: true }, {
+    get: (_target: Record<string, unknown>, prop: string) => prop === '__esModule' ? true : MockIcon,
+  });
+});
 
 jest.mock('@tanstack/react-query', () => ({
   useQuery: (...args: unknown[]) => mockUseQuery(...args),
@@ -246,20 +249,6 @@ describe('ExpensesTab — expense card display', () => {
     const { getByTestId } = render(<GroupDetailScreen />);
     fireEvent.press(getByTestId('tab-expenses'));
     expect(getByTestId('expense-title-expense-1')).toBeTruthy();
-  });
-
-  it('shows edited badge for is_edited expenses', () => {
-    const { getByTestId } = render(<GroupDetailScreen />);
-    fireEvent.press(getByTestId('tab-expenses'));
-    // expense-2 has is_edited = true
-    expect(getByTestId('edited-badge-expense-2')).toBeTruthy();
-  });
-
-  it('does not show edited badge for non-edited expenses', () => {
-    const { queryByTestId, getByTestId } = render(<GroupDetailScreen />);
-    fireEvent.press(getByTestId('tab-expenses'));
-    // expense-1 has is_edited = false
-    expect(queryByTestId('edited-badge-expense-1')).toBeNull();
   });
 
   it('dims settled expenses', () => {

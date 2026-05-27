@@ -150,7 +150,7 @@ describe('ExpenseDetail — non-payer participant with outstanding balance', () 
     await waitFor(() => expect(getByTestId('my-share-amount')).toBeTruthy());
   });
 
-  it('navigates to group root using router.replace when Settle Up is pressed', async () => {
+  it('calls router.back when Settle Up is pressed', async () => {
     const queryClient = makeQueryClient();
     const { getByTestId } = render(
       <Wrapper queryClient={queryClient}>
@@ -159,7 +159,7 @@ describe('ExpenseDetail — non-payer participant with outstanding balance', () 
     );
     await waitFor(() => getByTestId('settle-up-button'));
     fireEvent.press(getByTestId('settle-up-button'));
-    expect(mockReplace).toHaveBeenCalledWith(`/groups/${GROUP_ID}` as never);
+    expect(mockBack).toHaveBeenCalled();
   });
 });
 

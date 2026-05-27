@@ -28,18 +28,16 @@ function makeProfileClient(bucketMock = makeStorageBucket(PUBLIC_URL)) {
 
 function makeGroupClient(
   bucketMock = makeStorageBucket(GROUP_PUBLIC_URL),
-  updateResult = { error: null },
+  rpcResult = { error: null },
 ) {
-  const updateFn = jest.fn().mockReturnValue({
-    eq: jest.fn().mockResolvedValue(updateResult),
-  });
+  const rpcFn = jest.fn().mockResolvedValue(rpcResult);
   return {
     storage: {
       from: jest.fn().mockReturnValue(bucketMock),
     },
-    from: jest.fn().mockReturnValue({ update: updateFn }),
-    _updateFn: updateFn,
-  } as unknown as SupabaseClient<Database> & { _updateFn: jest.Mock };
+    rpc: rpcFn,
+    _rpcFn: rpcFn,
+  } as unknown as SupabaseClient<Database> & { _rpcFn: jest.Mock };
 }
 
 // ---------------------------------------------------------------------------
@@ -109,11 +107,12 @@ describe('uploadGroupPhoto', () => {
     expect(result).toMatch(/^https:\/\/storage\.example\.com\/group-photos\/groups\/group-1\.jpg/);
   });
 
-  it('saves the photo URL to the groups table', async () => {
+  it('calls rpc to update the groups table with the photo URL', async () => {
     const client = makeGroupClient();
     const result = await uploadGroupPhoto(client, 'group-1', 'https://example.com/photo.jpg', FAKE_BASE64);
-    expect((client as unknown as { _updateFn: jest.Mock })._updateFn).toHaveBeenCalledWith(
-      expect.objectContaining({ background_image_url: result }),
+    expect((client as unknown as { _rpcFn: jest.Mock })._rpcFn).toHaveBeenCalledWith(
+      'update_group_background_image',
+      expect.objectContaining({ p_group_id: 'group-1', p_url: expect.stringContaining(result.split('?')[0]) }),
     );
   });
 
@@ -126,9 +125,9 @@ describe('uploadGroupPhoto', () => {
     ).rejects.toThrow('bucket not found');
   });
 
-  it('throws when the groups table update fails', async () => {
+  it('throws when the rpc call fails', async () => {
     const client = makeGroupClient(makeStorageBucket(GROUP_PUBLIC_URL), {
-      error: new Error('update failed') as unknown as null,
+      error: new Error('update failed'),
     });
     await expect(
       uploadGroupPhoto(client, 'group-1', 'https://example.com/photo.jpg', FAKE_BASE64),
