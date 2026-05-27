@@ -417,10 +417,10 @@ export async function uploadGroupPhoto(
   const { data } = client.storage.from('group-photos').getPublicUrl(filePath);
   const photoUrl = `${data.publicUrl}?t=${Date.now()}`;
 
-  const { error: updateError } = await client
-    .from('groups')
-    .update({ background_image_url: photoUrl })
-    .eq('id', groupId);
+  const { error: updateError } = await client.rpc('update_group_background_image', {
+    p_group_id: groupId,
+    p_url: photoUrl,
+  });
   if (updateError) throw updateError;
 
   return photoUrl;
