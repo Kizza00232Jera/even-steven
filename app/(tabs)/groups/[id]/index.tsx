@@ -8,6 +8,7 @@ import {
   ScrollView,
   Animated,
   Dimensions,
+  Image,
 } from 'react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -159,23 +160,31 @@ export default function GroupDetailScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      {/* Full-bleed gradient header — 200px tall per spec §13 */}
+      {/* Full-bleed header — 200px tall per spec §13 */}
       <View style={{ height: HEADER_HEIGHT, overflow: 'hidden' }}>
-        <Svg
-          style={{ position: 'absolute', top: 0, left: 0 }}
-          width={screenWidth}
-          height={HEADER_HEIGHT}
-        >
-          <Defs>
-            <SvgLinearGradient id="hdrGrad" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0" stopColor={gradientStart} stopOpacity="1" />
-              <Stop offset="1" stopColor={gradientEnd} stopOpacity="1" />
-            </SvgLinearGradient>
-          </Defs>
-          <Rect width={screenWidth} height={HEADER_HEIGHT} fill="url(#hdrGrad)" />
-          {/* Dark overlay per spec §13 */}
-          <Rect width={screenWidth} height={HEADER_HEIGHT} fill="rgba(0,0,0,0.35)" />
-        </Svg>
+        {group.background_image_url ? (
+          <Image
+            source={{ uri: group.background_image_url }}
+            style={{ position: 'absolute', top: 0, left: 0, width: screenWidth, height: HEADER_HEIGHT }}
+            resizeMode="cover"
+          />
+        ) : (
+          <Svg
+            style={{ position: 'absolute', top: 0, left: 0 }}
+            width={screenWidth}
+            height={HEADER_HEIGHT}
+          >
+            <Defs>
+              <SvgLinearGradient id="hdrGrad" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0" stopColor={gradientStart} stopOpacity="1" />
+                <Stop offset="1" stopColor={gradientEnd} stopOpacity="1" />
+              </SvgLinearGradient>
+            </Defs>
+            <Rect width={screenWidth} height={HEADER_HEIGHT} fill="url(#hdrGrad)" />
+          </Svg>
+        )}
+        {/* Dark overlay per spec §13 */}
+        <View style={{ position: 'absolute', top: 0, left: 0, width: screenWidth, height: HEADER_HEIGHT, backgroundColor: 'rgba(0,0,0,0.35)' }} />
         <View className="px-4 pt-3 pb-4 flex-1 justify-between">
           <View className="flex-row items-center justify-between">
             <TouchableOpacity
