@@ -1,14 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
   FlatList,
   TouchableOpacity,
   Modal,
-  ScrollView,
-  Alert,
   Pressable,
-  TextInput,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -19,7 +17,6 @@ import {
   Pin,
   BellOff,
   MoreHorizontal,
-  Filter,
   X,
   Link,
 } from 'lucide-react-native';
@@ -37,7 +34,6 @@ import {
 } from '../../../lib/repos/groups';
 import type { MemberPreview } from '../../../lib/repos/groups';
 import { updateProfile } from '../../../lib/repos/profiles';
-import { filterGroups } from '../../../lib/groupFilters';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/auth';
 import { hapticOnGroupPin, hapticOnToggle } from '../../../lib/haptics';
@@ -45,47 +41,107 @@ import { useTripExpiry } from '../../../hooks/useTripExpiry';
 import { useRealtimeGroups } from '../../../hooks/useRealtime';
 import { format } from '../../../lib/currency';
 import type { Currency } from '../../../lib/currency';
-import type { GroupWithMembership, GroupFilters } from '../../../lib/groupFilters';
-import type { Database } from '../../../lib/database.types';
+import type { GroupWithMembership } from '../../../lib/groupFilters';
 
-type GroupType = Database['public']['Tables']['groups']['Row']['type'];
-type GroupStatus = Database['public']['Tables']['groups']['Row']['status'];
-
-const GROUP_TYPES: GroupType[] = ['Trip', 'Home', 'Couple', 'Utilities', 'Family', 'Other'];
-
-const EMPTY_FILTERS: GroupFilters = {
-  status: null,
-  types: [],
-  balance: null,
-  tripTiming: null,
-};
-
-const BALANCE_CHIP_LABELS: Record<NonNullable<GroupFilters['balance']>, string> = {
-  owe: 'You owe',
-  owed: 'You are owed',
-  settled: 'Settled',
-};
-
-const ACTIVE_CHIP_STYLE = {
-  backgroundColor: Colors.accentDim,
-  borderColor: Colors.accent,
-  borderWidth: 1,
-} as const;
-
-function formatDateRange(start: string, end: string): string {
-  const startDate = new Date(start + 'T00:00:00');
-  const endDate = new Date(end + 'T00:00:00');
-  const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  if (startDate.getFullYear() === endDate.getFullYear()) {
-    return `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${endStr}`;
-  }
-  return `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} – ${endStr}`;
-}
-
-function balanceDisplay(balance: number, currency: Currency, theme: typeof Colors.dark | typeof Colors.light): { text: string; color: string } {
+function balanceDisplay(
+  balance: number,
+  currency: Currency,
+  theme: typeof Colors.dark | typeof Colors.light,
+): { text: string; color: string } {
   if (balance === 0) return { text: 'Settled', color: theme.textSecondary };
   if (balance > 0) return { text: `You're owed ${format(balance, currency)}`, color: Colors.accent };
   return { text: `You owe ${format(Math.abs(balance), currency)}`, color: Colors.destructive };
+}
+
+function AvatarCircle({
+  preview,
+  size = 40,
+  borderColor,
+}: {
+  preview: MemberPreview;
+  size?: number;
+  borderColor: string;
+}) {
+  const initials = preview.name.charAt(0).toUpperCase();
+
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: preview.avatarUrl ? 'transparent' : Colors.accentDim,
+        borderWidth: 2,
+        borderColor,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+      }}
+    >
+      {preview.avatarUrl ? (
+        <Image source={{ uri: preview.avatarUrl }} style={{ width: size, height: size }} />
+      ) : (
+        <Text
+          style={{
+            color: '#ffffff',
+            fontSize: size * 0.38,
+            fontFamily: 'SpaceGrotesk_500Medium',
+          }}
+        >
+          {initials}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+function AvatarStack({
+  previews,
+  background,
+}: {
+  previews: MemberPreview[];
+  background: string;
+}) {
+  const { colorScheme } = useColorScheme();
+  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
+  const shown = previews.slice(0, 3);
+  const overflow = previews.length - 3;
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      {shown.map((p, i) => (
+        <View key={p.memberId} style={{ marginLeft: i === 0 ? 0 : -10, zIndex: shown.length - i }}>
+          <AvatarCircle preview={p} size={40} borderColor={background} />
+        </View>
+      ))}
+      {overflow > 0 && (
+        <View
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: theme.surface2,
+            borderWidth: 2,
+            borderColor: background,
+            marginLeft: -10,
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 0,
+          }}
+        >
+          <Text
+            style={{
+              color: theme.textSecondary,
+              fontSize: 13,
+              fontFamily: 'Inter_500Medium',
+            }}
+          >
+            +{overflow}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
 }
 
 interface GroupCardProps {
@@ -95,41 +151,10 @@ interface GroupCardProps {
   onMenuPress: () => void;
 }
 
-function MemberAvatarStack({ previews }: { previews: MemberPreview[] }) {
-  const { colorScheme } = useColorScheme();
-  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
-  return (
-    <View className="flex-row items-center mt-3">
-      {previews.map((p, i) => (
-        <View
-          key={p.memberId}
-          style={{
-            width: 24,
-            height: 24,
-            borderRadius: 12,
-            backgroundColor: theme.surface2,
-            borderWidth: 1.5,
-            borderColor: theme.surface,
-            marginLeft: i === 0 ? 0 : -8,
-            zIndex: previews.length - i,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text style={{ fontSize: 10, color: theme.textSecondary, fontFamily: 'Inter_500Medium' }}>
-            {p.name.charAt(0).toUpperCase()}
-          </Text>
-        </View>
-      ))}
-    </View>
-  );
-}
-
 function GroupCard({ group, memberPreviews, onPress, onMenuPress }: GroupCardProps) {
   const { colorScheme } = useColorScheme();
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
-  const gradientKey = group.type.toLowerCase() as keyof typeof Colors.gradients;
-  const [accentColor] = Colors.gradients[gradientKey];
+  const previews = memberPreviews ?? [];
   const { text: balanceText, color: balanceColor } = balanceDisplay(
     group.balance,
     group.base_currency as Currency,
@@ -140,42 +165,56 @@ function GroupCard({ group, memberPreviews, onPress, onMenuPress }: GroupCardPro
     <TouchableOpacity
       testID={`group-card-${group.id}`}
       onPress={onPress}
-      className="bg-surface rounded-2xl border border-border overflow-hidden"
+      style={{
+        backgroundColor: theme.surface,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: theme.border,
+        padding: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        minHeight: 72,
+      }}
       activeOpacity={0.8}
     >
-      <View style={{ backgroundColor: accentColor, height: 4 }} />
-      <View className="p-4">
-        <View className="flex-row items-start justify-between">
-          <View className="flex-1 mr-2">
-            <Text
-              className="font-display text-base font-semibold text-text-primary mb-1"
-              numberOfLines={2}
-            >
-              {group.name}
-            </Text>
-            <View className="flex-row items-center gap-2 flex-wrap">
-              <View
-                className="rounded px-2 py-0.5"
-                style={{ backgroundColor: theme.surface2 }}
-              >
-                <Text className="font-body text-xs text-text-secondary">{group.type}</Text>
-              </View>
-              {group.type === 'Trip' && group.start_date && group.end_date && (
-                <Text className="font-body text-xs text-text-tertiary">
-                  {formatDateRange(group.start_date, group.end_date)}
-                </Text>
-              )}
-            </View>
-          </View>
-          <View className="flex-row items-center gap-2">
+      {previews.length > 0 && (
+        <AvatarStack previews={previews} background={theme.surface} />
+      )}
+      <View style={{ flex: 1, marginLeft: previews.length > 0 ? 12 : 0 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: 'SpaceGrotesk_600SemiBold',
+              fontSize: 16,
+              color: theme.textPrimary,
+              flex: 1,
+            }}
+            numberOfLines={1}
+          >
+            {group.name}
+          </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              marginLeft: 8,
+            }}
+          >
             {group.is_pinned && (
               <View testID={`pin-icon-${group.id}`}>
-                <Pin size={14} color={Colors.accent} strokeWidth={2} />
+                <Pin size={13} color={Colors.accent} strokeWidth={2} />
               </View>
             )}
             {group.is_muted && (
               <View testID={`mute-icon-${group.id}`}>
-                <BellOff size={14} color={theme.textTertiary} strokeWidth={2} />
+                <BellOff size={13} color={theme.textTertiary} strokeWidth={2} />
               </View>
             )}
             <TouchableOpacity
@@ -187,14 +226,26 @@ function GroupCard({ group, memberPreviews, onPress, onMenuPress }: GroupCardPro
             </TouchableOpacity>
           </View>
         </View>
-        <View className="flex-row items-center justify-between mt-3">
-          <Text className="font-body text-sm" style={{ color: balanceColor }}>
-            {balanceText}
-          </Text>
-          {memberPreviews && memberPreviews.length > 0 && (
-            <MemberAvatarStack previews={memberPreviews} />
-          )}
-        </View>
+        <Text
+          style={{
+            fontFamily: 'Inter_400Regular',
+            fontSize: 13,
+            color: theme.textSecondary,
+            marginTop: 2,
+          }}
+        >
+          {group.type}
+        </Text>
+        <Text
+          style={{
+            fontFamily: 'Inter_500Medium',
+            fontSize: 14,
+            color: balanceColor,
+            marginTop: 3,
+          }}
+        >
+          {balanceText}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -228,19 +279,13 @@ function GroupContextMenu({ visible, group, onClose, onPin, onMute }: ContextMen
           <Text className="font-display text-text-primary font-semibold text-base mb-4">
             {group.name}
           </Text>
-          <TouchableOpacity
-            className="flex-row items-center gap-3 py-3"
-            onPress={onPin}
-          >
+          <TouchableOpacity className="flex-row items-center gap-3 py-3" onPress={onPin}>
             <Pin size={20} color={Colors.accent} strokeWidth={1.5} />
             <Text className="font-body text-text-primary text-base">
               {group.is_pinned ? 'Unpin from top' : 'Pin to top'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            className="flex-row items-center gap-3 py-3"
-            onPress={onMute}
-          >
+          <TouchableOpacity className="flex-row items-center gap-3 py-3" onPress={onMute}>
             <BellOff size={20} color={theme.textSecondary} strokeWidth={1.5} />
             <Text className="font-body text-text-primary text-base">
               {group.is_muted ? 'Unmute notifications' : 'Mute notifications'}
@@ -279,191 +324,11 @@ function BalanceNudgeModal({
             onPress={onDismiss}
             className="bg-accent rounded-full py-4 items-center"
           >
-            <Text className="font-display text-white font-semibold text-base">
-              View balances
-            </Text>
+            <Text className="font-display text-white font-semibold text-base">View balances</Text>
           </TouchableOpacity>
         </View>
       </View>
     </Modal>
-  );
-}
-
-interface FilterSheetProps {
-  visible: boolean;
-  filters: GroupFilters;
-  onClose: () => void;
-  onApply: (filters: GroupFilters) => void;
-}
-
-function FilterSheet({ visible, filters, onClose, onApply }: FilterSheetProps) {
-  const { colorScheme } = useColorScheme();
-  const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
-  const [draft, setDraft] = useState<GroupFilters>(filters);
-
-  function toggleType(type: GroupType) {
-    setDraft((prev) => ({
-      ...prev,
-      types: prev.types.includes(type)
-        ? prev.types.filter((t) => t !== type)
-        : [...prev.types, type],
-    }));
-  }
-
-  function setStatus(status: GroupStatus | null) {
-    setDraft((prev) => ({ ...prev, status: prev.status === status ? null : status }));
-  }
-
-  function setBalance(balance: GroupFilters['balance']) {
-    setDraft((prev) => ({ ...prev, balance: prev.balance === balance ? null : balance }));
-  }
-
-  function setTripTiming(timing: GroupFilters['tripTiming']) {
-    setDraft((prev) => ({ ...prev, tripTiming: prev.tripTiming === timing ? null : timing }));
-  }
-
-  function chipStyle(active: boolean) {
-    return {
-      backgroundColor: active ? Colors.accentDim : theme.surface2,
-      borderColor: active ? Colors.accent : 'transparent',
-      borderWidth: 1,
-    };
-  }
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable
-        className="flex-1"
-        style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-        onPress={onClose}
-      >
-        <Pressable
-          className="absolute bottom-0 left-0 right-0 rounded-t-2xl p-6"
-          style={{ backgroundColor: theme.surface }}
-        >
-          <View className="flex-row items-center justify-between mb-5">
-            <Text className="font-display text-text-primary font-semibold text-lg">
-              Filter groups
-            </Text>
-            <TouchableOpacity onPress={onClose}>
-              <X size={20} color={theme.textSecondary} strokeWidth={2} />
-            </TouchableOpacity>
-          </View>
-
-          <Text className="font-body text-text-secondary text-xs uppercase mb-2">Status</Text>
-          <View className="flex-row gap-2 mb-4 flex-wrap">
-            {(['active', 'archived'] as GroupStatus[]).map((s) => (
-              <TouchableOpacity
-                key={s}
-                onPress={() => setStatus(s)}
-                className="px-3 py-1.5 rounded-full"
-                style={chipStyle(draft.status === s)}
-              >
-                <Text
-                  className="font-body text-sm capitalize"
-                  style={{ color: draft.status === s ? Colors.accent : theme.textPrimary }}
-                >
-                  {s}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text className="font-body text-text-secondary text-xs uppercase mb-2">Group type</Text>
-          <View className="flex-row gap-2 mb-4 flex-wrap">
-            {GROUP_TYPES.map((t) => (
-              <TouchableOpacity
-                key={t}
-                onPress={() => toggleType(t)}
-                className="px-3 py-1.5 rounded-full"
-                style={chipStyle(draft.types.includes(t))}
-              >
-                <Text
-                  className="font-body text-sm"
-                  style={{ color: draft.types.includes(t) ? Colors.accent : theme.textPrimary }}
-                >
-                  {t}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text className="font-body text-text-secondary text-xs uppercase mb-2">Balance</Text>
-          <View className="flex-row gap-2 mb-4 flex-wrap">
-            {[
-              { key: 'owe' as const, label: 'You owe money' },
-              { key: 'owed' as const, label: 'You are owed' },
-              { key: 'settled' as const, label: 'Fully settled' },
-            ].map(({ key, label }) => (
-              <TouchableOpacity
-                key={key}
-                onPress={() => setBalance(key)}
-                className="px-3 py-1.5 rounded-full"
-                style={chipStyle(draft.balance === key)}
-              >
-                <Text
-                  className="font-body text-sm"
-                  style={{ color: draft.balance === key ? Colors.accent : theme.textPrimary }}
-                >
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {(draft.types.includes('Trip') || draft.types.length === 0) && (
-            <>
-              <Text className="font-body text-text-secondary text-xs uppercase mb-2">
-                Trip timing
-              </Text>
-              <View className="flex-row gap-2 mb-6 flex-wrap">
-                {[
-                  { key: 'upcoming' as const, label: 'Upcoming' },
-                  { key: 'ongoing' as const, label: 'Ongoing' },
-                  { key: 'past' as const, label: 'Past' },
-                ].map(({ key, label }) => (
-                  <TouchableOpacity
-                    key={key}
-                    onPress={() => setTripTiming(key)}
-                    className="px-3 py-1.5 rounded-full"
-                    style={chipStyle(draft.tripTiming === key)}
-                  >
-                    <Text
-                      className="font-body text-sm"
-                      style={{ color: draft.tripTiming === key ? Colors.accent : theme.textPrimary }}
-                    >
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </>
-          )}
-
-          <TouchableOpacity
-            className="w-full py-4 rounded-full items-center"
-            style={{ backgroundColor: Colors.accent }}
-            onPress={() => {
-              onApply(draft);
-              onClose();
-            }}
-          >
-            <Text className="font-display font-semibold text-base" style={{ color: '#fff' }}>
-              Apply filters
-            </Text>
-          </TouchableOpacity>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
-function hasActiveFilters(filters: GroupFilters): boolean {
-  return (
-    filters.status !== null ||
-    filters.types.length > 0 ||
-    filters.balance !== null ||
-    filters.tripTiming !== null
   );
 }
 
@@ -494,11 +359,9 @@ export default function GroupsScreen() {
     staleTime: 60_000,
   });
 
-  const [filters, setFilters] = useState<GroupFilters>(EMPTY_FILTERS);
-  const [search, setSearch] = useState('');
-  const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [contextGroup, setContextGroup] = useState<GroupWithMembership | null>(null);
   const [showExpensePicker, setShowExpensePicker] = useState(false);
+  const [showNudge, setShowNudge] = useState(false);
 
   const pinMutation = useMutation({
     mutationFn: ({ memberId, pin }: { memberId: string; pin: boolean }) =>
@@ -511,38 +374,6 @@ export default function GroupsScreen() {
       mute ? muteGroup(supabase, memberId) : unmuteGroup(supabase, memberId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['groups'] }),
   });
-
-  function handleMenuPress(group: GroupWithMembership) {
-    setContextGroup(group);
-  }
-
-  function handlePin() {
-    if (!contextGroup) return;
-    hapticOnGroupPin();
-    pinMutation.mutate({ memberId: contextGroup.member_id, pin: !contextGroup.is_pinned });
-    setContextGroup(null);
-  }
-
-  function handleMute() {
-    if (!contextGroup) return;
-    hapticOnToggle();
-    muteMutation.mutate({ memberId: contextGroup.member_id, mute: !contextGroup.is_muted });
-    setContextGroup(null);
-  }
-
-  const searchQuery = search.trim().toLowerCase();
-  const filteredGroups = groups
-    ? filterGroups(groups, filters).filter((g) =>
-        searchQuery ? g.name.toLowerCase().includes(searchQuery) : true,
-      )
-    : [];
-  const activeFilterCount =
-    (filters.status ? 1 : 0) +
-    filters.types.length +
-    (filters.balance ? 1 : 0) +
-    (filters.tripTiming ? 1 : 0);
-
-  const [showNudge, setShowNudge] = useState(false);
 
   useEffect(() => {
     if (profile?.show_balance_nudge) {
@@ -559,14 +390,66 @@ export default function GroupsScreen() {
       });
       setProfile(updated);
     } catch {
-      // Non-critical — nudge will reappear next open but that's acceptable
+      // Non-critical
     }
   }
+
+  function handlePin() {
+    if (!contextGroup) return;
+    hapticOnGroupPin();
+    pinMutation.mutate({ memberId: contextGroup.member_id, pin: !contextGroup.is_pinned });
+    setContextGroup(null);
+  }
+
+  function handleMute() {
+    if (!contextGroup) return;
+    hapticOnToggle();
+    muteMutation.mutate({ memberId: contextGroup.member_id, mute: !contextGroup.is_muted });
+    setContextGroup(null);
+  }
+
+  const overallBalance = useMemo(() => {
+    if (!groups) return null;
+    const active = groups.filter((g) => g.status === 'active');
+    if (active.length === 0) return null;
+
+    const totals: Record<string, number> = {};
+    for (const g of active) {
+      totals[g.base_currency] = (totals[g.base_currency] ?? 0) + g.balance;
+    }
+
+    const preferred = (profile?.preferred_currency ?? 'EUR') as Currency;
+    if (preferred in totals) {
+      return { balance: totals[preferred], currency: preferred };
+    }
+    const entries = Object.entries(totals);
+    const [currency, balance] = entries.reduce(
+      (best, [c, b]) => (Math.abs(b) > Math.abs(best[1]) ? [c, b] : best),
+      entries[0],
+    );
+    return { balance, currency: currency as Currency };
+  }, [groups, profile?.preferred_currency]);
+
+  const summaryLine = useMemo(() => {
+    if (!overallBalance || Math.abs(overallBalance.balance) < 0.005) {
+      return { text: "You're all settled", color: theme.textSecondary };
+    }
+    if (overallBalance.balance > 0) {
+      return {
+        text: `Overall, you are owed ${format(overallBalance.balance, overallBalance.currency)}`,
+        color: Colors.accent,
+      };
+    }
+    return {
+      text: `Overall, you owe ${format(Math.abs(overallBalance.balance), overallBalance.currency)}`,
+      color: Colors.destructive,
+    };
+  }, [overallBalance, theme.textSecondary]);
 
   function renderContent() {
     if (isLoading) {
       return (
-        <View className="gap-3">
+        <View style={{ gap: 10 }}>
           <SkeletonGroupCard />
           <SkeletonGroupCard />
           <SkeletonGroupCard />
@@ -578,43 +461,39 @@ export default function GroupsScreen() {
       return <ErrorState onRetry={refetch} />;
     }
 
-    if (!filteredGroups.length) {
+    if (!groups || groups.length === 0) {
       return (
         <View className="flex-1 items-center justify-center pt-20">
           <Text className="font-body text-text-secondary text-sm text-center mb-2">
-            {hasActiveFilters(filters) ? 'No groups match your filters.' : 'No groups yet.'}
+            No groups yet.
           </Text>
-          {!hasActiveFilters(filters) && (
-            <>
-              <Text className="font-body text-text-tertiary text-xs text-center mb-6">
-                Tap + to create your first group.
-              </Text>
-              <TouchableOpacity
-                onPress={() => router.push('/invite' as never)}
-                className="flex-row items-center gap-2 px-5 py-3 rounded-full border border-border"
-              >
-                <Link size={16} color={Colors.accent} />
-                <Text className="font-body text-text-secondary text-sm">Join with a link</Text>
-              </TouchableOpacity>
-            </>
-          )}
+          <Text className="font-body text-text-tertiary text-xs text-center mb-6">
+            Tap + to create your first group.
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.push('/invite' as never)}
+            className="flex-row items-center gap-2 px-5 py-3 rounded-full border border-border"
+          >
+            <Link size={16} color={Colors.accent} />
+            <Text className="font-body text-text-secondary text-sm">Join with a link</Text>
+          </TouchableOpacity>
         </View>
       );
     }
 
     return (
       <FlatList
-        data={filteredGroups}
+        data={groups}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <GroupCard
             group={item}
             memberPreviews={memberPreviews[item.id]}
             onPress={() => router.push(`/groups/${item.id}` as never)}
-            onMenuPress={() => handleMenuPress(item)}
+            onMenuPress={() => setContextGroup(item)}
           />
         )}
-        contentContainerStyle={{ gap: 12 }}
+        contentContainerStyle={{ gap: 10, paddingBottom: 88 }}
       />
     );
   }
@@ -622,101 +501,65 @@ export default function GroupsScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <View className="flex-1 px-4">
-        <View className="flex-row items-center justify-between mt-4 mb-3">
-          <Text className="font-display text-text-primary font-bold text-2xl">Groups</Text>
-          <View className="flex-row items-center gap-3">
-            <TouchableOpacity
-              testID="filter-button"
-              onPress={() => setShowFilterSheet(true)}
-              className="w-9 h-9 rounded-full items-center justify-center"
-              style={activeFilterCount > 0 ? { backgroundColor: Colors.accentDim } : undefined}
+        {/* Header */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginTop: 16,
+            marginBottom: 4,
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: 'SpaceGrotesk_700Bold',
+              fontSize: 28,
+              color: theme.textPrimary,
+            }}
+          >
+            Groups
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.push('/group/create')}
+            testID="create-group-fab"
+            style={{
+              height: 36,
+              paddingHorizontal: 16,
+              borderRadius: 18,
+              backgroundColor: theme.surface2,
+              borderWidth: 1,
+              borderColor: theme.border,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <Plus size={14} color={theme.textPrimary} strokeWidth={2} />
+            <Text
+              style={{
+                fontFamily: 'Inter_500Medium',
+                fontSize: 14,
+                color: theme.textPrimary,
+              }}
             >
-              <Filter
-                size={18}
-                color={activeFilterCount > 0 ? Colors.accent : theme.textSecondary}
-                strokeWidth={1.5}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => router.push('/group/create')}
-              testID="create-group-fab"
-              className="w-9 h-9 rounded-full bg-accent items-center justify-center"
-            >
-              <Plus size={18} color="#ffffff" strokeWidth={2.5} />
-            </TouchableOpacity>
-          </View>
+              New Group
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        <TextInput
-          testID="groups-search-input"
-          className="bg-surface border border-border rounded-xl px-4 py-3 text-text-primary mb-3"
-          placeholder="Search groups"
-          placeholderTextColor={colorScheme === 'dark' ? Colors.dark.textTertiary : Colors.light.textTertiary}
-          value={search}
-          onChangeText={setSearch}
-          autoCapitalize="none"
-          returnKeyType="search"
-        />
-
-        {hasActiveFilters(filters) && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="mb-3"
-            contentContainerStyle={{ gap: 8 }}
+        {/* Net balance summary */}
+        {groups !== undefined && (
+          <Text
+            style={{
+              fontFamily: 'Inter_400Regular',
+              fontSize: 15,
+              color: summaryLine.color,
+              marginBottom: 16,
+            }}
           >
-            {filters.status && (
-              <TouchableOpacity
-                onPress={() => setFilters((f) => ({ ...f, status: null }))}
-                className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
-                style={ACTIVE_CHIP_STYLE}
-              >
-                <Text className="font-body text-xs capitalize" style={{ color: Colors.accent }}>
-                  {filters.status}
-                </Text>
-                <X size={12} color={Colors.accent} strokeWidth={2} />
-              </TouchableOpacity>
-            )}
-            {filters.types.map((t) => (
-              <TouchableOpacity
-                key={t}
-                onPress={() =>
-                  setFilters((f) => ({ ...f, types: f.types.filter((x) => x !== t) }))
-                }
-                className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
-                style={ACTIVE_CHIP_STYLE}
-              >
-                <Text className="font-body text-xs" style={{ color: Colors.accent }}>
-                  {t}
-                </Text>
-                <X size={12} color={Colors.accent} strokeWidth={2} />
-              </TouchableOpacity>
-            ))}
-            {filters.balance && (
-              <TouchableOpacity
-                onPress={() => setFilters((f) => ({ ...f, balance: null }))}
-                className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
-                style={ACTIVE_CHIP_STYLE}
-              >
-                <Text className="font-body text-xs" style={{ color: Colors.accent }}>
-                  {BALANCE_CHIP_LABELS[filters.balance!]}
-                </Text>
-                <X size={12} color={Colors.accent} strokeWidth={2} />
-              </TouchableOpacity>
-            )}
-            {filters.tripTiming && (
-              <TouchableOpacity
-                onPress={() => setFilters((f) => ({ ...f, tripTiming: null }))}
-                className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
-                style={ACTIVE_CHIP_STYLE}
-              >
-                <Text className="font-body text-xs capitalize" style={{ color: Colors.accent }}>
-                  {filters.tripTiming}
-                </Text>
-                <X size={12} color={Colors.accent} strokeWidth={2} />
-              </TouchableOpacity>
-            )}
-          </ScrollView>
+            {summaryLine.text}
+          </Text>
         )}
 
         {renderContent()}
@@ -730,13 +573,6 @@ export default function GroupsScreen() {
         onMute={handleMute}
       />
 
-      <FilterSheet
-        visible={showFilterSheet}
-        filters={filters}
-        onClose={() => setShowFilterSheet(false)}
-        onApply={setFilters}
-      />
-
       <TripExpiredModal
         groupName={popupGroup?.name ?? ''}
         visible={popupGroup !== null}
@@ -745,28 +581,24 @@ export default function GroupsScreen() {
 
       <BalanceNudgeModal visible={showNudge} onDismiss={handleDismissNudge} />
 
-      {/* Floating Add Expense button */}
+      {/* FAB */}
       <TouchableOpacity
         testID="global-add-expense-fab"
         onPress={() => setShowExpensePicker(true)}
         style={{
           position: 'absolute',
-          bottom: 24,
-          right: 24,
-          height: 52,
-          paddingHorizontal: 20,
-          borderRadius: 26,
+          bottom: 16,
+          right: 16,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
           backgroundColor: Colors.accent,
-          flexDirection: 'row',
           alignItems: 'center',
-          gap: 8,
+          justifyContent: 'center',
         }}
         activeOpacity={0.85}
       >
-        <Plus size={18} color="#ffffff" strokeWidth={2.5} />
-        <Text style={{ color: '#ffffff', fontFamily: 'SpaceGrotesk_600SemiBold', fontSize: 14 }}>
-          Add Expense
-        </Text>
+        <Plus size={24} color="#ffffff" strokeWidth={2.5} />
       </TouchableOpacity>
 
       {/* Group picker for Add Expense from Groups tab */}
@@ -786,32 +618,48 @@ export default function GroupsScreen() {
             bottom: 0,
             left: 0,
             right: 0,
-            backgroundColor: colorScheme === 'dark' ? Colors.dark.surface : Colors.light.surface,
+            backgroundColor: theme.surface,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
             paddingBottom: 32,
           }}
         >
-          <View className="flex-row items-center justify-between px-6 py-5">
-            <Text className="font-display text-text-primary font-semibold text-lg">Add Expense</Text>
-            <TouchableOpacity onPress={() => setShowExpensePicker(false)}>
-              <X size={20} color={colorScheme === 'dark' ? Colors.dark.textSecondary : Colors.light.textSecondary} strokeWidth={1.5} />
-            </TouchableOpacity>
+          {/* Drag handle */}
+          <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: theme.border }} />
           </View>
+
+          <Text
+            style={{
+              fontFamily: 'SpaceGrotesk_600SemiBold',
+              fontSize: 18,
+              color: theme.textPrimary,
+              paddingHorizontal: 20,
+              paddingTop: 12,
+              paddingBottom: 8,
+            }}
+          >
+            Add expense to...
+          </Text>
+
           {(() => {
             const activeGroups = (groups ?? []).filter((g) => g.status === 'active');
             if (activeGroups.length === 0) {
               return (
-                <View className="items-center px-6 py-8 gap-4">
-                  <Text className="font-body text-text-secondary text-sm text-center">
+                <View style={{ alignItems: 'center', paddingHorizontal: 24, paddingVertical: 32, gap: 16 }}>
+                  <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 14, color: theme.textSecondary, textAlign: 'center' }}>
                     No active groups. Create a group to start adding expenses.
                   </Text>
                   <TouchableOpacity
-                    onPress={() => { setShowExpensePicker(false); router.push('/group/create'); }}
-                    className="rounded-full px-6 py-3"
-                    style={{ backgroundColor: Colors.accent }}
+                    onPress={() => {
+                      setShowExpensePicker(false);
+                      router.push('/group/create');
+                    }}
+                    style={{ backgroundColor: Colors.accent, borderRadius: 99, paddingHorizontal: 24, paddingVertical: 12 }}
                   >
-                    <Text className="font-body text-white font-semibold text-sm">Create a group</Text>
+                    <Text style={{ fontFamily: 'Inter_500Medium', color: '#ffffff', fontSize: 14 }}>
+                      Create a group
+                    </Text>
                   </TouchableOpacity>
                 </View>
               );
@@ -822,32 +670,82 @@ export default function GroupsScreen() {
                 keyExtractor={(g) => g.id}
                 scrollEnabled={activeGroups.length > 6}
                 style={{ maxHeight: 360 }}
-                renderItem={({ item: g }) => (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setShowExpensePicker(false);
-                      router.push(`/groups/${g.id}/add-expense` as never);
-                    }}
-                    className="flex-row items-center px-6 py-4 border-b border-border"
-                    activeOpacity={0.7}
-                  >
-                    <View className="flex-1">
-                      <Text className="font-body text-text-primary font-medium text-base">{g.name}</Text>
-                      <Text className="font-body text-text-secondary text-xs capitalize mt-0.5">{g.type}</Text>
-                    </View>
-                    {g.balance !== 0 && (
+                renderItem={({ item: g }) => {
+                  const previews = (memberPreviews[g.id] ?? []).slice(0, 2);
+                  return (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setShowExpensePicker(false);
+                        router.push(`/groups/${g.id}/add-expense` as never);
+                      }}
+                      style={{
+                        height: 60,
+                        paddingHorizontal: 16,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        borderBottomWidth: 1,
+                        borderBottomColor: theme.border,
+                        gap: 12,
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      {/* Small avatar stack */}
+                      <View style={{ flexDirection: 'row' }}>
+                        {previews.map((p, i) => (
+                          <View key={p.memberId} style={{ marginLeft: i === 0 ? 0 : -8, zIndex: 2 - i }}>
+                            <AvatarCircle preview={p} size={32} borderColor={theme.surface} />
+                          </View>
+                        ))}
+                      </View>
+
+                      {/* Group name */}
                       <Text
-                        className="font-body text-sm font-medium"
-                        style={{ color: g.balance > 0 ? Colors.accent : Colors.destructive }}
+                        style={{
+                          fontFamily: 'Inter_500Medium',
+                          fontSize: 15,
+                          color: theme.textPrimary,
+                          flex: 1,
+                        }}
+                        numberOfLines={1}
                       >
-                        {g.balance > 0 ? '+' : ''}{format(g.balance, g.base_currency as Currency)}
+                        {g.name}
                       </Text>
-                    )}
-                  </TouchableOpacity>
-                )}
+
+                      {/* Type badge */}
+                      <View
+                        style={{
+                          backgroundColor: theme.surface2,
+                          borderRadius: 99,
+                          paddingHorizontal: 10,
+                          paddingVertical: 4,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontFamily: 'Inter_400Regular',
+                            fontSize: 12,
+                            color: theme.textSecondary,
+                            textTransform: 'capitalize',
+                          }}
+                        >
+                          {g.type}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }}
               />
             );
           })()}
+
+          <TouchableOpacity
+            onPress={() => setShowExpensePicker(false)}
+            style={{ alignItems: 'center', paddingVertical: 16, marginTop: 4 }}
+          >
+            <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 15, color: Colors.destructive }}>
+              Cancel
+            </Text>
+          </TouchableOpacity>
         </View>
       </Modal>
     </SafeAreaView>

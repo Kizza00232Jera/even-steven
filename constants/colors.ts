@@ -6,9 +6,9 @@ export const Colors = {
   warning: '#F59E0B',
 
   dark: {
-    background: '#0b0b0b',
-    surface: '#1a1a1a',
-    surface2: '#242424',
+    background: '#0f0e0d',
+    surface: '#1c1a18',
+    surface2: '#262320',
     textPrimary: '#ffffff',
     textSecondary: 'rgba(255,255,255,0.55)',
     textTertiary: 'rgba(255,255,255,0.3)',
@@ -16,9 +16,9 @@ export const Colors = {
   },
 
   light: {
-    background: '#f8f8f8',
+    background: '#f5f3f0',
     surface: '#ffffff',
-    surface2: '#f2f2f2',
+    surface2: '#ededeb',
     textPrimary: '#0b0b0b',
     textSecondary: 'rgba(0,0,0,0.45)',
     textTertiary: 'rgba(0,0,0,0.25)',

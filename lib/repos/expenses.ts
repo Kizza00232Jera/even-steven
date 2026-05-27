@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../database.types';
 import type { Split } from '../splits';
+import { resolveDisplayName } from '../displayName';
 
 type Expense = Database['public']['Tables']['expenses']['Row'];
 type GroupMember = Database['public']['Tables']['group_members']['Row'];
@@ -66,6 +67,12 @@ export async function fetchGroupMembers(
   return data ?? [];
 }
 
+export interface ExpenseParticipantShare {
+  memberId: string;
+  shareAmount: number;
+  baseShareAmount: number | null;
+}
+
 export interface ExpenseListItem {
   id: string;
   title: string;
@@ -81,12 +88,14 @@ export interface ExpenseListItem {
   is_edited: boolean;
   last_edited_by_name: string | null;
   participant_member_ids: string[];
+  participants: ExpenseParticipantShare[];
   receipt_url: string | null;
 }
 
-type ParticipantRow = { member_id: string };
-type PayerJoin = { display_name: string | null; email: string; user_id: string | null };
-type EditorJoin = { display_name: string | null; email: string } | null;
+type ParticipantRow = { member_id: string; share_amount: number; base_share_amount: number | null };
+type ProfileNestedJoin = { display_name: string | null; google_name: string | null } | null;
+type PayerJoin = { display_name: string | null; email: string; user_id: string | null; profiles: ProfileNestedJoin | ProfileNestedJoin[] } | null;
+type EditorJoin = { display_name: string | null; email: string; profiles: ProfileNestedJoin | ProfileNestedJoin[] } | null;
 
 export async function fetchGroupExpenses(
   client: SupabaseClient<Database>,
@@ -97,9 +106,9 @@ export async function fetchGroupExpenses(
     .select(
       `id, title, description, amount, currency, category, payer_id,
        split_method, expense_date, is_edited, receipt_url,
-       payer:payer_id(display_name, email, user_id),
-       editor:last_edited_by(display_name, email),
-       expense_participants(member_id)`
+       payer:payer_id(display_name, email, user_id, profiles!group_members_user_id_fkey(display_name, google_name)),
+       editor:last_edited_by(display_name, email, profiles!group_members_user_id_fkey(display_name, google_name)),
+       expense_participants(member_id, share_amount, base_share_amount)`
     )
     .eq('group_id', groupId)
     .order('expense_date', { ascending: false })
@@ -111,6 +120,13 @@ export async function fetchGroupExpenses(
     const payer = (row as unknown as { payer: PayerJoin | null }).payer;
     const editor = (row as unknown as { editor: EditorJoin }).editor;
     const participants = (row.expense_participants as ParticipantRow[]) ?? [];
+
+    const resolveProfile = (raw: ProfileNestedJoin | ProfileNestedJoin[] | undefined): ProfileNestedJoin =>
+      Array.isArray(raw) ? (raw[0] ?? null) : (raw ?? null);
+
+    const payerProfile = payer ? resolveProfile(payer.profiles) : null;
+    const editorProfile = editor ? resolveProfile(editor.profiles) : null;
+
     return {
       id: row.id,
       title: row.title,
@@ -120,12 +136,21 @@ export async function fetchGroupExpenses(
       category: row.category,
       payer_id: row.payer_id,
       payer_user_id: payer?.user_id ?? null,
-      payer_name: payer?.display_name ?? payer?.email ?? '—',
+      payer_name: payer
+        ? resolveDisplayName(payer.display_name, payerProfile?.display_name, payerProfile?.google_name, payer.email)
+        : '—',
       split_method: row.split_method as 'equal' | 'unequal' | 'percentage',
       expense_date: row.expense_date,
       is_edited: row.is_edited,
-      last_edited_by_name: editor ? (editor.display_name ?? editor.email) : null,
+      last_edited_by_name: editor
+        ? resolveDisplayName(editor.display_name, editorProfile?.display_name, editorProfile?.google_name, editor.email)
+        : null,
       participant_member_ids: participants.map((p) => p.member_id),
+      participants: participants.map((p) => ({
+        memberId: p.member_id,
+        shareAmount: p.share_amount,
+        baseShareAmount: p.base_share_amount,
+      })),
       receipt_url: row.receipt_url,
     };
   });

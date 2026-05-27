@@ -24,7 +24,9 @@ import { useRatesStore } from '../../../../store/rates';
 import { useNetworkStatus } from '../../../../hooks/useNetworkStatus';
 import { useOfflineGuard } from '../../../../hooks/useOfflineGuard';
 import { useReceiptPicker } from '../../../../hooks/useReceiptPicker';
-import { createExpense, fetchGroupMembers, uploadReceipt } from '../../../../lib/repos/expenses';
+import { createExpense, uploadReceipt } from '../../../../lib/repos/expenses';
+import { fetchGroupMembers, type GroupMemberWithProfile } from '../../../../lib/repos/groups';
+import { resolveDisplayName } from '../../../../lib/displayName';
 import { sendGroupNotification } from '../../../../lib/notifications';
 import { logActivityEvent } from '../../../../lib/repos/activity';
 import { detectCategory, type Category } from '../../../../lib/categories';
@@ -32,10 +34,9 @@ import { calculateEqualSplit, calculateUnequalSplit, calculatePercentageSplit } 
 import { convert, format, type Currency } from '../../../../lib/currency';
 import { hapticOnExpenseSaved } from '../../../../lib/haptics';
 import { supabase } from '../../../../lib/supabase';
-import type { Database } from '../../../../lib/database.types';
 import { Colors } from '../../../../constants/colors';
 
-type GroupMember = Database['public']['Tables']['group_members']['Row'];
+type GroupMember = GroupMemberWithProfile;
 
 const CURRENCIES: Currency[] = ['USD', 'EUR', 'DKK', 'SEK'];
 
@@ -128,11 +129,10 @@ function hasNegativeEntry(
 function getMemberDisplayName(
   member: GroupMember,
   currentUserId: string | undefined,
-  profileDisplayName: string | null | undefined
 ): string {
-  if (member.display_name) return member.display_name;
-  if (member.user_id === currentUserId) return profileDisplayName ?? 'You';
-  return member.email ?? '—';
+  const resolved = resolveDisplayName(member.display_name, member.profile_display_name, member.google_name, member.email);
+  if (resolved === member.email && member.user_id === currentUserId) return 'You';
+  return resolved;
 }
 
 export default function AddExpenseScreen() {
@@ -430,7 +430,7 @@ export default function AddExpenseScreen() {
   // ── Payer display name ──────────────────────────────────────────────────────
   const payerMember = members.find((m) => m.id === payerId);
   const payerDisplayName = payerMember
-    ? getMemberDisplayName(payerMember, session?.user.id, profile?.display_name)
+    ? getMemberDisplayName(payerMember, session?.user.id)
     : '—';
 
   return (
@@ -468,6 +468,69 @@ export default function AddExpenseScreen() {
         </View>
 
         <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, gap: 20 }}>
+          {/* Amount Hero */}
+          <View>
+            <View style={{ alignItems: 'center', paddingTop: 8, paddingBottom: 16 }}>
+              {/* Currency pill */}
+              <TouchableOpacity
+                testID="currency-selector"
+                onPress={() => setCurrencyModalVisible(true)}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  backgroundColor: theme.surface2,
+                  borderRadius: 99,
+                  paddingHorizontal: 14,
+                  paddingVertical: 6,
+                  marginBottom: 10,
+                }}
+              >
+                <Text
+                  testID="currency-display"
+                  style={{ fontFamily: 'Inter_500Medium', fontSize: 14, color: theme.textPrimary }}
+                >
+                  {currency}
+                </Text>
+                <ChevronDown size={12} color={theme.textSecondary} strokeWidth={2} />
+              </TouchableOpacity>
+
+              {/* Amount input */}
+              <TextInput
+                testID="amount-input"
+                value={amountText}
+                onChangeText={setAmountText}
+                placeholder="0.00"
+                placeholderTextColor={theme.textTertiary}
+                keyboardType="decimal-pad"
+                textAlign="center"
+                style={{
+                  fontFamily: 'SpaceGrotesk_700Bold',
+                  fontSize: 48,
+                  color: theme.textPrimary,
+                  minWidth: 100,
+                  textAlign: 'center',
+                }}
+              />
+
+              {/* Live conversion */}
+              {conversionText && (
+                <Text
+                  style={{
+                    fontFamily: 'Inter_400Regular',
+                    fontSize: 13,
+                    color: theme.textSecondary,
+                    marginTop: 4,
+                  }}
+                >
+                  {conversionText}
+                </Text>
+              )}
+            </View>
+            {/* Divider */}
+            <View style={{ height: 1, backgroundColor: theme.border, marginHorizontal: -16 }} />
+          </View>
+
           {/* Title */}
           <View>
             <Text className="font-body text-text-secondary text-xs mb-1 uppercase tracking-wider">
@@ -574,39 +637,6 @@ export default function AddExpenseScreen() {
                   />
                 </View>
               </Modal>
-            )}
-          </View>
-
-          {/* Amount + Currency */}
-          <View>
-            <Text className="font-body text-text-secondary text-xs mb-1 uppercase tracking-wider">
-              Amount
-            </Text>
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                testID="currency-selector"
-                onPress={() => setCurrencyModalVisible(true)}
-                className="bg-surface-2 rounded-xl px-4 py-3 items-center justify-center flex-row gap-2"
-              >
-                <Text testID="currency-display" className="text-text-primary font-body text-base font-semibold">
-                  {currency}
-                </Text>
-                <ChevronDown size={14} color={theme.textSecondary} strokeWidth={2} />
-              </TouchableOpacity>
-              <TextInput
-                testID="amount-input"
-                value={amountText}
-                onChangeText={setAmountText}
-                placeholder="0.00"
-                placeholderTextColor={placeholderColor}
-                keyboardType="decimal-pad"
-                className="flex-1 bg-surface-2 rounded-xl px-4 py-3 text-text-primary font-body text-base"
-              />
-            </View>
-            {conversionText && (
-              <Text className="font-body text-text-secondary text-xs mt-1 pl-1">
-                {conversionText}
-              </Text>
             )}
           </View>
 
@@ -724,7 +754,7 @@ export default function AddExpenseScreen() {
             </View>
             <View className="bg-surface-2 rounded-xl overflow-hidden">
               {members.map((member, idx) => {
-                const name = getMemberDisplayName(member, session?.user.id, profile?.display_name);
+                const name = getMemberDisplayName(member, session?.user.id);
                 const isSelected = participantIds.has(member.id);
                 const isPayer = member.id === payerId;
                 const isPayerLocked = isPayer && splitMode !== 'equal';
@@ -883,7 +913,7 @@ export default function AddExpenseScreen() {
               </Text>
             </View>
             {members.map((member) => {
-              const name = getMemberDisplayName(member, session?.user.id, profile?.display_name);
+              const name = getMemberDisplayName(member, session?.user.id);
               return (
                 <TouchableOpacity
                   key={member.id}

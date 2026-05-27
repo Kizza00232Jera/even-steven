@@ -28,7 +28,6 @@ import { useToast } from '../../../../hooks/useToast';
 import { useReceiptPicker } from '../../../../hooks/useReceiptPicker';
 import {
   fetchGroupExpenses,
-  fetchGroupMembers,
   fetchExpenseParticipants,
   hasGroupSettlements,
   updateExpenseMetadata,
@@ -37,14 +36,15 @@ import {
   deleteExpense,
   type ExpenseListItem,
 } from '../../../../lib/repos/expenses';
+import { fetchGroupMembers, type GroupMemberWithProfile } from '../../../../lib/repos/groups';
+import { resolveDisplayName } from '../../../../lib/displayName';
 import { calculateEqualSplit, calculateUnequalSplit, calculatePercentageSplit } from '../../../../lib/splits';
 import { convert, type Currency } from '../../../../lib/currency';
 import { type Category } from '../../../../lib/categories';
 import { supabase } from '../../../../lib/supabase';
 import { Colors } from '../../../../constants/colors';
-import type { Database } from '../../../../lib/database.types';
 
-type GroupMember = Database['public']['Tables']['group_members']['Row'];
+type GroupMember = GroupMemberWithProfile;
 
 const ALL_CATEGORIES: Category[] = [
   'Other', 'Dining Out', 'Groceries', 'Liquor', 'Taxi', 'Hotel', 'Plane',
@@ -95,11 +95,10 @@ function hasNegativeEntry(
 function getMemberDisplayName(
   member: GroupMember,
   currentUserId: string | undefined,
-  profileDisplayName: string | null | undefined,
 ): string {
-  if (member.display_name) return member.display_name;
-  if (member.user_id === currentUserId) return profileDisplayName ?? 'You';
-  return member.email ?? '—';
+  const resolved = resolveDisplayName(member.display_name, member.profile_display_name, member.google_name, member.email);
+  if (resolved === member.email && member.user_id === currentUserId) return 'You';
+  return resolved;
 }
 
 export default function EditExpenseScreen() {
@@ -267,7 +266,7 @@ export default function EditExpenseScreen() {
 
   const payerMember = members.find((m) => m.id === payerId);
   const payerDisplayName = payerMember
-    ? getMemberDisplayName(payerMember, currentUserId, profile?.display_name)
+    ? getMemberDisplayName(payerMember, currentUserId)
     : '—';
 
   function handleManualCategorySelect(cat: Category) {
@@ -666,7 +665,7 @@ export default function EditExpenseScreen() {
                 </View>
                 <View className="bg-surface-2 rounded-xl overflow-hidden">
                   {members.map((member, idx) => {
-                    const name = getMemberDisplayName(member, currentUserId, profile?.display_name);
+                    const name = getMemberDisplayName(member, currentUserId);
                     const isSelected = participantIds.has(member.id);
                     const isPayer = member.id === payerId;
                     const isPayerLocked = isPayer && splitMode !== 'equal';
@@ -841,7 +840,7 @@ export default function EditExpenseScreen() {
               <Text className="font-display text-text-primary font-semibold text-base text-center">Paid by</Text>
             </View>
             {members.map((member) => {
-              const name = getMemberDisplayName(member, currentUserId, profile?.display_name);
+              const name = getMemberDisplayName(member, currentUserId);
               return (
                 <TouchableOpacity
                   key={member.id}

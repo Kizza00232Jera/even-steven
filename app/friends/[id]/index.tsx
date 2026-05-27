@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { useState } from 'react';
+import { View, Text, TouchableOpacity, Alert, ScrollView, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -25,7 +26,7 @@ function BalanceBadge({ balance, groupCount }: { balance: number; groupCount: nu
   }
 
   const isPositive = balance > 0;
-  const bgColor = isPositive ? Colors.balance.positiveFrom : Colors.balance.negativeFrom;
+  const bgColor = isPositive ? Colors.accentDim : Colors.destructiveDim;
   const textColor = isPositive ? Colors.accent : Colors.destructive;
   const groupSuffix = groupCount > 1 ? ` across ${groupCount} groups` : '';
   const label = isPositive
@@ -47,6 +48,7 @@ export default function FriendDetailScreen() {
   const queryClient = useQueryClient();
   const { colorScheme } = useColorScheme();
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
+  const [showAddExpenseSheet, setShowAddExpenseSheet] = useState(false);
 
   const { data: friend, isLoading, isError, refetch } = useQuery({
     queryKey: ['friend-detail', profile?.id, id],
@@ -202,17 +204,7 @@ export default function FriendDetailScreen() {
               if (friend.sharedGroups.length === 1) {
                 router.push(`/groups/${friend.sharedGroups[0].groupId}/add-expense?prefillUserId=${uid}` as never);
               } else if (friend.sharedGroups.length > 1) {
-                Alert.alert(
-                  'Add expense in which group?',
-                  undefined,
-                  [
-                    ...friend.sharedGroups.map(g => ({
-                      text: g.groupName,
-                      onPress: () => router.push(`/groups/${g.groupId}/add-expense?prefillUserId=${uid}` as never),
-                    })),
-                    { text: 'Cancel', style: 'cancel' as const },
-                  ]
-                );
+                setShowAddExpenseSheet(true);
               } else {
                 Alert.alert('No shared groups', 'You have no active shared groups with this person.');
               }
@@ -267,6 +259,94 @@ export default function FriendDetailScreen() {
           )}
         </View>
       </ScrollView>
+      {/* Add Expense group picker */}
+      <Modal
+        visible={showAddExpenseSheet}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAddExpenseSheet(false)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onPress={() => setShowAddExpenseSheet(false)}
+        />
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: theme.surface,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            paddingBottom: 32,
+          }}
+        >
+          <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: theme.border }} />
+          </View>
+          <Text
+            style={{
+              fontFamily: 'SpaceGrotesk_600SemiBold',
+              fontSize: 18,
+              color: theme.textPrimary,
+              paddingHorizontal: 20,
+              paddingTop: 12,
+              paddingBottom: 8,
+            }}
+          >
+            Add expense to...
+          </Text>
+          {friend.sharedGroups.map((g) => (
+            <TouchableOpacity
+              key={g.groupId}
+              onPress={() => {
+                setShowAddExpenseSheet(false);
+                router.push(`/groups/${g.groupId}/add-expense?prefillUserId=${friend.friendId}` as never);
+              }}
+              style={{
+                height: 60,
+                paddingHorizontal: 16,
+                flexDirection: 'row',
+                alignItems: 'center',
+                borderBottomWidth: 1,
+                borderBottomColor: theme.border,
+              }}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={{
+                  fontFamily: 'Inter_500Medium',
+                  fontSize: 15,
+                  color: theme.textPrimary,
+                  flex: 1,
+                }}
+                numberOfLines={1}
+              >
+                {g.groupName}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            onPress={() => setShowAddExpenseSheet(false)}
+            style={{
+              alignItems: 'center',
+              paddingVertical: 16,
+              marginTop: 4,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: 'Inter_500Medium',
+                fontSize: 15,
+                color: Colors.destructive,
+              }}
+            >
+              Cancel
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

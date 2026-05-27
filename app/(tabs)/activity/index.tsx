@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,18 +15,17 @@ import { useColorScheme } from 'nativewind';
 import {
   Filter,
   X,
-  DollarSign,
+  Receipt,
   Pencil,
   Trash2,
   ArrowLeftRight,
   RotateCcw,
   UserPlus,
   UserMinus,
-  LogOut,
   Users,
   Archive,
-  Link,
-  Clock,
+  CircleDot,
+  type LucideIcon,
 } from 'lucide-react-native';
 import { Skeleton } from '../../../components/Skeleton';
 import { ErrorState } from '../../../components/ErrorState';
@@ -36,6 +35,7 @@ import { fetchActivityFeed, type ActivityEvent } from '../../../lib/repos/activi
 import { fetchGroupsWithMembership } from '../../../lib/repos/groups';
 import { useAuthStore } from '../../../store/auth';
 import { useActivityStore } from '../../../store/activity';
+import { formatExpenseDate } from '../../../lib/dateUtils';
 import type { Database } from '../../../lib/database.types';
 
 type EventType = Database['public']['Tables']['activity_events']['Row']['event_type'];
@@ -47,38 +47,38 @@ const ROW_CLASS = 'flex-row items-start gap-3 py-3 border-b border-border';
 // Event helpers
 // ---------------------------------------------------------------------------
 
-function getEventIcons(secondary: string): Record<EventType, React.ReactElement> {
-  return {
-    expense_added: <DollarSign size={18} color={Colors.accent} strokeWidth={1.5} />,
-    expense_edited: <Pencil size={18} color={Colors.accent} strokeWidth={1.5} />,
-    expense_deleted: <Trash2 size={18} color={Colors.destructive} strokeWidth={1.5} />,
-    settlement_recorded: <ArrowLeftRight size={18} color={Colors.accent} strokeWidth={1.5} />,
-    settlement_voided: <RotateCcw size={18} color={secondary} strokeWidth={1.5} />,
-    member_joined: <UserPlus size={18} color={Colors.accent} strokeWidth={1.5} />,
-    member_removed: <UserMinus size={18} color={Colors.destructive} strokeWidth={1.5} />,
-    member_left: <LogOut size={18} color={secondary} strokeWidth={1.5} />,
-    group_created: <Users size={18} color={Colors.accent} strokeWidth={1.5} />,
-    group_archived: <Archive size={18} color={secondary} strokeWidth={1.5} />,
-    group_unarchived: <Archive size={18} color={Colors.accent} strokeWidth={1.5} />,
-    invite_link_reset: <Link size={18} color={secondary} strokeWidth={1.5} />,
-    trip_expired: <Clock size={18} color={Colors.destructive} strokeWidth={1.5} />,
-  };
+function getEventIconConfig(
+  eventType: EventType,
+  textSecondary: string,
+): { Icon: LucideIcon; color: string } {
+  switch (eventType) {
+    case 'expense_added':       return { Icon: Receipt,        color: Colors.accent };
+    case 'expense_edited':      return { Icon: Pencil,         color: Colors.warning };
+    case 'expense_deleted':     return { Icon: Trash2,         color: Colors.destructive };
+    case 'settlement_recorded': return { Icon: ArrowLeftRight, color: Colors.accent };
+    case 'settlement_voided':   return { Icon: RotateCcw,      color: Colors.warning };
+    case 'member_joined':       return { Icon: UserPlus,       color: Colors.accent };
+    case 'member_removed':      return { Icon: UserMinus,      color: Colors.destructive };
+    case 'group_created':       return { Icon: Users,          color: Colors.accent };
+    case 'group_archived':      return { Icon: Archive,        color: textSecondary };
+    default:                    return { Icon: CircleDot,      color: textSecondary };
+  }
 }
 
 const EVENT_DESCRIPTIONS: Record<EventType, (actor: string) => string> = {
-  expense_added: (a) => `${a} added an expense`,
-  expense_edited: (a) => `${a} edited an expense`,
-  expense_deleted: (a) => `${a} deleted an expense`,
-  settlement_recorded: (a) => `${a} recorded a payment`,
-  settlement_voided: (a) => `${a} undid a payment`,
-  member_joined: (a) => `${a} joined the group`,
-  member_removed: (a) => `${a} was removed from the group`,
-  member_left: (a) => `${a} left the group`,
-  group_created: (a) => `${a} created the group`,
-  group_archived: (a) => `${a} archived the group`,
-  group_unarchived: (a) => `${a} unarchived the group`,
-  invite_link_reset: (a) => `${a} reset the invite link`,
-  trip_expired: (a) => `${a} — trip has ended`,
+  expense_added:      (a) => `${a} added an expense`,
+  expense_edited:     (a) => `${a} edited an expense`,
+  expense_deleted:    (a) => `${a} deleted an expense`,
+  settlement_recorded:(a) => `${a} recorded a payment`,
+  settlement_voided:  (a) => `${a} undid a payment`,
+  member_joined:      (a) => `${a} joined the group`,
+  member_removed:     (a) => `${a} was removed from the group`,
+  member_left:        (a) => `${a} left the group`,
+  group_created:      (a) => `${a} created the group`,
+  group_archived:     (a) => `${a} archived the group`,
+  group_unarchived:   (a) => `${a} unarchived the group`,
+  invite_link_reset:  (a) => `${a} reset the invite link`,
+  trip_expired:       (a) => `${a} — trip has ended`,
 };
 
 function formatTimestamp(iso: string): string {
@@ -96,18 +96,60 @@ function formatTimestamp(iso: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Date grouping
+// ---------------------------------------------------------------------------
+
+type ListItem =
+  | { type: 'header'; key: string; label: string }
+  | { type: 'event'; key: string; event: ActivityEvent };
+
+function groupEventsByDate(events: ActivityEvent[]): ListItem[] {
+  const items: ListItem[] = [];
+  let currentLabel: string | null = null;
+
+  for (const event of events) {
+    const label = formatExpenseDate(event.createdAt);
+    if (label !== currentLabel) {
+      currentLabel = label;
+      items.push({ type: 'header', key: `header-${event.createdAt}`, label });
+    }
+    items.push({ type: 'event', key: event.id, event });
+  }
+
+  return items;
+}
+
+// ---------------------------------------------------------------------------
 // Components
 // ---------------------------------------------------------------------------
 
 function SkeletonActivityRow() {
   return (
     <View className={ROW_CLASS}>
-      <Skeleton width={36} height={36} borderRadius={18} />
+      <Skeleton width={40} height={40} borderRadius={20} />
       <View className="flex-1 gap-2 pt-1">
         <Skeleton width={'80%'} height={13} borderRadius={6} />
         <Skeleton width={70} height={11} borderRadius={6} />
       </View>
     </View>
+  );
+}
+
+function DateHeader({ label, color }: { label: string; color: string }) {
+  return (
+    <Text
+      style={{
+        fontFamily: 'Inter_500Medium',
+        fontSize: 12,
+        color,
+        letterSpacing: 0.5,
+        paddingTop: 8,
+        paddingBottom: 4,
+        textTransform: 'uppercase',
+      }}
+    >
+      {label}
+    </Text>
   );
 }
 
@@ -120,7 +162,7 @@ function ActivityRow({ event }: ActivityRowProps) {
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
   const router = useRouter();
 
-  const icon = getEventIcons(theme.textSecondary)[event.eventType];
+  const { Icon, color: iconColor } = getEventIconConfig(event.eventType, theme.textSecondary);
   const description = EVENT_DESCRIPTIONS[event.eventType]?.(event.actorName) ?? event.actorName;
   const amount =
     typeof event.metadata.amount === 'number' && event.metadata.currency
@@ -137,10 +179,16 @@ function ActivityRow({ event }: ActivityRowProps) {
   const rowContent = (
     <>
       <View
-        className="w-9 h-9 rounded-full items-center justify-center"
-        style={{ backgroundColor: theme.surface2 }}
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: theme.surface2,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
       >
-        {icon}
+        <Icon size={18} color={iconColor} strokeWidth={1.5} />
       </View>
       <View className="flex-1">
         <Text className="text-text-primary text-sm" numberOfLines={2}>
@@ -171,10 +219,7 @@ function ActivityRow({ event }: ActivityRowProps) {
   }
 
   return (
-    <View
-      testID={`activity-row-${event.id}`}
-      className={ROW_CLASS}
-    >
+    <View testID={`activity-row-${event.id}`} className={ROW_CLASS}>
       {rowContent}
     </View>
   );
@@ -302,6 +347,8 @@ export default function ActivityScreen() {
   });
 
   const events = data?.pages.flat() ?? [];
+  const listItems = useMemo(() => groupEventsByDate(events), [events]);
+
   const selectedGroupName = selectedGroupId
     ? groups.find((g) => g.id === selectedGroupId)?.name ?? null
     : null;
@@ -356,18 +403,21 @@ export default function ActivityScreen() {
 
         {!isLoading && !isError && (
           <FlatList
-            data={events}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <ActivityRow event={item} />}
+            data={listItems}
+            keyExtractor={(item) => item.key}
+            renderItem={({ item }) => {
+              if (item.type === 'header') {
+                return <DateHeader label={item.label} color={theme.textTertiary} />;
+              }
+              return <ActivityRow event={item.event} />;
+            }}
             onEndReached={() => {
               if (hasNextPage && !isFetchingNextPage) fetchNextPage();
             }}
             onEndReachedThreshold={0.3}
             ListEmptyComponent={
               <View className="flex-1 items-center justify-center py-16">
-                <Text className="text-text-secondary text-sm text-center">
-                  No activity yet.
-                </Text>
+                <Text className="text-text-secondary text-sm text-center">No activity yet.</Text>
               </View>
             }
             ListFooterComponent={

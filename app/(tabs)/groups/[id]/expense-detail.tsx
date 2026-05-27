@@ -7,6 +7,7 @@ import { ChevronLeft, Pencil, Receipt, CheckCircle } from 'lucide-react-native';
 import { supabase } from '../../../../lib/supabase';
 import { fetchGroupExpenses, fetchExpenseParticipants } from '../../../../lib/repos/expenses';
 import { fetchGroupMembers } from '../../../../lib/repos/groups';
+import { resolveDisplayName } from '../../../../lib/displayName';
 import { fetchGroupBalances } from '../../../../lib/repos/balances';
 import { format, type Currency } from '../../../../lib/currency';
 import { useAuthStore } from '../../../../store/auth';
@@ -169,7 +170,9 @@ export default function ExpenseDetailScreen() {
           </Text>
           {participants.map((p) => {
             const member = memberMap.get(p.memberId);
-            const name = member?.display_name ?? member?.email ?? 'Unknown';
+            const name = member
+              ? resolveDisplayName(member.display_name, member.profile_display_name, member.google_name, member.email)
+              : 'Unknown';
             const isMe = p.memberId === currentMemberId;
             return (
               <View key={p.memberId} className="flex-row items-center justify-between py-2 border-b border-border last:border-b-0">

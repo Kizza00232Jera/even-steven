@@ -476,17 +476,8 @@ export default function AccountScreen() {
               <>
                 {([
                   { key: 'new_expense' as PrefKey, label: 'New expense' },
-                  { key: 'expense_edited' as PrefKey, label: 'Expense edited' },
-                  { key: 'expense_deleted' as PrefKey, label: 'Expense deleted' },
                   { key: 'payment_received' as PrefKey, label: 'Payment received' },
-                  { key: 'payment_in_group' as PrefKey, label: 'Payment in group' },
-                  { key: 'someone_joins_group' as PrefKey, label: 'Member joined' },
-                  { key: 'someone_added' as PrefKey, label: 'Member added' },
-                  { key: 'member_removed' as PrefKey, label: 'Member removed' },
-                  { key: 'trip_end_approaching' as PrefKey, label: 'Trip ending soon' },
                   { key: 'trip_ends_today' as PrefKey, label: 'Trip ends today' },
-                  { key: 'trip_expired' as PrefKey, label: 'Trip expired' },
-                  { key: 'balance_reaches_zero' as PrefKey, label: 'Balance reaches zero' },
                 ] as { key: PrefKey; label: string }[]).map(({ key, label }, idx, arr) => (
                   <View
                     key={key}

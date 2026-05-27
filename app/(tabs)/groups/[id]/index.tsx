@@ -21,11 +21,13 @@ import { SkeletonBalanceRow } from '../../../../components/SkeletonBalanceRow';
 import { ErrorState } from '../../../../components/ErrorState';
 import { RemovedMemberState } from '../../../../components/RemovedMemberState';
 import { Colors } from '../../../../constants/colors';
-import { fetchGroupDetail, type GroupDetail } from '../../../../lib/repos/groups';
+import { CATEGORY_META, DEFAULT_CATEGORY_META } from '../../../../constants/categories';
+import { fetchGroupDetail, fetchGroupMemberPreviews, type GroupDetail, type MemberPreview } from '../../../../lib/repos/groups';
 import { getOrCreateInviteToken } from '../../../../lib/repos/invites';
 import { fetchGroupExpenses, type ExpenseListItem } from '../../../../lib/repos/expenses';
 import { fetchGroupBalances, type GroupBalanceData } from '../../../../lib/repos/balances';
 import { format, type Currency } from '../../../../lib/currency';
+import { formatExpenseDate } from '../../../../lib/dateUtils';
 import { supabase } from '../../../../lib/supabase';
 import { useAuthStore } from '../../../../store/auth';
 import { useToast } from '../../../../hooks/useToast';
@@ -103,6 +105,23 @@ export default function GroupDetailScreen() {
   useRealtime(id);
   const [isSharing, setIsSharing] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('balances');
+
+  const { data: memberPreviewMap = {} } = useQuery({
+    queryKey: ['group-member-previews', userId, id],
+    queryFn: () => fetchGroupMemberPreviews(supabase, [id], userId),
+    enabled: !!id && !!userId,
+    staleTime: 60_000,
+  });
+
+  const { data: headerBalances } = useQuery({
+    queryKey: ['group-balances', id],
+    queryFn: () => fetchGroupBalances(supabase, id),
+    enabled: !!id,
+  });
+
+  const headerMemberPreviews: MemberPreview[] = memberPreviewMap[id] ?? [];
+  const myBalance = headerBalances?.members.find((m) => m.userId === userId)?.balance ?? null;
+  const groupCurrency = (group?.base_currency ?? 'EUR') as Currency;
 
   async function handleShareInviteLink() {
     if (!session || !id || !group?.memberId) return;
@@ -219,15 +238,96 @@ export default function GroupDetailScreen() {
               </TouchableOpacity>
             </View>
           </View>
-          <View>
-            <Text className="text-white font-bold text-2xl" style={{ fontFamily: 'SpaceGrotesk_700Bold' }}>
-              {group.name}
-            </Text>
-            {group.status === 'expired' && (
-              <View className="mt-1.5 px-2 py-0.5 bg-black/20 rounded-full self-start">
-                <Text className="text-white/70 text-xs">Trip ended</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+            {/* Left: group name + balance */}
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <Text style={{ fontFamily: 'SpaceGrotesk_700Bold', fontSize: 24, color: '#ffffff' }}>
+                {group.name}
+              </Text>
+              {group.status === 'expired' && (
+                <View className="mt-1 px-2 py-0.5 bg-black/20 rounded-full self-start">
+                  <Text className="text-white/70 text-xs">Trip ended</Text>
+                </View>
+              )}
+              {myBalance !== null && (
+                <View
+                  style={{
+                    marginTop: 4,
+                    alignSelf: 'flex-start',
+                    paddingHorizontal: myBalance === 0 ? 0 : 8,
+                    paddingVertical: myBalance === 0 ? 0 : 3,
+                    borderRadius: 8,
+                    backgroundColor:
+                      myBalance > 0.005
+                        ? 'rgba(0,200,150,0.25)'
+                        : myBalance < -0.005
+                        ? 'rgba(255,68,68,0.25)'
+                        : 'transparent',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: 'Inter_500Medium',
+                      fontSize: 14,
+                      color: '#ffffff',
+                    }}
+                  >
+                    {myBalance > 0.005
+                      ? `You're owed ${format(myBalance, groupCurrency)}`
+                      : myBalance < -0.005
+                      ? `You owe ${format(Math.abs(myBalance), groupCurrency)}`
+                      : 'Settled'}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Right: avatar stack + member count */}
+            <View style={{ alignItems: 'flex-end' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                {headerMemberPreviews.slice(0, 3).map((p, i) => (
+                  <View
+                    key={p.memberId}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      borderWidth: 2,
+                      borderColor: 'rgba(0,0,0,0.25)',
+                      marginLeft: i === 0 ? 0 : -6,
+                      zIndex: 3 - i,
+                      overflow: 'hidden',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {p.avatarUrl ? (
+                      <Image source={{ uri: p.avatarUrl }} style={{ width: 32, height: 32 }} />
+                    ) : (
+                      <Text
+                        style={{
+                          color: '#ffffff',
+                          fontSize: 13,
+                          fontFamily: 'SpaceGrotesk_500Medium',
+                        }}
+                      >
+                        {p.name.charAt(0).toUpperCase()}
+                      </Text>
+                    )}
+                  </View>
+                ))}
               </View>
-            )}
+              <Text
+                style={{
+                  color: 'rgba(255,255,255,0.7)',
+                  fontSize: 12,
+                  fontFamily: 'Inter_400Regular',
+                }}
+              >
+                {group.memberCount} {group.memberCount === 1 ? 'member' : 'members'}
+              </Text>
+            </View>
           </View>
         </View>
       </View>
@@ -420,6 +520,19 @@ function ExpensesTab({ groupId, currentMemberId }: ExpensesTabProps) {
           {filteredExpenses.map((expense) => {
             const settled = isExpenseSettled(expense.participant_member_ids, memberBalances);
             const slideAnim = slideAnims.get(expense.id);
+            const { icon: CategoryIcon, color: categoryColor } =
+              CATEGORY_META[expense.category] ?? DEFAULT_CATEGORY_META;
+            const isPayer = expense.payer_id === currentMemberId;
+            const myParticipant = expense.participants.find(
+              (p) => p.memberId === currentMemberId,
+            );
+            const shareText = isPayer
+              ? `You paid ${format(expense.amount, expense.currency as Currency)}`
+              : myParticipant
+              ? `You borrowed ${format(myParticipant.shareAmount, expense.currency as Currency)}`
+              : null;
+            const shareColor = isPayer ? Colors.accent : Colors.destructive;
+
             return (
               <Animated.View
                 key={expense.id}
@@ -429,42 +542,86 @@ function ExpensesTab({ groupId, currentMemberId }: ExpensesTabProps) {
                   testID={`expense-card-${expense.id}`}
                   onPress={() =>
                     router.push(
-                      `/groups/${groupId}/expense-detail?expenseId=${expense.id}` as never
+                      `/groups/${groupId}/expense-detail?expenseId=${expense.id}` as never,
                     )
                   }
-                  className="rounded-2xl p-4"
                   style={{
                     backgroundColor: theme.surface,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: theme.border,
+                    padding: 14,
+                    flexDirection: 'row',
+                    alignItems: 'center',
                     opacity: settled ? 0.5 : 1,
                   }}
+                  activeOpacity={0.75}
                 >
-                  <View className="flex-row items-start justify-between">
-                    <View className="flex-1 mr-3">
-                      <View className="flex-row items-center gap-2 flex-wrap">
-                        <Text
-                          testID={`expense-title-${expense.id}`}
-                          className="font-display font-semibold text-text-primary text-base"
-                          style={{ color: settled ? theme.textSecondary : theme.textPrimary }}
-                        >
-                          {expense.title}
-                        </Text>
-                        {expense.is_edited && (
-                          <View
-                            testID={`edited-badge-${expense.id}`}
-                            className="px-1.5 py-0.5 rounded"
-                            style={{ backgroundColor: theme.surface2 }}
-                          >
-                            <Text className="text-text-tertiary text-xs font-body">edited</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text className="font-body text-text-secondary text-sm mt-0.5">
-                        {expense.category} · {expense.payer_name} paid · {expense.expense_date}
-                      </Text>
-                    </View>
-                    <Text className="font-display font-semibold text-text-primary text-base">
+                  {/* Category icon */}
+                  <View
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: `${categoryColor}26`,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <CategoryIcon size={18} color={categoryColor} strokeWidth={1.5} />
+                  </View>
+
+                  {/* Title + payer · date */}
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text
+                      testID={`expense-title-${expense.id}`}
+                      style={{
+                        fontFamily: 'SpaceGrotesk_600SemiBold',
+                        fontSize: 15,
+                        color: settled ? theme.textSecondary : theme.textPrimary,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {expense.title}
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: 'Inter_400Regular',
+                        fontSize: 13,
+                        color: theme.textSecondary,
+                        marginTop: 2,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {expense.payer_name} · {formatExpenseDate(expense.expense_date)}
+                    </Text>
+                  </View>
+
+                  {/* Total + share */}
+                  <View style={{ alignItems: 'flex-end', marginLeft: 8 }}>
+                    <Text
+                      style={{
+                        fontFamily: 'SpaceGrotesk_600SemiBold',
+                        fontSize: 15,
+                        color: theme.textPrimary,
+                      }}
+                    >
                       {format(expense.amount, expense.currency as Currency)}
                     </Text>
+                    {shareText && (
+                      <Text
+                        style={{
+                          fontFamily: 'Inter_500Medium',
+                          fontSize: 12,
+                          color: shareColor,
+                          textAlign: 'right',
+                          marginTop: 2,
+                          maxWidth: 100,
+                        }}
+                      >
+                        {shareText}
+                      </Text>
+                    )}
                   </View>
                 </TouchableOpacity>
               </Animated.View>

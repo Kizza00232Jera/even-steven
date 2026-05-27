@@ -347,7 +347,7 @@ export default function MembersScreen() {
   }
 
   function confirmRemove(member: GroupMemberWithProfile) {
-    const name = member.display_name ?? member.email;
+    const name = resolveDisplayName(member.display_name, member.profile_display_name, member.google_name, member.email);
     const hasBalance = member.balance !== 0;
     const balanceNote = hasBalance
       ? ` This member has an outstanding balance of ${member.balance > 0 ? '+' : ''}${member.balance.toFixed(2)}.`

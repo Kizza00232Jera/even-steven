@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { User, Check, RotateCcw } from 'lucide-react-native';
+import { User, Check, RotateCcw, CheckCircle2 } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { simplifyDebts, type Settlement } from '../../../../lib/debt';
 import { fetchGroupBalances } from '../../../../lib/repos/balances';
@@ -224,20 +224,72 @@ export function BalancesTab({ groupId, currentMemberId, settlementVisibility, gr
     );
   }
 
+  const myBalance = data?.members.find((m) => m.memberId === currentMemberId)?.balance ?? 0;
+  const currency = (data?.currency ?? 'EUR') as Currency;
+  const summaryColor =
+    myBalance > 0.005 ? Colors.accent : myBalance < -0.005 ? Colors.destructive : theme.textSecondary;
+  const summaryLabel =
+    myBalance > 0.005 ? 'you are owed total' : myBalance < -0.005 ? 'you owe total' : "you're all even";
+
   return (
     <>
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, gap: 12 }}>
-        {simplifiedDebts.length === 0 ? (
-          <View className="flex-1 items-center justify-center py-16">
-            <View
-              className="w-16 h-16 rounded-full items-center justify-center mb-4"
-              style={{ backgroundColor: Colors.accentDim }}
+        {/* Summary header card */}
+        {data && (
+          <View
+            style={{
+              backgroundColor: theme.surface,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: theme.border,
+              padding: 20,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: 'SpaceGrotesk_700Bold',
+                fontSize: 32,
+                color: summaryColor,
+              }}
             >
-              <User size={28} color={Colors.accent} strokeWidth={1.5} />
-            </View>
-            <Text className="text-text-primary font-semibold text-lg">All settled</Text>
-            <Text className="text-text-secondary text-sm mt-1 text-center">
-              Everyone is square — no outstanding balances.
+              {format(Math.abs(myBalance), currency)}
+            </Text>
+            <Text
+              style={{
+                fontFamily: 'Inter_400Regular',
+                fontSize: 14,
+                color: theme.textSecondary,
+                marginTop: 4,
+              }}
+            >
+              {summaryLabel}
+            </Text>
+          </View>
+        )}
+
+        {simplifiedDebts.length === 0 ? (
+          <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 40, paddingBottom: 24 }}>
+            <CheckCircle2 size={48} color={Colors.accent} strokeWidth={1.5} />
+            <Text
+              style={{
+                fontFamily: 'SpaceGrotesk_600SemiBold',
+                fontSize: 20,
+                color: theme.textPrimary,
+                marginTop: 16,
+              }}
+            >
+              You're all even!
+            </Text>
+            <Text
+              style={{
+                fontFamily: 'Inter_400Regular',
+                fontSize: 14,
+                color: theme.textSecondary,
+                marginTop: 8,
+                textAlign: 'center',
+              }}
+            >
+              No outstanding balances in this group.
             </Text>
           </View>
         ) : (
