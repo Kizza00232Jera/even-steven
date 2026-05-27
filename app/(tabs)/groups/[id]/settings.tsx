@@ -196,6 +196,7 @@ export default function GroupSettingsScreen() {
     try {
       await uploadGroupPhoto(supabase, id, asset.uri, asset.base64, asset.mimeType ?? undefined);
       invalidateGroupQueries();
+      router.back();
     } catch {
       Alert.alert('Error', 'Failed to upload photo. Please try again.');
     } finally {
