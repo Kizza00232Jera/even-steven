@@ -20,7 +20,7 @@ const mockUseQuery = jest.fn();
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ id: 'group-1' }),
-  useRouter: () => ({ back: mockBack, push: mockPush, replace: mockReplace }),
+  useRouter: () => ({ back: mockBack, push: mockPush, replace: mockReplace, navigate: mockReplace }),
 }));
 
 jest.mock('../../../../lib/repos/groups', () => ({
@@ -75,6 +75,7 @@ jest.mock('@tanstack/react-query', () => ({
   useQuery: (...args: unknown[]) => mockUseQuery(...args),
   useQueryClient: jest.fn(() => ({
     invalidateQueries: mockInvalidateQueries,
+    removeQueries: jest.fn(),
   })),
 }));
 

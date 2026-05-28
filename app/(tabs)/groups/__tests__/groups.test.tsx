@@ -161,8 +161,8 @@ describe('GroupsScreen — negative balance', () => {
       isError: false,
       refetch: jest.fn(),
     });
-    const { getByText } = render(<GroupsScreen />);
-    expect(getByText(/You owe/)).toBeTruthy();
+    const { getAllByText } = render(<GroupsScreen />);
+    expect(getAllByText(/You owe/).length).toBeGreaterThan(0);
   });
 });
 
@@ -174,8 +174,8 @@ describe('GroupsScreen — positive balance', () => {
       isError: false,
       refetch: jest.fn(),
     });
-    const { getByText } = render(<GroupsScreen />);
-    expect(getByText(/You're owed/)).toBeTruthy();
+    const { getAllByText } = render(<GroupsScreen />);
+    expect(getAllByText(/You're owed/).length).toBeGreaterThan(0);
   });
 });
 

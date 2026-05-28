@@ -109,5 +109,22 @@ export async function fetchGroupBalances(
     };
   });
 
+  // After rounding each balance to 2dp, positive and negative values can round
+  // asymmetrically (JS Math.round rounds -0.5 toward 0), leaving a 1-cent sum
+  // that causes simplifyDebts to produce debt amounts that disagree with the
+  // displayed member balance. Absorb the rounding error on the largest creditor
+  // so the sum stays at zero and debt amounts always match what the UI shows.
+  const roundingErr = Math.round(membersWithBalances.reduce((s, m) => s + m.balance, 0) * 100) / 100;
+  if (Math.abs(roundingErr) >= 0.01) {
+    const idx = membersWithBalances.reduce(
+      (best, m, i) => Math.abs(m.balance) > Math.abs(membersWithBalances[best].balance) ? i : best,
+      0,
+    );
+    membersWithBalances[idx] = {
+      ...membersWithBalances[idx],
+      balance: Math.round((membersWithBalances[idx].balance - roundingErr) * 100) / 100,
+    };
+  }
+
   return { groupId, currency: currency as Currency, members: membersWithBalances };
 }
