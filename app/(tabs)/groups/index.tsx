@@ -39,9 +39,10 @@ import { useAuthStore } from '../../../store/auth';
 import { hapticOnGroupPin, hapticOnToggle } from '../../../lib/haptics';
 import { useTripExpiry } from '../../../hooks/useTripExpiry';
 import { useRealtimeGroups } from '../../../hooks/useRealtime';
-import { format } from '../../../lib/currency';
+import { format, convert } from '../../../lib/currency';
 import type { Currency } from '../../../lib/currency';
 import type { GroupWithMembership } from '../../../lib/groupFilters';
+import { useRatesStore } from '../../../store/rates';
 
 function balanceDisplay(
   balance: number,
@@ -154,10 +155,23 @@ interface GroupCardProps {
 function GroupCard({ group, memberPreviews, onPress, onMenuPress }: GroupCardProps) {
   const { colorScheme } = useColorScheme();
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
+  const { profile } = useAuthStore();
+  const { rates } = useRatesStore();
   const previews = memberPreviews ?? [];
+
+  const preferredCurrency = (profile?.preferred_currency ?? 'EUR') as Currency;
+  const groupCurrency = group.base_currency as Currency;
+  let displayBalance = group.balance;
+  if (rates && groupCurrency !== preferredCurrency) {
+    try {
+      displayBalance = convert(group.balance, groupCurrency, preferredCurrency, rates);
+    } catch { /* fall back to raw amount */ }
+  }
+  const displayCurrency = (rates || groupCurrency === preferredCurrency) ? preferredCurrency : groupCurrency;
+
   const { text: balanceText, color: balanceColor } = balanceDisplay(
-    group.balance,
-    group.base_currency as Currency,
+    displayBalance,
+    displayCurrency,
     theme,
   );
 

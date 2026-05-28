@@ -127,17 +127,12 @@ export default function PrivacyScreen() {
           All data is transmitted over HTTPS and stored in encrypted databases hosted in the EU (Stockholm, Sweden). Row-level security policies ensure users can only access data they are authorised to see.
         </Body>
 
-        <Section title="8. Children's Privacy" />
-        <Body>
-          Even Steven is not directed at children under 13. We do not knowingly collect personal data from children under 13.
-        </Body>
-
-        <Section title="9. Changes to This Policy" />
+        <Section title="8. Changes to This Policy" />
         <Body>
           We may update this Privacy Policy from time to time. We will notify you of material changes via a push notification or in-app banner.
         </Body>
 
-        <Section title="10. Contact" />
+        <Section title="9. Contact" />
         <Body>
           Questions about this policy? Reach us at privacy@evensteven.app.
         </Body>
