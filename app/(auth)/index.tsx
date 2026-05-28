@@ -28,7 +28,7 @@ export default function SignInScreen() {
   useEffect(() => {
     const ease = Easing.out(Easing.cubic);
     Animated.sequence([
-      Animated.timing(glowOpacity, { toValue: 1, duration: 800, easing: ease, useNativeDriver: true }),
+      Animated.timing(glowOpacity, { toValue: 0.07, duration: 800, easing: ease, useNativeDriver: true }),
       Animated.parallel([
         Animated.timing(wordmarkOpacity, { toValue: 1, duration: 500, easing: ease, useNativeDriver: true }),
         Animated.timing(wordmarkY,       { toValue: 0, duration: 500, easing: ease, useNativeDriver: true }),
@@ -138,7 +138,6 @@ const styles = StyleSheet.create({
     height: 480,
     borderRadius: 240,
     backgroundColor: Colors.accent,
-    opacity: 0.07,
   },
   inner: {
     flex: 1,

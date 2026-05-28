@@ -82,7 +82,7 @@ function AddMemberSheet({ visible, onClose, onAdd, isLoading }: AddMemberSheetPr
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         className="flex-1 justify-end"
       >
         <TouchableOpacity className="flex-1" onPress={handleClose} />
@@ -145,7 +145,7 @@ function EditDisplayNameSheet({ visible, currentName, onClose, onSave, isLoading
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         className="flex-1 justify-end"
       >
         <TouchableOpacity className="flex-1" onPress={handleClose} />

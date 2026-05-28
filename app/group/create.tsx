@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   View,
   Text,
@@ -45,7 +45,7 @@ const GROUP_TYPES: { type: GroupType; label: string; Icon: React.ComponentType<{
 
 const CURRENCIES: { code: Currency; symbol: string }[] = [
   { code: 'USD', symbol: '$' },
-  { code: 'EUR', symbol: '€' },
+  { code: 'EUR', symbol: 'â‚¬' },
   { code: 'DKK', symbol: 'kr' },
   { code: 'SEK', symbol: 'kr' },
 ];
@@ -407,7 +407,7 @@ function Step3Members({
           Members &amp; settings
         </Text>
         <Text className="font-body text-base text-text-secondary">
-          Both are optional — you can change these later.
+          Both are optional â€” you can change these later.
         </Text>
       </View>
 
@@ -587,7 +587,7 @@ export default function CreateGroupScreen() {
         eventType: 'group_created',
         metadata: { name: name.trim() },
       }).catch(() => {});
-      // Request push notification permission after first group creation (spec §38)
+      // Request push notification permission after first group creation (spec Â§38)
       requestAndRegisterPushToken(session.user.id).catch(() => {});
       queryClient.invalidateQueries({ queryKey: ['groups'] });
       router.back();
@@ -606,7 +606,7 @@ export default function CreateGroupScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         style={{ flex: 1 }}
       >
         <View style={{ flex: 1, paddingHorizontal: 16 }}>
@@ -727,3 +727,4 @@ export default function CreateGroupScreen() {
     </SafeAreaView>
   );
 }
+

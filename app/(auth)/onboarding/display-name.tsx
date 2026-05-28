@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   View,
   Text,
@@ -50,7 +50,7 @@ export default function DisplayNameScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         className="flex-1"
       >
         <View className="flex-1 px-6 pt-16 pb-8">
@@ -98,3 +98,4 @@ export default function DisplayNameScreen() {
     </SafeAreaView>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -134,7 +134,7 @@ function AddFriendSheet({ visible, onClose, onAdd, isLoading }: AddFriendSheetPr
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         className="flex-1 justify-end"
       >
         <TouchableOpacity className="flex-1" onPress={handleClose} />
@@ -167,7 +167,7 @@ function AddFriendSheet({ visible, onClose, onAdd, isLoading }: AddFriendSheetPr
             activeOpacity={0.8}
           >
             <Text className="text-white font-semibold text-base">
-              {isLoading ? 'Adding…' : 'Add Friend'}
+              {isLoading ? 'Addingâ€¦' : 'Add Friend'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -373,3 +373,4 @@ export default function FriendsScreen() {
     </SafeAreaView>
   );
 }
+

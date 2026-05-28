@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -43,7 +43,7 @@ type DeleteStep = 'closed' | 'balance-warning' | 'confirm-anonymise' | 'confirm-
 
 const CURRENCIES: { code: Currency; label: string; symbol: string }[] = [
   { code: 'USD', label: 'US Dollar', symbol: '$' },
-  { code: 'EUR', label: 'Euro', symbol: '€' },
+  { code: 'EUR', label: 'Euro', symbol: 'â‚¬' },
   { code: 'DKK', label: 'Danish Krone', symbol: 'kr' },
   { code: 'SEK', label: 'Swedish Krona', symbol: 'kr' },
 ];
@@ -347,7 +347,7 @@ export default function AccountScreen() {
     if (deleteStep === 'confirm-anonymise') {
       return renderConfirmStep(
         'Anonymise your data?',
-        '“Deleted User” will replace your name, and your profile photo and email will be permanently removed. Expense records remain visible to other group members.',
+        'â€œDeleted Userâ€ will replace your name, and your profile photo and email will be permanently removed. Expense records remain visible to other group members.',
         'Anonymise my data',
         'Confirm anonymise account',
         handleAnonymise,
@@ -386,7 +386,7 @@ export default function AccountScreen() {
                 {renderAvatarContent()}
               </View>
               <View className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-accent items-center justify-center">
-                <Text className="text-white text-xs font-bold">✎</Text>
+                <Text className="text-white text-xs font-bold">âœŽ</Text>
               </View>
             </TouchableOpacity>
             <Text className="font-display text-xl font-semibold text-text-primary">
@@ -406,7 +406,7 @@ export default function AccountScreen() {
                 <Text className="font-body text-base text-text-secondary">
                   {displayName}
                 </Text>
-                <Text className="text-text-tertiary">›</Text>
+                <Text className="text-text-tertiary">â€º</Text>
               </View>
             </TouchableOpacity>
 
@@ -418,7 +418,7 @@ export default function AccountScreen() {
               <Text className="font-body text-base text-text-primary">Preferred currency</Text>
               <View className="flex-row items-center gap-2">
                 <Text className="font-body text-base text-text-secondary">{preferredCurrency}</Text>
-                <Text className="text-text-tertiary">›</Text>
+                <Text className="text-text-tertiary">â€º</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -470,7 +470,7 @@ export default function AccountScreen() {
                 className="flex-row items-center justify-between px-5 py-4"
               >
                 <Text className="font-body text-base text-text-primary">Enable notifications</Text>
-                <Text className="text-text-tertiary">›</Text>
+                <Text className="text-text-tertiary">â€º</Text>
               </TouchableOpacity>
             ) : (
               <>
@@ -504,14 +504,14 @@ export default function AccountScreen() {
               className="flex-row items-center justify-between px-5 py-4 border-b border-border"
             >
               <Text className="font-body text-base text-text-primary">Privacy Policy</Text>
-              <Text className="text-text-tertiary">›</Text>
+              <Text className="text-text-tertiary">â€º</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => Linking.openURL('https://even-steven.vercel.app/terms')}
               className="flex-row items-center justify-between px-5 py-4"
             >
               <Text className="font-body text-base text-text-primary">Terms of Service</Text>
-              <Text className="text-text-tertiary">›</Text>
+              <Text className="text-text-tertiary">â€º</Text>
             </TouchableOpacity>
           </View>
 
@@ -554,7 +554,7 @@ export default function AccountScreen() {
         onRequestClose={() => setShowNameModal(false)}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior="padding"
           className="flex-1"
         >
           <TouchableOpacity
@@ -647,7 +647,7 @@ export default function AccountScreen() {
                       <Text className="font-body text-sm text-text-secondary">{label}</Text>
                     </View>
                     {isSelected && (
-                      <Text className="text-accent font-bold">✓</Text>
+                      <Text className="text-accent font-bold">âœ“</Text>
                     )}
                   </TouchableOpacity>
                 );
@@ -679,3 +679,4 @@ export default function AccountScreen() {
     </SafeAreaView>
   );
 }
+

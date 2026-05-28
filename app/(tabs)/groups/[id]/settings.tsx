@@ -160,6 +160,7 @@ export default function GroupSettingsScreen() {
       await renameGroup(supabase, id, trimmed);
       invalidateGroupQueries();
       setShowRenameModal(false);
+      router.back();
     } finally {
       setIsRenaming(false);
     }
@@ -629,7 +630,7 @@ export default function GroupSettingsScreen() {
 
       {/* Rename Modal */}
       <Modal visible={showRenameModal} transparent animationType="slide" onRequestClose={() => setShowRenameModal(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+        <KeyboardAvoidingView behavior="padding" className="flex-1">
           <View className="flex-1 justify-end bg-black/60">
             <View className="bg-surface rounded-t-3xl p-6 pb-10">
               <Text className="font-display text-lg font-semibold text-text-primary mb-4">
@@ -727,7 +728,7 @@ export default function GroupSettingsScreen() {
         animationType="slide"
         onRequestClose={() => setShowExtendDateModal(false)}
       >
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+        <KeyboardAvoidingView behavior="padding" className="flex-1">
           <View className="flex-1 justify-end bg-black/60">
             <View className="bg-surface rounded-t-3xl p-6 pb-10">
               <Text className="font-display text-lg font-semibold text-text-primary mb-4">

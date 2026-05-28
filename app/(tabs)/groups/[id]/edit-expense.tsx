@@ -467,7 +467,7 @@ export default function EditExpenseScreen() {
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
       >
         {/* Header */}
         <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
