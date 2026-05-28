@@ -4,6 +4,37 @@ export interface Split {
   baseShare?: number;
 }
 
+/**
+ * Compute base-currency shares from local-currency splits.
+ * Uses floor for non-payer shares and gives the payer the remainder so that
+ * sum(baseShares) === baseCurrencyAmount exactly. This prevents the 1-cent
+ * asymmetry that occurs when both parties independently round a x.xx5 amount.
+ */
+export function computeBaseShares(
+  splits: Split[],
+  localAmount: number,
+  baseCurrencyAmount: number,
+  payerId: string,
+): (Split & { baseShare: number })[] {
+  if (localAmount === 0) {
+    return splits.map((s) => ({ ...s, baseShare: s.share }));
+  }
+  const nonPayers = splits.filter((s) => s.memberId !== payerId);
+  const nonPayerBases = nonPayers.map((s) => ({
+    memberId: s.memberId,
+    baseShare: floor2((s.share / localAmount) * baseCurrencyAmount),
+  }));
+  const othersTotal = round2(nonPayerBases.reduce((acc, s) => acc + s.baseShare, 0));
+  const payerBase = round2(baseCurrencyAmount - othersTotal);
+  return splits.map((s) => ({
+    ...s,
+    baseShare:
+      s.memberId === payerId
+        ? payerBase
+        : nonPayerBases.find((b) => b.memberId === s.memberId)!.baseShare,
+  }));
+}
+
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const floor2 = (n: number) => Math.floor(n * 100) / 100;
 

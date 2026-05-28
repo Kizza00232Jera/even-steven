@@ -38,7 +38,7 @@ import {
 } from '../../../../lib/repos/expenses';
 import { fetchGroupMembers, type GroupMemberWithProfile } from '../../../../lib/repos/groups';
 import { resolveDisplayName } from '../../../../lib/displayName';
-import { calculateEqualSplit, calculateUnequalSplit, calculatePercentageSplit } from '../../../../lib/splits';
+import { calculateEqualSplit, calculateUnequalSplit, calculatePercentageSplit, computeBaseShares } from '../../../../lib/splits';
 import { convert, type Currency } from '../../../../lib/currency';
 import { type Category } from '../../../../lib/categories';
 import { supabase } from '../../../../lib/supabase';
@@ -361,10 +361,7 @@ export default function EditExpenseScreen() {
         if (rates && expenseCurrency !== baseCurrency) {
           try { baseCurrencyAmount = convert(effectiveAmount, expenseCurrency, baseCurrency, rates); } catch { /* fallback to raw amount */ }
         }
-        const splitsWithBase = splits.map((s) => ({
-          ...s,
-          baseShare: effectiveAmount > 0 ? (s.share / effectiveAmount) * baseCurrencyAmount : s.share,
-        }));
+        const splitsWithBase = computeBaseShares(splits, effectiveAmount, baseCurrencyAmount, payerId);
         await updateExpenseFinancial(supabase, expense.id, {
           amount: effectiveAmount,
           payerId,

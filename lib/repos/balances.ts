@@ -25,76 +25,30 @@ type ProfileJoin = {
   google_avatar_url: string | null;
 };
 
-type ExpenseParticipantRow = {
-  member_id: string;
-  share_amount: number;
-  base_share_amount?: number | null;
-};
-
 export async function fetchGroupBalances(
   client: SupabaseClient<Database>,
   groupId: string
 ): Promise<GroupBalanceData> {
-  const [membersResult, expensesResult, settlementsResult, groupResult] = await Promise.all([
+  // Read the pre-computed balance from group_members (maintained by DB triggers
+  // with sum-preservation rounding) so this value is always in sync with the
+  // groups list — both read from the same authoritative column.
+  const [membersResult, groupResult] = await Promise.all([
     client
       .from('group_members')
       .select(
-        'id, user_id, email, display_name, profiles!group_members_user_id_fkey(display_name, google_name, avatar_url, google_avatar_url)'
+        'id, user_id, email, display_name, balance, profiles!group_members_user_id_fkey(display_name, google_name, avatar_url, google_avatar_url)'
       )
       .eq('group_id', groupId)
       .eq('status', 'active'),
-
-    client
-      .from('expenses')
-      .select('id, payer_id, amount, base_currency_amount, expense_participants(member_id, share_amount, base_share_amount)')
-      .eq('group_id', groupId),
-
-    // RLS enforces private settlement visibility automatically
-    client
-      .from('settlements')
-      .select('payer_member_id, payee_member_id, amount')
-      .eq('group_id', groupId)
-      .eq('is_voided', false),
 
     client.from('groups').select('base_currency').eq('id', groupId).single(),
   ]);
 
   if (membersResult.error) throw membersResult.error;
-  if (expensesResult.error) throw expensesResult.error;
-  if (settlementsResult.error) throw settlementsResult.error;
   if (groupResult.error) throw groupResult.error;
 
   const members = membersResult.data ?? [];
-  const expenses = expensesResult.data ?? [];
-  const settlements = settlementsResult.data ?? [];
   const currency = groupResult.data.base_currency;
-
-  const balanceMap = new Map<string, number>();
-  for (const m of members) {
-    balanceMap.set(m.id, 0);
-  }
-
-  for (const expense of expenses) {
-    const payerCredit = expense.base_currency_amount ?? expense.amount;
-    const payerBal = balanceMap.get(expense.payer_id) ?? 0;
-    balanceMap.set(expense.payer_id, payerBal + payerCredit);
-
-    const participants = (expense.expense_participants as ExpenseParticipantRow[]) ?? [];
-    for (const p of participants) {
-      const participantDebit = p.base_share_amount ?? p.share_amount;
-      const partBal = balanceMap.get(p.member_id) ?? 0;
-      balanceMap.set(p.member_id, partBal - participantDebit);
-    }
-  }
-
-  for (const s of settlements) {
-    // Debtor (payer_member_id) pays → their negative balance increases toward 0
-    const payerBal = balanceMap.get(s.payer_member_id) ?? 0;
-    balanceMap.set(s.payer_member_id, payerBal + s.amount);
-    // Creditor (payee_member_id) receives → their positive balance decreases toward 0
-    const payeeBal = balanceMap.get(s.payee_member_id) ?? 0;
-    balanceMap.set(s.payee_member_id, payeeBal - s.amount);
-  }
 
   const membersWithBalances: MemberWithBalance[] = members.map((m) => {
     const raw = m.profiles;
@@ -105,26 +59,9 @@ export async function fetchGroupBalances(
       name: resolveDisplayName(m.display_name, profile?.display_name, profile?.google_name, m.email),
       email: m.email,
       avatarUrl: profile?.avatar_url ?? profile?.google_avatar_url ?? null,
-      balance: Math.round((balanceMap.get(m.id) ?? 0) * 100) / 100,
+      balance: m.balance,
     };
   });
-
-  // After rounding each balance to 2dp, positive and negative values can round
-  // asymmetrically (JS Math.round rounds -0.5 toward 0), leaving a 1-cent sum
-  // that causes simplifyDebts to produce debt amounts that disagree with the
-  // displayed member balance. Absorb the rounding error on the largest creditor
-  // so the sum stays at zero and debt amounts always match what the UI shows.
-  const roundingErr = Math.round(membersWithBalances.reduce((s, m) => s + m.balance, 0) * 100) / 100;
-  if (Math.abs(roundingErr) >= 0.01) {
-    const idx = membersWithBalances.reduce(
-      (best, m, i) => Math.abs(m.balance) > Math.abs(membersWithBalances[best].balance) ? i : best,
-      0,
-    );
-    membersWithBalances[idx] = {
-      ...membersWithBalances[idx],
-      balance: Math.round((membersWithBalances[idx].balance - roundingErr) * 100) / 100,
-    };
-  }
 
   return { groupId, currency: currency as Currency, members: membersWithBalances };
 }

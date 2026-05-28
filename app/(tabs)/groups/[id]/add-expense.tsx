@@ -30,7 +30,7 @@ import { resolveDisplayName } from '../../../../lib/displayName';
 import { sendGroupNotification } from '../../../../lib/notifications';
 import { logActivityEvent } from '../../../../lib/repos/activity';
 import { detectCategory, type Category } from '../../../../lib/categories';
-import { calculateEqualSplit, calculateUnequalSplit, calculatePercentageSplit } from '../../../../lib/splits';
+import { calculateEqualSplit, calculateUnequalSplit, calculatePercentageSplit, computeBaseShares } from '../../../../lib/splits';
 import { convert, format, type Currency } from '../../../../lib/currency';
 import { hapticOnExpenseSaved } from '../../../../lib/haptics';
 import { supabase } from '../../../../lib/supabase';
@@ -367,10 +367,7 @@ export default function AddExpenseScreen() {
     if (rates && currency !== baseCurrency) {
       try { baseCurrencyAmount = convert(amount, currency, baseCurrency, rates); } catch { /* fallback to raw amount */ }
     }
-    const splitsWithBase = splits.map((s) => ({
-      ...s,
-      baseShare: amount > 0 ? (s.share / amount) * baseCurrencyAmount : s.share,
-    }));
+    const splitsWithBase = computeBaseShares(splits, amount, baseCurrencyAmount, payerId!);
 
     setIsSaving(true);
     try {
