@@ -410,6 +410,8 @@ export default function AddExpenseScreen() {
         metadata: { title: title.trim(), amount, currency, expense_id: newExpense.id },
       });
       queryClient.invalidateQueries({ queryKey: ['expenses', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-balances', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
       router.back();
     } catch (err: unknown) {
       const msg =

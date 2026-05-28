@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useColorScheme } from 'nativewind';
-import { Settings, ChevronLeft, Plus, Share2 } from 'lucide-react-native';
+import { Settings, ChevronLeft, Plus, Share2, CheckCircle } from 'lucide-react-native';
 import { SkeletonExpenseCard } from '../../../../components/SkeletonExpenseCard';
 import { SkeletonBalanceRow } from '../../../../components/SkeletonBalanceRow';
 import { ErrorState } from '../../../../components/ErrorState';
@@ -528,6 +528,8 @@ function ExpensesTab({ groupId, currentMemberId }: ExpensesTabProps) {
             );
             const shareText = isPayer
               ? `You paid ${format(expense.amount, expense.currency as Currency)}`
+              : myParticipant && settled
+              ? null
               : myParticipant
               ? `You borrowed ${format(myParticipant.shareAmount, expense.currency as Currency)}`
               : null;
@@ -603,12 +605,36 @@ function ExpensesTab({ groupId, currentMemberId }: ExpensesTabProps) {
                       style={{
                         fontFamily: 'SpaceGrotesk_600SemiBold',
                         fontSize: 15,
-                        color: theme.textPrimary,
+                        color: settled ? theme.textSecondary : theme.textPrimary,
                       }}
                     >
                       {format(expense.amount, expense.currency as Currency)}
                     </Text>
-                    {shareText && (
+                    {settled && !isPayer && myParticipant ? (
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 3,
+                          marginTop: 3,
+                          backgroundColor: Colors.accentDim,
+                          borderRadius: 6,
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                        }}
+                      >
+                        <CheckCircle size={10} color={Colors.accent} strokeWidth={2.5} />
+                        <Text
+                          style={{
+                            fontFamily: 'Inter_500Medium',
+                            fontSize: 11,
+                            color: Colors.accent,
+                          }}
+                        >
+                          Settled
+                        </Text>
+                      </View>
+                    ) : shareText ? (
                       <Text
                         style={{
                           fontFamily: 'Inter_500Medium',
@@ -621,7 +647,7 @@ function ExpensesTab({ groupId, currentMemberId }: ExpensesTabProps) {
                       >
                         {shareText}
                       </Text>
-                    )}
+                    ) : null}
                   </View>
                 </TouchableOpacity>
               </Animated.View>

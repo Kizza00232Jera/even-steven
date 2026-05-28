@@ -58,7 +58,7 @@ export default function ExpenseDetailScreen() {
     : undefined;
 
   const myBalance = groupBalances?.members.find((m) => m.memberId === currentMemberId)?.balance ?? null;
-  const isSettled = isNonPayerParticipant && myBalance !== null && myBalance >= 0;
+  const isSettled = isNonPayerParticipant && myBalance !== null && myBalance >= -0.005;
   const baseCurrency = groupBalances?.currency;
 
   if (expensesLoading) {
@@ -247,7 +247,9 @@ export default function ExpenseDetailScreen() {
               ) : (
                 <TouchableOpacity
                   testID="settle-up-button"
-                  onPress={() => router.back()}
+                  onPress={() => {
+                    router.back();
+                  }}
                   className="px-4 py-2 rounded-full"
                   style={{ backgroundColor: Colors.accent }}
                 >

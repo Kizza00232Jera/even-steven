@@ -408,43 +408,39 @@ export default function GroupsScreen() {
     setContextGroup(null);
   }
 
-  const overallBalance = useMemo(() => {
+  const balanceSummary = useMemo(() => {
     if (!groups) return null;
     const active = groups.filter((g) => g.status === 'active');
     if (active.length === 0) return null;
 
-    const totals: Record<string, number> = {};
-    for (const g of active) {
-      totals[g.base_currency] = (totals[g.base_currency] ?? 0) + g.balance;
-    }
-
     const preferred = (profile?.preferred_currency ?? 'EUR') as Currency;
-    if (preferred in totals) {
-      return { balance: totals[preferred], currency: preferred };
-    }
-    const entries = Object.entries(totals);
-    const [currency, balance] = entries.reduce(
-      (best, [c, b]) => (Math.abs(b) > Math.abs(best[1]) ? [c, b] : best),
-      entries[0],
-    );
-    return { balance, currency: currency as Currency };
-  }, [groups, profile?.preferred_currency]);
 
-  const summaryLine = useMemo(() => {
-    if (!overallBalance || Math.abs(overallBalance.balance) < 0.005) {
-      return { text: "You're all settled", color: theme.textSecondary };
+    const owingByCurrency: Record<string, number> = {};
+    const owedByCurrency: Record<string, number> = {};
+
+    for (const g of active) {
+      if (g.balance < -0.005) {
+        owingByCurrency[g.base_currency] = (owingByCurrency[g.base_currency] ?? 0) + Math.abs(g.balance);
+      } else if (g.balance > 0.005) {
+        owedByCurrency[g.base_currency] = (owedByCurrency[g.base_currency] ?? 0) + g.balance;
+      }
     }
-    if (overallBalance.balance > 0) {
-      return {
-        text: `Overall, you are owed ${format(overallBalance.balance, overallBalance.currency)}`,
-        color: Colors.accent,
-      };
+
+    function pickAmount(byCurrency: Record<string, number>): { amount: number; currency: Currency } | null {
+      if (Object.keys(byCurrency).length === 0) return null;
+      if (preferred in byCurrency) return { amount: byCurrency[preferred], currency: preferred };
+      const [c, b] = Object.entries(byCurrency).reduce(
+        (best, [c2, b2]) => (b2 > best[1] ? [c2, b2] : best),
+        ['', 0],
+      );
+      return { amount: b, currency: c as Currency };
     }
+
     return {
-      text: `Overall, you owe ${format(Math.abs(overallBalance.balance), overallBalance.currency)}`,
-      color: Colors.destructive,
+      owing: pickAmount(owingByCurrency),
+      owed: pickAmount(owedByCurrency),
     };
-  }, [overallBalance, theme.textSecondary]);
+  }, [groups, profile?.preferred_currency]);
 
   function renderContent() {
     if (isLoading) {
@@ -548,18 +544,94 @@ export default function GroupsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Net balance summary */}
+        {/* Balance summary — split into owed / owing */}
         {groups !== undefined && (
-          <Text
-            style={{
-              fontFamily: 'Inter_400Regular',
-              fontSize: 15,
-              color: summaryLine.color,
-              marginBottom: 16,
-            }}
-          >
-            {summaryLine.text}
-          </Text>
+          <View style={{ marginBottom: 16 }}>
+            {!balanceSummary?.owing && !balanceSummary?.owed ? (
+              <Text
+                style={{
+                  fontFamily: 'Inter_400Regular',
+                  fontSize: 15,
+                  color: theme.textSecondary,
+                }}
+              >
+                You're all settled
+              </Text>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {balanceSummary?.owing && (
+                  <View
+                    style={{
+                      flex: 1,
+                      backgroundColor: theme.surface,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: theme.border,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: 'Inter_400Regular',
+                        fontSize: 11,
+                        color: theme.textTertiary,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
+                        marginBottom: 2,
+                      }}
+                    >
+                      You owe
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: 'SpaceGrotesk_700Bold',
+                        fontSize: 18,
+                        color: Colors.destructive,
+                      }}
+                    >
+                      {format(balanceSummary.owing.amount, balanceSummary.owing.currency)}
+                    </Text>
+                  </View>
+                )}
+                {balanceSummary?.owed && (
+                  <View
+                    style={{
+                      flex: 1,
+                      backgroundColor: theme.surface,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: theme.border,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: 'Inter_400Regular',
+                        fontSize: 11,
+                        color: theme.textTertiary,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
+                        marginBottom: 2,
+                      }}
+                    >
+                      You're owed
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: 'SpaceGrotesk_700Bold',
+                        fontSize: 18,
+                        color: Colors.accent,
+                      }}
+                    >
+                      {format(balanceSummary.owed.amount, balanceSummary.owed.currency)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
         )}
 
         {renderContent()}

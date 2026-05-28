@@ -390,6 +390,8 @@ export default function EditExpenseScreen() {
         });
       }
       queryClient.invalidateQueries({ queryKey: ['expenses', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-balances', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
       router.back();
     } catch {
       Alert.alert('Error', 'Could not save changes. Please try again.');
@@ -428,6 +430,8 @@ export default function EditExpenseScreen() {
                 });
               }
               queryClient.invalidateQueries({ queryKey: ['expenses', groupId] });
+              queryClient.invalidateQueries({ queryKey: ['group-balances', groupId] });
+              queryClient.invalidateQueries({ queryKey: ['groups'] });
               router.back();
             } catch {
               Alert.alert('Error', 'Could not delete this expense. Please try again.');

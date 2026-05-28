@@ -337,8 +337,14 @@ export default function GroupSettingsScreen() {
     setIsDeleting(true);
     try {
       await deleteGroup(supabase, id);
+      // Remove stale group data from cache before navigating to prevent
+      // the group detail screen (still in the stack) from re-rendering with a deleted group
+      queryClient.removeQueries({ queryKey: ['group', id] });
+      queryClient.removeQueries({ queryKey: ['group-balances', id] });
+      queryClient.removeQueries({ queryKey: ['expenses', id] });
+      queryClient.removeQueries({ queryKey: ['group-settlements', id] });
       queryClient.invalidateQueries({ queryKey: ['groups'] });
-      router.replace('/(tabs)/groups');
+      router.navigate('/(tabs)/groups' as never);
     } finally {
       setIsDeleting(false);
     }

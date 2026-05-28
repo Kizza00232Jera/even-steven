@@ -166,6 +166,7 @@ export function BalancesTab({ groupId, currentMemberId, settlementVisibility, gr
       closeModal();
       queryClient.invalidateQueries({ queryKey: ['group-balances', groupId] });
       queryClient.invalidateQueries({ queryKey: ['group-settlements', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
       // Auto-archive when all debts reach zero (spec §22)
       checkAndAutoArchive(groupId);
     } catch {
@@ -187,6 +188,7 @@ export function BalancesTab({ groupId, currentMemberId, settlementVisibility, gr
       toast.success('Settlement undone');
       queryClient.invalidateQueries({ queryKey: ['group-balances', groupId] });
       queryClient.invalidateQueries({ queryKey: ['group-settlements', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
     } catch {
       toast.error('Failed to undo settlement');
     }

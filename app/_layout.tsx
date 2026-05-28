@@ -18,8 +18,9 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Platform, AppState } from 'react-native';
+import { SplashAnimation } from '../components/SplashAnimation';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import { configureGoogleSignIn } from '../lib/auth';
@@ -148,6 +149,7 @@ function RootContent() {
   useOTAUpdates();
   const { fetchRates } = useRatesStore();
   useEffect(() => { fetchRates(); }, []);
+  const [showSplash, setShowSplash] = useState(true);
 
   // Re-register push token on every app open (handles token rotation)
   useEffect(() => {
@@ -260,6 +262,7 @@ function RootContent() {
         <Stack screenOptions={{ headerShown: false }} />
       </View>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      {showSplash && <SplashAnimation onFinished={() => setShowSplash(false)} />}
     </>
   );
 }

@@ -105,7 +105,7 @@ export async function fetchGroupBalances(
       name: resolveDisplayName(m.display_name, profile?.display_name, profile?.google_name, m.email),
       email: m.email,
       avatarUrl: profile?.avatar_url ?? profile?.google_avatar_url ?? null,
-      balance: balanceMap.get(m.id) ?? 0,
+      balance: Math.round((balanceMap.get(m.id) ?? 0) * 100) / 100,
     };
   });
 
