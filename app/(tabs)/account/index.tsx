@@ -15,6 +15,7 @@ import {
   Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as Notifications from 'expo-notifications';
@@ -500,14 +501,14 @@ export default function AccountScreen() {
 
           <View className="bg-surface rounded-2xl border border-border overflow-hidden mb-4">
             <TouchableOpacity
-              onPress={() => Linking.openURL('https://even-steven.vercel.app/privacy')}
+              onPress={() => router.push('/legal/privacy' as never)}
               className="flex-row items-center justify-between px-5 py-4 border-b border-border"
             >
               <Text className="font-body text-base text-text-primary">Privacy Policy</Text>
               <Text className="text-text-tertiary">›</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => Linking.openURL('https://even-steven.vercel.app/terms')}
+              onPress={() => router.push('/legal/terms' as never)}
               className="flex-row items-center justify-between px-5 py-4"
             >
               <Text className="font-body text-base text-text-primary">Terms of Service</Text>
