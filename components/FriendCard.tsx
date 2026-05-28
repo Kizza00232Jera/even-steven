@@ -2,9 +2,10 @@ import { TouchableOpacity, View, Text, Image } from 'react-native';
 import { User } from 'lucide-react-native';
 import { Colors } from '../constants/colors';
 import { useColorScheme } from 'nativewind';
-import { format } from '../lib/currency';
+import { format, convert } from '../lib/currency';
 import type { Currency } from '../lib/currency';
 import { useAuthStore } from '../store/auth';
+import { useRatesStore } from '../store/rates';
 import type { ActiveFriend } from '../lib/repos/friends';
 
 interface FriendCardProps {
@@ -16,13 +17,24 @@ export function FriendCard({ friend, onPress }: FriendCardProps) {
   const { colorScheme } = useColorScheme();
   const theme = colorScheme === 'dark' ? Colors.dark : Colors.light;
   const { profile } = useAuthStore();
-  const currency = (profile?.preferred_currency ?? 'EUR') as Currency;
+  const { rates } = useRatesStore();
+  const preferredCurrency = (profile?.preferred_currency ?? 'EUR') as Currency;
 
-  const balanceColor = friend.totalBalance > 0 ? Colors.accent : Colors.destructive;
+  // Convert each group's balance to the user's preferred currency before summing
+  const convertedBalance = friend.sharedGroupBalances.reduce((sum, { balance, currency }) => {
+    if (!rates || currency === preferredCurrency) return sum + balance;
+    try {
+      return sum + convert(balance, currency as Currency, preferredCurrency, rates);
+    } catch {
+      return sum + balance;
+    }
+  }, 0);
+
+  const balanceColor = convertedBalance > 0 ? Colors.accent : Colors.destructive;
   const balanceText =
-    friend.totalBalance > 0
-      ? `Owes ${format(friend.totalBalance, currency)}`
-      : `You owe ${format(Math.abs(friend.totalBalance), currency)}`;
+    convertedBalance > 0
+      ? `Owes ${format(convertedBalance, preferredCurrency)}`
+      : `You owe ${format(Math.abs(convertedBalance), preferredCurrency)}`;
 
   return (
     <TouchableOpacity
@@ -72,7 +84,7 @@ export function FriendCard({ friend, onPress }: FriendCardProps) {
         </Text>
       </View>
 
-      {friend.totalBalance !== 0 && (
+      {convertedBalance !== 0 && (
         <Text
           style={{
             fontFamily: 'Inter_500Medium',

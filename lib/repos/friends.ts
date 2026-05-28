@@ -10,6 +10,7 @@ export interface ActiveFriend {
   avatarUrl: string | null;
   totalBalance: number;
   sharedGroupCount: number;
+  sharedGroupBalances: { groupId: string; balance: number; currency: string }[];
 }
 
 export interface PendingFriend {
@@ -90,7 +91,7 @@ export async function listFriendships(
       .order('created_at', { ascending: false }),
     client
       .from('group_members')
-      .select('group_id, balance')
+      .select('group_id, balance, groups(base_currency)')
       .eq('user_id', userId)
       .eq('status', 'active'),
   ]);
@@ -110,10 +111,13 @@ export async function listFriendships(
         .eq('status', 'active')
     : { data: [] };
 
-  const myGroupBalance = new Map<string, number>(
+  const myGroupBalance = new Map<string, { balance: number; currency: string }>(
     (myGroupsResult.data ?? [])
       .filter((gm) => gm.group_id != null)
-      .map((gm) => [gm.group_id as string, gm.balance])
+      .map((gm) => {
+        const g = gm.groups as { base_currency: string } | null;
+        return [gm.group_id as string, { balance: gm.balance, currency: g?.base_currency ?? 'USD' }];
+      })
   );
 
   // Map: friendId → Set of group IDs they're in
@@ -135,10 +139,12 @@ export async function listFriendships(
       const friendGroupIds = friendGroupMap.get(row.friend_id) ?? new Set<string>();
       let totalBalance = 0;
       let sharedGroupCount = 0;
-      for (const [groupId, balance] of myGroupBalance) {
+      const sharedGroupBalances: { groupId: string; balance: number; currency: string }[] = [];
+      for (const [groupId, { balance, currency }] of myGroupBalance) {
         if (friendGroupIds.has(groupId)) {
           totalBalance += balance;
           sharedGroupCount++;
+          sharedGroupBalances.push({ groupId, balance, currency });
         }
       }
 
@@ -150,6 +156,7 @@ export async function listFriendships(
         avatarUrl: p?.avatar_url ?? p?.google_avatar_url ?? null,
         totalBalance,
         sharedGroupCount,
+        sharedGroupBalances,
       });
     } else {
       pending.push({

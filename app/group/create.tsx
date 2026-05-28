@@ -45,7 +45,7 @@ const GROUP_TYPES: { type: GroupType; label: string; Icon: React.ComponentType<{
 
 const CURRENCIES: { code: Currency; symbol: string }[] = [
   { code: 'USD', symbol: '$' },
-  { code: 'EUR', symbol: 'â‚¬' },
+  { code: 'EUR', symbol: '€' },
   { code: 'DKK', symbol: 'kr' },
   { code: 'SEK', symbol: 'kr' },
 ];
@@ -407,7 +407,7 @@ function Step3Members({
           Members &amp; settings
         </Text>
         <Text className="font-body text-base text-text-secondary">
-          Both are optional â€” you can change these later.
+          Both are optional – you can change these later.
         </Text>
       </View>
 
@@ -587,7 +587,7 @@ export default function CreateGroupScreen() {
         eventType: 'group_created',
         metadata: { name: name.trim() },
       }).catch(() => {});
-      // Request push notification permission after first group creation (spec Â§38)
+      // Request push notification permission after first group creation (spec §38)
       requestAndRegisterPushToken(session.user.id).catch(() => {});
       queryClient.invalidateQueries({ queryKey: ['groups'] });
       router.back();

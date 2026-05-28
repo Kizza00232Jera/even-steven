@@ -167,7 +167,7 @@ function AddFriendSheet({ visible, onClose, onAdd, isLoading }: AddFriendSheetPr
             activeOpacity={0.8}
           >
             <Text className="text-white font-semibold text-base">
-              {isLoading ? 'Addingâ€¦' : 'Add Friend'}
+              {isLoading ? 'Adding…' : 'Add Friend'}
             </Text>
           </TouchableOpacity>
         </View>

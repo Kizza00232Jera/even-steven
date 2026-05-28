@@ -10,6 +10,7 @@ const baseFriend = {
   avatarUrl: null as string | null,
   totalBalance: 0,
   sharedGroupCount: 0,
+  sharedGroupBalances: [] as { groupId: string; balance: number; currency: string }[],
 };
 
 describe('FriendCard', () => {
@@ -24,13 +25,23 @@ describe('FriendCard', () => {
   });
 
   it('shows "Owes" amount when balance is positive', () => {
-    const friend = { ...baseFriend, totalBalance: 47, sharedGroupCount: 2 };
+    const friend = {
+      ...baseFriend,
+      totalBalance: 47,
+      sharedGroupCount: 2,
+      sharedGroupBalances: [{ groupId: 'g-1', balance: 47, currency: 'EUR' }],
+    };
     const { getByText } = render(<FriendCard friend={friend} onPress={() => {}} />);
     expect(getByText(/Owes/)).toBeTruthy();
   });
 
   it('shows "You owe" label when balance is negative', () => {
-    const friend = { ...baseFriend, totalBalance: -12, sharedGroupCount: 1 };
+    const friend = {
+      ...baseFriend,
+      totalBalance: -12,
+      sharedGroupCount: 1,
+      sharedGroupBalances: [{ groupId: 'g-1', balance: -12, currency: 'EUR' }],
+    };
     const { getByText } = render(<FriendCard friend={friend} onPress={() => {}} />);
     expect(getByText(/You owe/)).toBeTruthy();
   });
