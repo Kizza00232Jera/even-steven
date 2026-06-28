@@ -1,76 +1,71 @@
+<div align="center">
+
+<img src="assets/icon.png" alt="Even Steven" width="84">
+
 # Even Steven
 
 **Fair splits for every trip.**
 
-A mobile app for groups to track shared expenses and calculate the minimum number of settlements needed for everyone to be square. No more splitting 12 separate payments after a 7-day trip.
+[![Case study](https://img.shields.io/badge/Case_study-antoniojerkovic.com-080C18?style=for-the-badge)](https://antoniojerkovic.com/projects/even-steven)
 
-Available on iOS and Android.
+![React Native](https://img.shields.io/badge/React_Native-20232A?logo=react&logoColor=61DAFB)
+![Expo](https://img.shields.io/badge/Expo-1B1F23?logo=expo&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?logo=supabase&logoColor=white)
+![Jest](https://img.shields.io/badge/Jest-C21325?logo=jest&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
 
----
+</div>
+
+A mobile app for groups to track shared expenses and settle up with the fewest payments possible. Instead of 12 separate transfers after a 7-day trip, it works out the minimum set of settlements that makes everyone square. Built for iOS and Android.
 
 ## Features
 
-- **Google Sign-In** — OAuth via Google, session persisted across cold restarts
-- **First-launch onboarding** — set display name and preferred currency, shown exactly once
+- **Group expenses** — add who paid, who shares the cost, and split evenly or by custom amounts.
+- **Smart settle-up** — the app reduces all the debts in a group to the minimum number of payments.
+- **Real-time sync** — everyone in a group sees changes live, powered by Supabase Realtime.
+- **Multi-currency** — expenses in different currencies, converted with live ECB rates.
+- **Push notifications** — get notified when you are added to a group or an expense changes.
+- **Deep-link invites** — share a link, tap it, and you are in the group.
+- **Google Sign-In** — one-tap auth, session kept across cold restarts.
+- **Test-driven** — core split and settlement logic is covered by Jest.
 
----
-
-## Tech Stack
+## Tech stack
 
 | Layer | Technology |
-|-------|-----------|
+| --- | --- |
 | Mobile | React Native + TypeScript |
-| Framework | Expo (managed workflow) |
-| Styling | NativeWind (Tailwind CSS for RN) |
-| Routing | Expo Router |
+| Framework | Expo (managed workflow) + Expo Router |
+| Styling | NativeWind (Tailwind for React Native) |
 | Backend | Supabase (Postgres, Realtime, Auth, Storage) |
 | Auth | Google OAuth via Supabase Auth |
-| State | TanStack Query + Zustand |
-| Push notifications | Expo Notifications |
-| Transactional email | Resend |
+| State / data | TanStack Query + Zustand |
+| Notifications | Expo Notifications |
+| Email | Resend |
 | Exchange rates | Frankfurter API (ECB) |
+| Testing | Jest + Testing Library |
 
----
+## Run it locally
 
-## Prerequisites
-
-Before running this project you need:
-
-- **Node.js** 18+ — [nodejs.org](https://nodejs.org)
-- **Expo Go** app on your phone — [iOS](https://apps.apple.com/app/expo-go/id982107779) / [Android](https://play.google.com/store/apps/details?id=host.exp.exponent)
-- **EAS CLI** — `npm install -g eas-cli` then `eas login`
-- A **Supabase** project with Google OAuth configured (see Environment Variables below)
-- A **Google Cloud** project with OAuth 2.0 credentials (Web + iOS client IDs)
-
----
-
-## Setup
+Prerequisites: Node 18+, the EAS CLI (`npm install -g eas-cli`), a Supabase project, and Google OAuth credentials.
 
 ```bash
-# Clone the repo
 git clone https://github.com/Kizza00232Jera/even-steven.git
 cd even-steven
-
-# Install dependencies
 npm install
-
-# Copy the env template and fill in your values
-cp .env.example .env
-
-# Start the development server
+cp .env.example .env   # fill in your values
 npx expo start
 ```
 
-Scan the QR code with Expo Go on your phone.
+Google Sign-In needs a development build rather than Expo Go:
 
-> For Google Sign-In to work you need a development build, not Expo Go.
-> Run `eas build --profile development --platform ios` (or `android`) for a dev build.
+```bash
+eas build --profile development --platform android   # or ios
+```
 
----
+### Environment
 
-## Environment Variables
-
-Create a `.env` file at the root (never commit it):
+Create a `.env` at the root (never commit it):
 
 ```
 EXPO_PUBLIC_SUPABASE_URL=
@@ -84,34 +79,8 @@ RESEND_API_KEY=
 SUPABASE_DB_PASSWORD=
 ```
 
-### Supabase setup
+For Supabase, enable the Google provider under **Authentication → Providers** and paste your Google Web Client ID and secret. For Google, create a Web client (redirect URI `https://<project>.supabase.co/auth/v1/callback`) and an iOS client (bundle ID `com.evensteven.app`).
 
-1. Create a project at [supabase.com](https://supabase.com)
-2. Go to **Authentication → Providers → Google**
-3. Paste your Google Web Client ID and Secret
-4. Copy your project URL and anon key into `.env`
+## License
 
-### Google OAuth setup
-
-1. Create a project at [console.cloud.google.com](https://console.cloud.google.com)
-2. Go to **APIs & Services → Credentials → Create OAuth 2.0 Client ID**
-3. Create one **Web** client (redirect URI: `https://<your-project>.supabase.co/auth/v1/callback`)
-4. Create one **iOS** client (bundle ID: `com.evensteven.app`)
-5. Add the iOS client ID to `.env` as `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
-
----
-
-<!-- Screenshots: added once first screens are built -->
-
----
-
-## Contributing
-
-Branch off `main`, open a PR with a clear description of what changed and why.
-
-```
-feature/<description>   # new features
-fix/<description>       # bug fixes
-db/<description>        # schema changes
-chore/<description>     # tooling, config
-```
+[MIT](LICENSE) © Antonio Jerković
